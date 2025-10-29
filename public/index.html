@@ -9,12 +9,14 @@
     .card { border: 1px solid #e5e7eb; border-radius: 16px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,.04); margin-bottom: 20px; }
     button { padding: 10px 16px; border-radius: 10px; border: 1px solid #d1d5db; background: #111; color: #fff; cursor: pointer; }
     button.secondary { background: #fff; color: #111; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
     #status { opacity: .8; font-size: 14px; margin-top: 8px; }
     textarea { width: 100%; min-height: 160px; padding: 12px; border-radius: 12px; border: 1px solid #d1d5db; }
     .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     ul { list-style: none; padding-left: 0; }
     li { padding: 8px 0; border-bottom: 1px solid #eee; display: flex; gap: 8px; align-items: center; justify-content: space-between; }
     .muted { color: #6b7280; font-size: 12px; }
+    .right { margin-left: auto; }
   </style>
 </head>
 <body>
@@ -25,11 +27,13 @@
       <button id="recordBtn">Starta inspelning</button>
       <button class="secondary" id="stopBtn" disabled>Stoppa</button>
       <button class="secondary" id="saveLocalBtn">💾 Spara som textfil</button>
-      <label class="secondary" style="margin-left:auto;">
+
+      <span class="right">
         <input type="file" id="fileInput" accept=".mp3,.wav,.m4a,.mp4,.mpeg,.ogg,.oga,.webm,.flac" style="display:none;">
         <button class="secondary" id="uploadBtn" type="button">📤 Ladda upp ljudfil</button>
-      </label>
+      </span>
     </div>
+
     <div id="status">Redo</div>
     <audio id="player" controls style="width:100%; margin-top:12px; display:none"></audio>
 
@@ -47,6 +51,7 @@
   </div>
 
   <script>
+    // Element
     let mediaRecorder, chunks = [];
     const recordBtn = document.getElementById('recordBtn');
     const stopBtn = document.getElementById('stopBtn');
@@ -59,37 +64,56 @@
     const fileInput = document.getElementById('fileInput');
     const uploadBtn = document.getElementById('uploadBtn');
 
+    // Hjälp
+    function setStatus(msg) { statusEl.textContent = msg; }
+
+    // Uppladdning av existerande ljudfil
     uploadBtn.onclick = () => fileInput.click();
     fileInput.onchange = async (e) => {
       const file = e.target.files?.[0];
       if (!file) return;
       const form = new FormData();
       form.append('audio', file, file.name);
-      statusEl.textContent = '⬆️ Laddar upp & transkriberar...';
+      setStatus('⬆️ Laddar upp & transkriberar...');
       try {
         const res = await fetch('/api/transcribe', { method: 'POST', body: form });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
         result.value = data.text || '';
-        statusEl.textContent = data.saved ? `✅ Sparad: ${data.filename}` : '✅ Klar!';
+        setStatus(data.saved ? `✅ Sparad: ${data.filename}` : '✅ Klar!');
         await loadHistory();
       } catch (err) {
         console.error(err);
-        statusEl.textContent = '❌ Fel: ' + err.message;
+        setStatus('❌ Fel: ' + err.message);
       }
     };
 
-    async function start() {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      chunks = [];
-      mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
-      mediaRecorder.ondataavailable = e => chunks.push(e.data);
-      mediaRecorder.onstop = onStop;
-      mediaRecorder.start();
-      recordBtn.disabled = true; stopBtn.disabled = false;
-      statusEl.textContent = '⏺️ Spelar in...';
-    }
+    // Start inspelning
+    recordBtn.onclick = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        chunks = [];
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+        mediaRecorder.ondataavailable = e => chunks.push(e.data);
+        mediaRecorder.onstop = onStop;
+        mediaRecorder.start();
+        recordBtn.disabled = true; stopBtn.disabled = false;
+        setStatus('⏺️ Spelar in...');
+      } catch (e) {
+        console.error(e);
+        setStatus('❌ Mikrofon nekad eller ej tillgänglig');
+      }
+    };
 
+    // Stoppa inspelning
+    stopBtn.onclick = () => {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        setStatus('⏹️ Bearbetar...');
+      }
+    };
+
+    // När inspelningen stoppas → skicka till API
     async function onStop() {
       const blob = new Blob(chunks, { type: 'audio/webm' });
       player.src = URL.createObjectURL(blob);
@@ -97,32 +121,23 @@
 
       const form = new FormData();
       form.append('audio', blob, 'inspelning.webm');
-      statusEl.textContent = '⬆️ Laddar upp & transkriberar...';
-
+      setStatus('⬆️ Laddar upp & transkriberar...');
       try {
         const res = await fetch('/api/transcribe', { method: 'POST', body: form });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
         result.value = data.text || '';
-        statusEl.textContent = data.saved ? `✅ Sparad: ${data.filename}` : '✅ Klar!';
+        setStatus(data.saved ? `✅ Sparad: ${data.filename}` : '✅ Klar!');
         await loadHistory();
       } catch (e) {
         console.error(e);
-        statusEl.textContent = '❌ Fel: ' + e.message';
+        setStatus('❌ Fel: ' + e.message);
       } finally {
         recordBtn.disabled = false; stopBtn.disabled = true;
       }
     }
 
-    recordBtn.onclick = start;
-    stopBtn.onclick = () => {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-        statusEl.textContent = '⏹️ Bearbetar...';
-      }
-    };
-
-    // Lokal nedladdning
+    // Spara lokalt (download)
     saveLocalBtn.onclick = () => {
       const text = result.value.trim();
       if (!text) return alert('Inget att spara!');
@@ -157,14 +172,13 @@
         historyEl.innerHTML = '<li class="muted">Kunde inte hämta historik.</li>';
       }
     }
-
-    async function delFile(name) {
+    window.delFile = async (name) => {
       if (!confirm('Radera filen permanent?')) return;
       await fetch('/api/text/' + encodeURIComponent(name), { method: 'DELETE' });
       await loadHistory();
-    }
+    };
 
-    refreshBtn.onclick = loadHistory;
+    // Init
     loadHistory();
   </script>
 </body>
