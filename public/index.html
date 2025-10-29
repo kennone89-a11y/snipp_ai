@@ -3,151 +3,171 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Snipp – Ljud → Text</title>
+  <title>Snipp – Ljud till Text</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; max-width: 820px; margin: 40px auto; padding: 0 16px; }
-    .card { border: 1px solid #e5e7eb; border-radius: 16px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,.04); margin-bottom: 20px; }
-    button { padding: 10px 16px; border-radius: 10px; border: 1px solid #d1d5db; background: #111; color: #fff; cursor: pointer; }
-    button.secondary { background: #fff; color: #111; }
-    button:disabled { opacity: .5; cursor: not-allowed; }
-    #status { opacity: .8; font-size: 14px; margin-top: 8px; }
-    textarea { width: 100%; min-height: 160px; padding: 12px; border-radius: 12px; border: 1px solid #d1d5db; }
-    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    ul { list-style: none; padding-left: 0; }
-    li { padding: 8px 0; border-bottom: 1px solid #eee; display: flex; gap: 8px; align-items: center; justify-content: space-between; }
-    .muted { color: #6b7280; font-size: 12px; }
-    .right { margin-left: auto; }
+    :root { color-scheme: light dark; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      max-width: 860px;
+      margin: 32px auto;
+      padding: 0 16px;
+      background: var(--bg);
+    }
+    h1 { margin-bottom: 12px; }
+    .card {
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.05);
+      margin: 16px 0;
+    }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    button {
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+      background:#111; color:#fff;
+      cursor:pointer;
+      transition: all .2s;
+    }
+    button.secondary { background:#fff; color:#111; }
+    button:hover { opacity: .85; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    textarea {
+      width:100%; min-height:160px; padding:12px;
+      border-radius: 12px; border:1px solid #d1d5db;
+    }
+    .muted { color:#6b7280; font-size:12px; }
+    ul { list-style:none; padding:0; margin:0; }
+    li {
+      display:flex; justify-content:space-between; align-items:center;
+      gap:8px; padding:8px 0; border-bottom:1px solid #eee;
+    }
+    .right { margin-left:auto; }
+    #status { font-size:14px; margin-top:6px; opacity:.85; }
   </style>
 </head>
 <body>
-  <h1>🎙️ Snipp – Ljud → Text</h1>
+  <h1>🎙️ Snipp – Ljud till Text</h1>
 
   <div class="card">
     <div class="row">
-      <button id="recordBtn">Starta inspelning</button>
-      <button class="secondary" id="stopBtn" disabled>Stoppa</button>
-      <button class="secondary" id="saveLocalBtn">💾 Spara som textfil</button>
-
+      <button id="recordBtn">🎤 Starta inspelning</button>
+      <button id="stopBtn" class="secondary" disabled>⏹️ Stoppa</button>
+      <button id="saveLocalBtn" class="secondary">💾 Spara som textfil</button>
       <span class="right">
-        <input type="file" id="fileInput" accept=".mp3,.wav,.m4a,.mp4,.mpeg,.ogg,.oga,.webm,.flac" style="display:none;">
-        <button class="secondary" id="uploadBtn" type="button">📤 Ladda upp ljudfil</button>
+        <input id="fileInput" type="file" accept=".flac,.m4a,.mp3,.mp4,.mpeg,.mpga,.oga,.ogg,.wav,.webm" style="display:none" />
+        <button id="uploadBtn" class="secondary">📤 Ladda upp ljudfil</button>
       </span>
     </div>
 
-    <div id="status">Redo</div>
-    <audio id="player" controls style="width:100%; margin-top:12px; display:none"></audio>
+    <div id="status">✅ Redo</div>
+    <audio id="player" controls style="width:100%; margin-top:12px; display:none;"></audio>
 
-    <h3>Transkript</h3>
+    <h3>Transkription</h3>
     <textarea id="result" placeholder="Här kommer texten..."></textarea>
-    <div class="muted">Obs: Transkriptioner sparas automatiskt på servern och syns i “Historik”.</div>
+    <div class="muted">Transkriptioner sparas automatiskt på servern.</div>
   </div>
 
   <div class="card">
-    <div class="row" style="justify-content: space-between;">
+    <div class="row" style="justify-content:space-between;">
       <h3 style="margin:0">🗂️ Historik</h3>
-      <button class="secondary" id="refreshBtn">Uppdatera</button>
+      <button id="refreshBtn" class="secondary">Uppdatera</button>
     </div>
-    <ul id="history"></ul>
+    <ul id="history"><li class="muted">Hämtar...</li></ul>
   </div>
 
   <script>
-    // Element
-    let mediaRecorder, chunks = [];
-    const recordBtn = document.getElementById('recordBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const saveLocalBtn = document.getElementById('saveLocalBtn');
-    const statusEl = document.getElementById('status');
-    const player = document.getElementById('player');
-    const result = document.getElementById('result');
-    const historyEl = document.getElementById('history');
-    const refreshBtn = document.getElementById('refreshBtn');
-    const fileInput = document.getElementById('fileInput');
-    const uploadBtn = document.getElementById('uploadBtn');
+  (function () {
+    const $ = (id) => document.getElementById(id);
+    const statusEl = $('status');
+    const setStatus = (m) => statusEl.textContent = m;
 
-    // Hjälp
-    function setStatus(msg) { statusEl.textContent = msg; }
+    const recordBtn = $('recordBtn');
+    const stopBtn = $('stopBtn');
+    const saveLocalBtn = $('saveLocalBtn');
+    const player = $('player');
+    const result = $('result');
+    const historyEl = $('history');
+    const refreshBtn = $('refreshBtn');
+    const fileInput = $('fileInput');
+    const uploadBtn = $('uploadBtn');
 
-    // Uppladdning av existerande ljudfil
+    let mediaRecorder = null;
+    let chunks = [];
+
+    // Testa backend
+    fetch('/api/health').then(r => r.json()).then(j => {
+      if (!j.ok) setStatus('⚠️ Backend fel: ' + JSON.stringify(j));
+    }).catch(() => setStatus('❌ Kunde inte nå backend.'));
+
+    // Ladda upp färdig ljudfil
     uploadBtn.onclick = () => fileInput.click();
     fileInput.onchange = async (e) => {
       const file = e.target.files?.[0];
       if (!file) return;
+      await transcribeFile(file);
+      fileInput.value = '';
+    };
+
+    async function transcribeFile(file) {
       const form = new FormData();
-      form.append('audio', file, file.name);
+      form.append('audio', file, file.name || 'file.webm');
       setStatus('⬆️ Laddar upp & transkriberar...');
       try {
         const res = await fetch('/api/transcribe', { method: 'POST', body: form });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
         result.value = data.text || '';
-        setStatus(data.saved ? `✅ Sparad: ${data.filename}` : '✅ Klar!');
+        setStatus('✅ Klar!');
         await loadHistory();
       } catch (err) {
         console.error(err);
         setStatus('❌ Fel: ' + err.message);
       }
-    };
+    }
 
-    // Start inspelning
+    // Spela in
     recordBtn.onclick = async () => {
+      if (!navigator.mediaDevices) return alert('Din webbläsare stöder inte inspelning.');
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         chunks = [];
-        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
-        mediaRecorder.ondataavailable = e => chunks.push(e.data);
-        mediaRecorder.onstop = onStop;
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(chunks, { type: 'audio/webm' });
+          player.src = URL.createObjectURL(blob);
+          player.style.display = 'block';
+          await transcribeFile(new File([blob], 'inspelning.webm', { type: 'audio/webm' }));
+          stream.getTracks().forEach(t => t.stop());
+          recordBtn.disabled = false; stopBtn.disabled = true;
+        };
         mediaRecorder.start();
         recordBtn.disabled = true; stopBtn.disabled = false;
-        setStatus('⏺️ Spelar in...');
-      } catch (e) {
-        console.error(e);
-        setStatus('❌ Mikrofon nekad eller ej tillgänglig');
+        setStatus('🎙️ Spelar in...');
+      } catch (err) {
+        console.error(err);
+        setStatus('❌ Ingen mikrofonåtkomst.');
       }
     };
 
-    // Stoppa inspelning
     stopBtn.onclick = () => {
       if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        setStatus('⏹️ Stoppar...');
         mediaRecorder.stop();
-        setStatus('⏹️ Bearbetar...');
       }
     };
 
-    // När inspelningen stoppas → skicka till API
-    async function onStop() {
-      const blob = new Blob(chunks, { type: 'audio/webm' });
-      player.src = URL.createObjectURL(blob);
-      player.style.display = 'block';
-
-      const form = new FormData();
-      form.append('audio', blob, 'inspelning.webm');
-      setStatus('⬆️ Laddar upp & transkriberar...');
-      try {
-        const res = await fetch('/api/transcribe', { method: 'POST', body: form });
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-        result.value = data.text || '';
-        setStatus(data.saved ? `✅ Sparad: ${data.filename}` : '✅ Klar!');
-        await loadHistory();
-      } catch (e) {
-        console.error(e);
-        setStatus('❌ Fel: ' + e.message);
-      } finally {
-        recordBtn.disabled = false; stopBtn.disabled = true;
-      }
-    }
-
-    // Spara lokalt (download)
+    // Spara lokalt
     saveLocalBtn.onclick = () => {
       const text = result.value.trim();
-      if (!text) return alert('Inget att spara!');
-      const blob = new Blob([text], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
+      if (!text) return alert('Ingen text att spara.');
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `transkript_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.txt`;
+      a.href = URL.createObjectURL(blob);
+      a.download = `transkript_${Date.now()}.txt`;
       a.click();
-      URL.revokeObjectURL(url);
     };
 
     // Historik
@@ -155,31 +175,33 @@
       try {
         const res = await fetch('/api/history');
         const data = await res.json();
-        const files = (data.files || []);
+        const files = Array.isArray(data.files) ? data.files : [];
+        if (!files.length) return historyEl.innerHTML = '<li class="muted">Ingen historik ännu.</li>';
         historyEl.innerHTML = files.map(f => {
           const dt = new Date(f.mtime).toLocaleString();
+          const sizeKB = (f.size/1024).toFixed(1);
+          const name = encodeURIComponent(f.name);
           return `<li>
-            <span>${f.name}<div class="muted">${dt} · ${(f.size/1024).toFixed(1)} KB</div></span>
-            <span>
-              <a href="/api/text/${encodeURIComponent(f.name)}" download>
-                <button class="secondary">⬇️ Ladda ner</button>
-              </a>
-              <button class="secondary" onclick="delFile('${f.name}')">🗑️ Radera</button>
-            </span>
+            <div><strong>${f.name}</strong><div class="muted">${dt} · ${sizeKB} KB</div></div>
+            <div>
+              <a href="/api/text/${name}" download><button class="secondary">⬇️ Ladda ner</button></a>
+              <button class="secondary" onclick="delFile('${name}')">🗑️ Radera</button>
+            </div>
           </li>`;
-        }).join('') || '<li class="muted">Ingen historik ännu.</li>';
-      } catch (e) {
+        }).join('');
+      } catch (err) {
         historyEl.innerHTML = '<li class="muted">Kunde inte hämta historik.</li>';
       }
     }
     window.delFile = async (name) => {
       if (!confirm('Radera filen permanent?')) return;
-      await fetch('/api/text/' + encodeURIComponent(name), { method: 'DELETE' });
+      await fetch('/api/text/' + name, { method: 'DELETE' });
       await loadHistory();
     };
+    refreshBtn.onclick = loadHistory;
 
-    // Init
     loadHistory();
+  })();
   </script>
 </body>
 </html>
