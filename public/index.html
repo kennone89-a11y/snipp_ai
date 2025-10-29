@@ -1,141 +1,59 @@
-(function () {
-  // --- helpers
-  const $ = (id) => document.getElementById(id);
-  const statusEl = $('status');
-  const setStatus = (m) => statusEl.textContent = m;
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Snipp – Ljud → Text</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; max-width: 860px; margin: 32px auto; padding: 0 16px; }
+    h1 { margin-bottom: 12px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.05); margin: 16px 0; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #d1d5db; background:#111; color:#fff; cursor:pointer; }
+    button.secondary { background:#fff; color:#111; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    textarea { width:100%; min-height:160px; padding:12px; border-radius: 12px; border:1px solid #d1d5db; }
+    .muted { color:#6b7280; font-size:12px; }
+    ul { list-style:none; padding:0; margin:0; }
+    li { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #eee; }
+    .right { margin-left:auto; }
+    #status { font-size:14px; margin-top:6px; opacity:.85; }
+  </style>
+</head>
+<body>
+  <h1>🎙️ Snipp – Ljud till Text</h1>
 
-  // --- el
-  const recordBtn = $('recordBtn');
-  const stopBtn = $('stopBtn');
-  const saveLocalBtn = $('saveLocalBtn');
-  const player = $('player');
-  const result = $('result');
-  const historyEl = $('history');
-  const refreshBtn = $('refreshBtn');
-  const fileInput = $('fileInput');
-  const uploadBtn = $('uploadBtn');
+  <div class="card">
+    <div class="row">
+      <button id="recordBtn">Starta inspelning</button>
+      <button id="stopBtn" class="secondary" disabled>Stoppa</button>
+      <button id="saveLocalBtn" class="secondary">💾 Spara som textfil</button>
 
-  // --- state
-  let mediaRecorder = null;
-  let chunks = [];
+      <span class="right">
+        <input id="fileInput" type="file" accept=".flac,.m4a,.mp3,.mp4,.mpeg,.mpga,.oga,.ogg,.wav,.webm" style="display:none" />
+        <button id="uploadBtn" class="secondary" type="button">📤 Ladda upp ljudfil</button>
+      </span>
+    </div>
 
-  // --- sanity check: backend
-  fetch('/api/health').then(r => r.json()).then(j => {
-    if (!j || !j.ok) setStatus('⚠️ Backend svarar oväntat: ' + JSON.stringify(j));
-  }).catch(() => setStatus('⚠️ Kunde inte nå backend.'));
+    <div id="status">Redo</div>
+    <audio id="player" controls style="width:100%; margin-top:12px; display:none;"></audio>
 
-  // --- upload existing file
-  uploadBtn.onclick = () => fileInput.click();
-  fileInput.onchange = async (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    await transcribeFile(file);
-    fileInput.value = '';
-  };
+    <h3>Transkription</h3>
+    <textarea id="result" placeholder="Här kommer texten..."></textarea>
+    <div class="muted">Obs: Transkriptioner sparas på servern och syns under “Historik”.</div>
+  </div>
 
-  async function transcribeFile(file) {
-    const form = new FormData();
-    form.append('audio', file, file.name || 'file.webm');
-    setStatus('⬆️ Laddar upp & transkriberar...');
-    try {
-      const res = await fetch('/api/transcribe', { method: 'POST', body: form });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      result.value = data.text || '';
-      setStatus(data.saved ? `✅ Sparad: ${data.filename}` : '✅ Klar!');
-      await loadHistory();
-    } catch (err) {
-      console.error(err);
-      setStatus('❌ Fel: ' + (err.message || 'okänt'));
-    }
-  }
+  <div class="card">
+    <div class="row" style="justify-content:space-between;">
+      <h3 style="margin:0">🗂️ Historik</h3>
+      <button id="refreshBtn" class="secondary">Uppdatera</button>
+    </div>
+    <ul id="history"><li class="muted">Hämtar...</li></ul>
+  </div>
 
-  // --- recording
-  recordBtn.onclick = async () => {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setStatus('❌ Din webbläsare saknar getUserMedia'); return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      chunks = [];
-      const mime = (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/webm;codecs=opus'))
-        ? 'audio/webm;codecs=opus'
-        : 'audio/webm';
-      mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
-      mediaRecorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-      mediaRecorder.onstop = async () => {
-        const blob = new Blob(chunks, { type: 'audio/webm' });
-        player.src = URL.createObjectURL(blob);
-        player.style.display = 'block';
-        await transcribeFile(new File([blob], 'inspelning.webm', { type: 'audio/webm' }));
-        try { stream.getTracks().forEach(t => t.stop()); } catch {}
-        recordBtn.disabled = false; stopBtn.disabled = true;
-      };
-      mediaRecorder.start();
-      recordBtn.disabled = true; stopBtn.disabled = false;
-      setStatus('⏺️ Spelar in...');
-    } catch (e) {
-      console.error(e);
-      setStatus('❌ Mikrofon nekad eller ej tillgänglig');
-    }
-  };
-
-  stopBtn.onclick = () => {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      setStatus('⏹️ Bearbetar...');
-      mediaRecorder.stop();
-    }
-  };
-
-  // --- save local text
-  saveLocalBtn.onclick = () => {
-    const text = (result.value || '').trim();
-    if (!text) { alert('Inget att spara.'); return; }
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `transkript_${new Date().toISOString().replace(/[:T]/g,'-').slice(0,19)}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // --- history
-  async function loadHistory() {
-    try {
-      const r = await fetch('/api/history');
-      const data = await r.json();
-      const files = Array.isArray(data.files) ? data.files : [];
-      if (!files.length) {
-        historyEl.innerHTML = '<li class="muted">Ingen historik ännu.</li>'; return;
-      }
-      historyEl.innerHTML = files.map(f => {
-        const dt = new Date(f.mtime).toLocaleString();
-        const sizeKB = (f.size/1024).toFixed(1);
-        const name = encodeURIComponent(f.name);
-        return `<li>
-          <div>
-            <div><strong>${f.name}</strong></div>
-            <div class="muted">${dt} · ${sizeKB} KB</div>
-          </div>
-          <div>
-            <a href="/api/text/${name}" download><button class="secondary">⬇️ Ladda ner</button></a>
-            <button class="secondary" onclick="delFile('${name}')">🗑️ Radera</button>
-          </div>
-        </li>`;
-      }).join('');
-    } catch (e) {
-      console.error(e);
-      historyEl.innerHTML = '<li class="muted">Kunde inte hämta historik.</li>';
-    }
-  }
-  window.delFile = async (name) => {
-    if (!confirm('Radera filen permanent?')) return;
-    await fetch('/api/text/' + name, { method: 'DELETE' });
-    await loadHistory();
-  };
-  refreshBtn.onclick = loadHistory;
-
-  // --- init
-  loadHistory();
-})();
+  <!-- Viktigt: extern JS-fil pga CSP -->
+  <script src="/app.js" defer></script>
+</body>
+</html>
