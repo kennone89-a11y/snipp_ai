@@ -1,35 +1,23 @@
-import fs from 'fs';
-import express from 'express';
-import cors from 'cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
+// server.js — minimal och robust
+import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// ---- Säkerhet ----
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
+// Dela ut /public på rot-URL (så /surf.jpg funkar)
+app.use(express.static(path.join(__dirname, "public")));
 
-// ---- CORS ----
-app.use(cors({ origin: true }));
-
-// ---- JSON-stöd ----
-app.use(express.json());
-
-// ---- Statisk mapp ----
-app.use(express.static(path.join(__dirname, 'public')));
-
-// ---- Skicka startsidan ----
-app.get('/', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Startsidan
+app.get("/", (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// ---- Starta servern ----
+// Hjälprutt för snabb koll
+app.get("/health", (_req, res) => res.type("text").send("OK"));
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ Servern kör på port ${PORT}`));
+app.listen(PORT, () => console.log("Server running on " + PORT));
