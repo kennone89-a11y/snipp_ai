@@ -1,175 +1,84 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="sv">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kenai Tech</title>
+  <meta name="description" content="Kenai Tech – AI för röst, text och recensioner" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <meta property="og:title" content="Kenai Tech" />
+  <meta property="og:description" content="AI för röst, text och recensioner – byggd av Kenai" />
+  <meta property="og:image" content="https://kenai.technology/favicon.svg" />
+  <meta name="theme-color" content="#7c5cff" />
+
+  <!-- Animation och glow -->
   <style>
-/* Review (snabbrecension) */
-.review { padding:24px }
-.review form { display:grid; gap:12px }
-.row-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px }
-.input, .select, .textarea {
-  width:100%; border:1px solid #444; border-radius:12px;
-  background:rgba(255,255,255,.06); color:#fff; padding:10px 12px; outline:none;
-}
-.textarea { min-height:110px; resize:vertical }
-.stars { display:flex; gap:6px; align-items:center }
-.star { cursor:pointer; font-size:22px; filter:drop-shadow(0 0 6px rgba(124,92,255,.25)) }
-.output-card { background:rgba(0,0,0,.25); border:1px solid #333; border-radius:12px; padding:14px; white-space:pre-wrap }
-.actions { display:flex; gap:10px; flex-wrap:wrap }
-</style>
-
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Snipp – Ljud till Text</title>
-  <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="/styles.css">
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <div class="logo"></div>
-      <div>
-        <h1>Snipp – Ljud till Text</h1>
-        <div class="subtitle">Spela in eller ladda upp ljud och få text direkt. Drivs av OpenAI.</div>
-      </div>
-      <span class="spacer"></span>
-      <span class="badge" id="status">🟢 Redo</span>
-    </div>
-
-    <div class="grid">
-      <!-- Vänster kolumn -->
-      <section class="card">
-        <h3>Inspelning & uppladdning</h3>
-
-        <div class="row" style="margin-bottom:12px;">
-          <button id="recordBtn" class="btn-primary">🎙️ Starta inspelning</button>
-          <button id="stopBtn" class="btn-ghost" disabled>⏹️ Stoppa</button>
-          <button id="saveLocalBtn" class="btn-safe">💾 Spara textfil</button>
-
-          <span class="spacer"></span>
-
-          <input id="fileInput" type="file"
-                 accept=".flac,.m4a,.mp3,.mp4,.mpeg,.mpga,.oga,.ogg,.wav,.webm"
-                 style="display:none" />
-          <button id="uploadBtn" class="btn-ghost">📤 Ladda upp ljudfil</button>
-        </div>
-
-        <audio id="player" controls></audio>
-
-        <h3 style="margin-top:14px;">Transkription</h3>
-        <textarea id="result" placeholder="Här kommer texten..."></textarea>
-        <div class="meta">Transkriptioner sparas på servern och syns under “Historik”.</div>
-      </section>
-
-      <!-- Höger kolumn -->
-      <section class="card">
-        <div class="row" style="justify-content:space-between;">
-          <h3>Historik</h3>
-          <button id="refreshBtn" class="btn-ghost">🔄 Uppdatera</button>
-        </div>
-        <ul id="history" class="list">
-          <li class="item"><span class="item-sub">Hämtar...</span></li>
-        </ul>
-      </section>
-    </div>
-<section id="quickreview" class="section card review">
-  <h2>Snabbrecension (podcast/avsnitt)</h2>
-  <form id="revForm">
-    <div class="row-2">
-      <input class="input" id="revTitle"  placeholder="Titel / Avsnittsnamn" required>
-      <input class="input" id="revLink"   placeholder="Länk (Spotify/YouTube/RSS)">
-    </div>
-    <div class="row-2">
-      <div class="stars" id="revStars" aria-label="Betyg 1–5">
-        <span class="star" data-v="1">★</span>
-        <span class="star" data-v="2">★</span>
-        <span class="star" data-v="3">★</span>
-        <span class="star" data-v="4">★</span>
-        <span class="star" data-v="5">★</span>
-        <small id="revScore" style="margin-left:8px;opacity:.8">0/5</small>
-      </div>
-      <input class="input" id="revAuthor" placeholder="Skapare/Podcastnamn">
-    </div>
-    <textarea class="textarea" id="revNotes" placeholder="Dina anteckningar (vad handlar avsnittet om?)"></textarea>
-    <div class="actions">
-      <button type="button" class="btn btn-primary" id="revAi">AI-demo: skriv sammanfattning</button>
-      <button type="button" class="btn" id="revCopy">Kopiera recension</button>
-      <button type="button" class="btn" id="revDownload">Spara .txt</button>
-      <button type="reset"  class="btn">Rensa</button>
-    </div>
-    <div class="output-card" id="revOut" style="margin-top:10px"></div>
-  </form>
-</section>
-
-    <div class="footer">© Snipp • Byggd av Kenneth 🚀</div>
-  </div>
-
-  <!-- Viktigt: extern JS för att följa CSP -->
-  <script src="/app.js" defer></script>
-  <script>
-// ===== Snabbrecension =====
-(() => {
-  const el = (id)=>document.getElementById(id);
-  const title=el('revTitle'), link=el('revLink'), notes=el('revNotes'),
-        author=el('revAuthor'), out=el('revOut'), scoreEl=el('revScore');
-  let starsValue = 0;
-
-  document.querySelectorAll('#revStars .star').forEach(s=>{
-    s.addEventListener('click', ()=>{
-      starsValue = +s.dataset.v;
-      scoreEl.textContent = `${starsValue}/5`;
-      document.querySelectorAll('#revStars .star').forEach(st=>{
-        st.style.opacity = (+st.dataset.v <= starsValue) ? '1' : '.35';
-      });
-    });
-  });
-
-  function demoSummary(t){
-    const base = (t||'').trim();
-    const mood = (base.length%2?'mörkare ton':'lättsam ton');
-    const take = base ? 'Bygger på dina anteckningar.' : 'Kort demo utan anteckningar.';
-    return [
-      `Titel: ${title.value||'–'}`,
-      author.value? `Skapare: ${author.value}` : null,
-      link.value? `Länk: ${link.value}` : null,
-      '',
-      'Sammanfattning:',
-      base ? base : 'Ingen beskrivning angiven.',
-      '',
-      `Ton: ${mood}`,
-      `Betyg: ${starsValue||'–'}/5`,
-      '',
-      `Kommentar: ${take}`
-    ].filter(Boolean).join('\n');
-  }
-
-  function buildReview(){ return demoSummary(notes.value); }
-
-  document.getElementById('revAi').addEventListener('click', async ()=>{
-    const text = buildReview();
-    out.textContent = '';
-    for (let i=0;i<text.length;i++){
-      out.textContent += text[i];
-      await new Promise(r=>setTimeout(r,6));
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
-  });
 
-  document.getElementById('revCopy').addEventListener('click', async ()=>{
-    const text = out.textContent || buildReview();
-    await navigator.clipboard.writeText(text);
-    alert('Recension kopierad ✅');
-  });
+    @keyframes pulseGlow {
+      0% { text-shadow: 0 0 20px rgba(255,255,255,0.7), 0 0 40px rgba(124,252,255,0.5); }
+      50% { text-shadow: 0 0 35px rgba(255,255,255,1), 0 0 70px rgba(124,252,255,0.8); }
+      100% { text-shadow: 0 0 20px rgba(255,255,255,0.7), 0 0 40px rgba(124,252,255,0.5); }
+    }
 
-  document.getElementById('revDownload').addEventListener('click', ()=>{
-    const text = out.textContent || buildReview();
-    const blob = new Blob([text], {type:'text/plain'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = (title.value||'recension') + '.txt';
-    a.click();
-    URL.revokeObjectURL(a.href);
-  });
-})();
-</script>
+    #hero h1 {
+      animation: fadeIn 2s ease-out forwards, pulseGlow 4s ease-in-out infinite;
+      font-family: 'Poppins', sans-serif;
+      text-align: center;
+      color: white;
+    }
 
+    #hero {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      background-image: url('A_digital_illustration_in_the_style_of_an_epic_mov.png');
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-shadow: 2px 2px 10px rgba(0,0,0,0.7);
+    }
+
+    :root {
+      --bg: #0b0f19;
+      --bg-soft: #111728;
+      --text: #9eef5;
+      --muted: #9fb6b6;
+      --brand: #7c5cff;
+      --brand2: #0ffb3;
+      --card: rgba(255,255,255,0.06);
+      --border: rgba(255,255,255,0.1);
+      --radius: 16px;
+      --shadow: 0 10px 30px rgba(0,0,0,0.35);
+      --max: 1080px;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: white;
+      margin: 0;
+      padding: 0;
+      font-family: 'Poppins', sans-serif;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- HERO SECTION -->
+  <section id="hero">
+    <h1>
+      KENAI LEGENDS<br>
+      <span style="font-size:1.5rem;">BORN TO PADDLE</span>
+    </h1>
+  </section>
+
+  <script>
+    // Din JavaScript-kod kan stå här om du har något längre ner på sidan
+  </script>
 </body>
 </html>
