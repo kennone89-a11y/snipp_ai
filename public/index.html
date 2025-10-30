@@ -3,12 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kenai Tech</title>
-  <meta name="description" content="Kenai Tech – AI för röst, text och recensioner" />
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  <meta property="og:title" content="Kenai Tech" />
-  <meta property="og:description" content="AI för röst, text och recensioner – byggd av Kenai" />
-  <meta property="og:image" content="https://kenai.technology/favicon.svg" />
+  <title>Kenai Legends</title>
+  <meta name="description" content="Kenai Legends - Born to Paddle" />
   <meta name="theme-color" content="#7c5cff" />
 
   <style>
@@ -19,57 +15,69 @@
     }
 
     @keyframes pulseGlow {
-      0% { text-shadow: 0 0 20px rgba(255,255,255,0.7), 0 0 40px rgba(124,252,255,0.5); }
-      50% { text-shadow: 0 0 35px rgba(255,255,255,1), 0 0 70px rgba(124,252,255,0.8); }
+      0%   { text-shadow: 0 0 20px rgba(255,255,255,0.7), 0 0 40px rgba(124,252,255,0.5); }
+      50%  { text-shadow: 0 0 35px rgba(255,255,255,1), 0 0 70px rgba(124,252,255,0.8); }
       100% { text-shadow: 0 0 20px rgba(255,255,255,0.7), 0 0 40px rgba(124,252,255,0.5); }
     }
 
     /* --- Hero-sektionen --- */
-    #hero {
-      <!-- DEBUG: ta bort efter test -->
-<img src="/surf.jpg?v=9" style="max-width:220px;border:2px solid #fff;">
+    body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      font-family: 'Poppins', sans-serif;
+      background-color: #0b0f19;
+    }
 
+    #hero {
       position: relative;
       width: 100%;
       height: 100vh;
-     background-image: url('/public/surf.jpg?v=9');
-
-
-
-
-
-
-
+      background-image: url('/public/surf.jpg?v=20'); /* <- Bildväg */
       background-size: cover;
       background-position: center;
       display: flex;
       justify-content: center;
       align-items: center;
       text-align: center;
-      font-family: 'Poppins', sans-serif;
+    }
+
+    /* Mörk overlay för bättre kontrast */
+    #hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.25);
     }
 
     #hero h1 {
       color: white;
       font-size: 3rem;
       animation: fadeIn 2s ease-out forwards, pulseGlow 4s ease-in-out infinite;
+      position: relative;
+      z-index: 1;
     }
 
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: #0b0f19;
-      overflow-x: hidden;
+    #hero span {
+      font-size: 1.5rem;
+      display: block;
+      margin-top: 10px;
+    }
+
+    /* Responsivt (mobilanpassat) */
+    @media (max-width: 768px) {
+      #hero h1 {
+        font-size: 2rem;
+      }
+      #hero span {
+        font-size: 1.2rem;
+      }
     }
   </style>
 </head>
-
 <body>
   <section id="hero">
-    <h1>
-      KENAI LEGENDS<br>
-      <span style="font-size:1.5rem;">BORN TO PADDLE</span>
-    </h1>
+    <h1>KENAI LEGENDS<br><span>BORN TO PADDLE</span></h1>
   </section>
 </body>
 </html>
