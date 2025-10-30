@@ -1,6 +1,22 @@
 <!doctype html>
 <html lang="sv">
 <head>
+  <style>
+/* Review (snabbrecension) */
+.review { padding:24px }
+.review form { display:grid; gap:12px }
+.row-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px }
+.input, .select, .textarea {
+  width:100%; border:1px solid #444; border-radius:12px;
+  background:rgba(255,255,255,.06); color:#fff; padding:10px 12px; outline:none;
+}
+.textarea { min-height:110px; resize:vertical }
+.stars { display:flex; gap:6px; align-items:center }
+.star { cursor:pointer; font-size:22px; filter:drop-shadow(0 0 6px rgba(124,92,255,.25)) }
+.output-card { background:rgba(0,0,0,.25); border:1px solid #333; border-radius:12px; padding:14px; white-space:pre-wrap }
+.actions { display:flex; gap:10px; flex-wrap:wrap }
+</style>
+
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Snipp – Ljud till Text</title>
@@ -55,11 +71,105 @@
         </ul>
       </section>
     </div>
+<section id="quickreview" class="section card review">
+  <h2>Snabbrecension (podcast/avsnitt)</h2>
+  <form id="revForm">
+    <div class="row-2">
+      <input class="input" id="revTitle"  placeholder="Titel / Avsnittsnamn" required>
+      <input class="input" id="revLink"   placeholder="Länk (Spotify/YouTube/RSS)">
+    </div>
+    <div class="row-2">
+      <div class="stars" id="revStars" aria-label="Betyg 1–5">
+        <span class="star" data-v="1">★</span>
+        <span class="star" data-v="2">★</span>
+        <span class="star" data-v="3">★</span>
+        <span class="star" data-v="4">★</span>
+        <span class="star" data-v="5">★</span>
+        <small id="revScore" style="margin-left:8px;opacity:.8">0/5</small>
+      </div>
+      <input class="input" id="revAuthor" placeholder="Skapare/Podcastnamn">
+    </div>
+    <textarea class="textarea" id="revNotes" placeholder="Dina anteckningar (vad handlar avsnittet om?)"></textarea>
+    <div class="actions">
+      <button type="button" class="btn btn-primary" id="revAi">AI-demo: skriv sammanfattning</button>
+      <button type="button" class="btn" id="revCopy">Kopiera recension</button>
+      <button type="button" class="btn" id="revDownload">Spara .txt</button>
+      <button type="reset"  class="btn">Rensa</button>
+    </div>
+    <div class="output-card" id="revOut" style="margin-top:10px"></div>
+  </form>
+</section>
 
     <div class="footer">© Snipp • Byggd av Kenneth 🚀</div>
   </div>
 
   <!-- Viktigt: extern JS för att följa CSP -->
   <script src="/app.js" defer></script>
+  <script>
+// ===== Snabbrecension =====
+(() => {
+  const el = (id)=>document.getElementById(id);
+  const title=el('revTitle'), link=el('revLink'), notes=el('revNotes'),
+        author=el('revAuthor'), out=el('revOut'), scoreEl=el('revScore');
+  let starsValue = 0;
+
+  document.querySelectorAll('#revStars .star').forEach(s=>{
+    s.addEventListener('click', ()=>{
+      starsValue = +s.dataset.v;
+      scoreEl.textContent = `${starsValue}/5`;
+      document.querySelectorAll('#revStars .star').forEach(st=>{
+        st.style.opacity = (+st.dataset.v <= starsValue) ? '1' : '.35';
+      });
+    });
+  });
+
+  function demoSummary(t){
+    const base = (t||'').trim();
+    const mood = (base.length%2?'mörkare ton':'lättsam ton');
+    const take = base ? 'Bygger på dina anteckningar.' : 'Kort demo utan anteckningar.';
+    return [
+      `Titel: ${title.value||'–'}`,
+      author.value? `Skapare: ${author.value}` : null,
+      link.value? `Länk: ${link.value}` : null,
+      '',
+      'Sammanfattning:',
+      base ? base : 'Ingen beskrivning angiven.',
+      '',
+      `Ton: ${mood}`,
+      `Betyg: ${starsValue||'–'}/5`,
+      '',
+      `Kommentar: ${take}`
+    ].filter(Boolean).join('\n');
+  }
+
+  function buildReview(){ return demoSummary(notes.value); }
+
+  document.getElementById('revAi').addEventListener('click', async ()=>{
+    const text = buildReview();
+    out.textContent = '';
+    for (let i=0;i<text.length;i++){
+      out.textContent += text[i];
+      await new Promise(r=>setTimeout(r,6));
+    }
+  });
+
+  document.getElementById('revCopy').addEventListener('click', async ()=>{
+    const text = out.textContent || buildReview();
+    await navigator.clipboard.writeText(text);
+    alert('Recension kopierad ✅');
+  });
+
+  document.getElementById('revDownload').addEventListener('click', ()=>{
+    const text = out.textContent || buildReview();
+    const blob = new Blob([text], {type:'text/plain'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (title.value||'recension') + '.txt';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+})();
+</script>
+
 </body>
 </html>
