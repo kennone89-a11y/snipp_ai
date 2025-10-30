@@ -6,34 +6,64 @@
   <title>Kenai Legends</title>
   <meta name="theme-color" content="#0b0f19" />
   <style>
-    @keyframes fadeIn { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:translateY(0) } }
+    :root { --bg-tint: 0.88; }
+    html,body{height:100%;margin:0;background:#0b0f19;font-family:"Poppins",system-ui,Segoe UI,Roboto,Arial,sans-serif;overflow:hidden}
+    @keyframes fadeIn { from { opacity:0; transform: translateY(16px) } to { opacity:1; transform:none } }
     @keyframes pulseGlow {
       0%   { text-shadow:0 0 20px rgba(255,255,255,.7), 0 0 40px rgba(124,252,255,.5) }
       50%  { text-shadow:0 0 35px rgba(255,255,255,1), 0 0 70px rgba(124,252,255,.8) }
       100% { text-shadow:0 0 20px rgba(255,255,255,.7), 0 0 40px rgba(124,252,255,.5) }
     }
-
-    html,body{height:100%;margin:0;background:#0b0f19;font-family:"Poppins",system-ui,Segoe UI,Roboto,Arial,sans-serif;overflow-x:hidden}
-
-    #hero{
-      position:relative;
-      width:100%; height:100vh;
-      /* LADDAS LOKALT från /public  */
-      background-image:url('/surf.jpg?v=1');
-      background-repeat:no-repeat;
-      background-size:cover;
-      background-position:center;
-      display:flex; align-items:center; justify-content:center;
-      text-align:center; color:#fff;
+    /* fullskärms-bakgrund som IMG så vi slipper path-problem */
+    #bg{
+      position:fixed; inset:0; width:100%; height:100%;
+      object-fit:cover; object-position:center; z-index:-2;
+      filter: brightness(var(--bg-tint));
+      background:#0b0f19; /* fallback */
     }
-    #hero h1{margin:0;font-size:3rem;text-transform:uppercase;letter-spacing:1px;animation:fadeIn 1.2s ease-out both,pulseGlow 4s ease-in-out infinite}
-    #hero h1 span{display:block;font-size:1.2rem;margin-top:8px;opacity:.95}
-    @media (max-width:768px){#hero h1{font-size:2.2rem} #hero h1 span{font-size:1rem}}
+    /* svag overlay för kontrast */
+    #overlay{position:fixed; inset:0; background: radial-gradient(transparent, rgba(0,0,0,.35)); z-index:-1;}
+
+    /* hero-texter */
+    #hero{
+      position:relative; height:100vh; display:grid; place-items:center; text-align:center; color:#fff;
+      padding:24px;
+    }
+    #hero h1{margin:0; font-size:3rem; text-transform:uppercase; letter-spacing:1px;
+             animation: fadeIn 1.2s ease-out both, pulseGlow 4s ease-in-out infinite;}
+    #hero span{display:block; font-size:1.2rem; margin-top:8px; opacity:.96}
+    @media (max-width:768px){ #hero h1{font-size:2.2rem} #hero span{font-size:1rem} }
   </style>
 </head>
 <body>
+  <!-- 1) Försök ladda lokalt från /public/surf.jpg
+       2) Om det FAILAR -> byt automatiskt till GitHub-URL -->
+  <img id="bg" src="/surf.jpg" alt="Background">
+  <div id="overlay"></div>
+
   <section id="hero">
     <h1>KENAI LEGENDS<span>BORN TO PADDLE</span></h1>
   </section>
+
+  <script>
+    (function(){
+      const img = document.getElementById('bg');
+      const fallback = 'https://raw.githubusercontent.com/kennone89-a11y/snipp_ai/main/public/surf.jpg';
+      let triedFallback = false;
+
+      img.onerror = function(){
+        if (!triedFallback) {
+          triedFallback = true;
+          img.src = fallback;           // prova GitHub om /surf.jpg inte finns
+        } else {
+          // sista utvägen: visa en neutral gradient
+          img.remove();
+          document.documentElement.style.setProperty('--bg-tint','1');
+          document.getElementById('overlay').style.background =
+            'linear-gradient(135deg,#0b0f19 0%, #0e1430 50%, #0b0f19 100%)';
+        }
+      };
+    })();
+  </script>
 </body>
 </html>
