@@ -157,5 +157,18 @@
     }
   };
 </script>
+  <script>
+  // DÖDAR hero-blocket med "KENAI LEGENDS" om det finns, utan att röra resten
+  (function () {
+    const h = [...document.querySelectorAll('h1,h2')].find(el =>
+      /KENAI\s+LEGENDS/i.test(el.textContent)
+    );
+    if (h) {
+      const sec = h.closest('section') || h.parentElement;
+      if (sec) sec.remove();
+    }
+  })();
+</script>
+
 </body>
 </html>
