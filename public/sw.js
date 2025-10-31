@@ -1,5 +1,5 @@
-// sw.js – simple offline cache v0.6
-const CACHE = 'recensioner-cache-v0_6';
+// sw.js – simple offline cache v0.7
+const CACHE = 'recensioner-cache-v0_7';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
@@ -8,7 +8,11 @@ self.addEventListener('install', (e) => {
 });
 
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.map(k => (k === CACHE) ? null : caches.delete(k)))));
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.map(k => (k === CACHE ? null : caches.delete(k))))
+    )
+  );
   self.clients.claim();
 });
 
