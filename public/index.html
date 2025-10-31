@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Röstrecensioner (MVP)</title>
   <meta name="description" content="Spela in röst, skriv kort text och spara dina recensioner. Enkel MVP för röstrecensioner." />
-  <!-- Tailwind via CDN -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0b0d12">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root { color-scheme: dark light; }
@@ -14,11 +15,12 @@
     .glass { backdrop-filter: blur(8px); background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04)); border: 1px solid rgba(255,255,255,0.12); }
     .card { border-radius: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.18); }
     a, button { transition: .15s ease; }
+    .tagchip { border:1px solid rgba(255,255,255,.14); }
+    .tagchip.active { background:#1c273a; border-color:#3b82f6; }
   </style>
 </head>
 <body class="bg-neutral-950 text-neutral-100">
 
-  <!-- Minimal topptext -->
   <section class="max-w-6xl mx-auto px-4 py-8">
     <h1 class="text-3xl md:text-4xl font-extrabold leading-tight">Röstrecensioner</h1>
     <p class="mt-2 text-neutral-300">Spela in din röst, lägg till taggar och spara. Perfekt för poddar, filmer och ljudböcker.</p>
@@ -30,30 +32,26 @@
     <div class="mt-4 grid md:grid-cols-3 gap-6">
       <div class="md:col-span-2 glass card p-6">
         <div class="flex items-center gap-3 flex-wrap">
-          <!-- Start (mic-ikon) -->
           <button id="btnStart" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-semibold disabled:opacity-50" aria-label="Starta">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="inline -mt-0.5 mr-1">
-              <path d="M12 14a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v4a3 3 0 0 0 3 3Z"/>
-              <path d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V21a1 1 0 1 0 2 0v-3.08A7 7 0 0 0 19 11Z"/>
-            </svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="inline -mt-0.5 mr-1"><path d="M12 14a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v4a3 3 0 0 0 3 3Z"/><path d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V21a1 1 0 1 0 2 0v-3.08A7 7 0 0 0 19 11Z"/></svg>
             Spela in
           </button>
-          <!-- Stop (kvadrat-ikon) -->
           <button id="btnStop" class="px-4 py-2 rounded-lg bg-fuchsia-600 hover:bg-fuchsia-500 font-semibold disabled:opacity-50" aria-label="Stoppa" disabled>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="inline -mt-0.5 mr-1">
-              <rect x="6" y="6" width="12" height="12" rx="2"/>
-            </svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="inline -mt-0.5 mr-1"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
             Stoppa
           </button>
-
           <button id="btnUpload" class="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 font-semibold disabled:opacity-50">Ladda upp</button>
           <span id="recReady" class="text-xs px-2 py-1 rounded bg-emerald-700/30 border border-emerald-700 hidden">Inspelning klar ✓</span>
           <span id="timer" class="text-sm text-neutral-300">00:00</span>
+
+          <!-- Trim + normalize toggle -->
+          <label class="ml-2 inline-flex items-center gap-2 text-sm text-neutral-300 select-none">
+            <input id="procToggle" type="checkbox" class="accent-emerald-500">
+            <span>Trim tystnad + normalisera (WAV)</span>
+          </label>
         </div>
 
         <audio id="player" class="mt-4 w-full" controls></audio>
-
-        <!-- Live vågform -->
         <canvas id="wave" class="mt-3 w-full h-28 rounded-lg bg-neutral-900 border border-neutral-800"></canvas>
 
         <div class="mt-3 flex gap-3">
@@ -73,19 +71,16 @@
       </div>
     </div>
 
-    <!-- Upload file (valfritt) -->
     <div class="mt-4 glass card p-6">
       <h3 class="font-semibold">📁 Ladda upp fil</h3>
       <input id="fileInput" type="file" accept="audio/*" class="mt-2 block w-full text-sm" />
     </div>
 
-    <!-- Resultat -->
     <div class="mt-4 glass card p-6">
       <h3 class="font-semibold">🧪 Resultat</h3>
       <p id="uploadResult" class="text-sm text-neutral-300 mt-2">Ingen uppladdning gjord än.</p>
     </div>
 
-    <!-- Senaste uppladdningar (lokal lista) -->
     <div class="mt-4 glass card p-6">
       <h3 class="font-semibold">🗂️ Senaste uppladdningar</h3>
       <ul id="recentUploads" class="list-disc list-inside text-sm text-neutral-300 mt-2"></ul>
@@ -130,9 +125,9 @@
     </form>
   </section>
 
-  <!-- Lista -->
+  <!-- Lista + kontroller -->
   <section id="list" class="max-w-6xl mx-auto px-4 py-12">
-    <div class="flex items-end justify-between">
+    <div class="flex items-end justify-between gap-3 flex-wrap">
       <h2 class="text-2xl font-bold">📚 Mina recensioner</h2>
       <div class="flex items-center gap-2">
         <input id="importInput" type="file" accept="application/json" class="hidden">
@@ -140,15 +135,37 @@
         <button id="btnExport" class="text-sm px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700">Exportera JSON</button>
       </div>
     </div>
+
+    <!-- Filterrad -->
+    <div class="mt-4 glass card p-4">
+      <div class="flex flex-col md:flex-row gap-3 md:items-center">
+        <input id="searchInput" class="flex-1 bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm" placeholder="Sök på titel, text eller länk…">
+        <select id="sortSelect" class="bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm">
+          <option value="newest">Sortera: Nyast</option>
+          <option value="oldest">Äldst</option>
+          <option value="ratingHigh">Betyg: Högst först</option>
+          <option value="ratingLow">Betyg: Lägst först</option>
+        </select>
+      </div>
+      <div id="tagCloud" class="mt-3 flex flex-wrap gap-2"></div>
+    </div>
+
     <div id="reviewList" class="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
   </section>
 
   <footer class="border-t border-neutral-800 py-10 text-center text-sm text-neutral-400">
-    MVP utan backend • <span class="underline">v0.2</span>
+    MVP utan backend • <span class="underline">v0.4 (filter + sök + sort)</span>
   </footer>
 
   <script>
-    // === Stjärnor ===
+    // PWA SW
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(()=>{}));
+    }
+  </script>
+
+  <script>
+    /* ====== Stjärnor ====== */
     const starsEl = document.getElementById('stars');
     const starValue = document.getElementById('starValue');
     let rating = 0;
@@ -161,14 +178,10 @@
       b.addEventListener('click', () => { rating = i; starValue.textContent = `${rating}/5`; paintStars(); });
       return b;
     };
-    const paintStars = () => {
-      [...starsEl.children].forEach((el, idx) => {
-        el.style.background = (idx < rating) ? 'linear-gradient(180deg,#f59e0b,#f97316)' : '';
-      });
-    };
+    const paintStars = () => { [...starsEl.children].forEach((el, idx) => el.style.background = (idx < rating) ? 'linear-gradient(180deg,#f59e0b,#f97316)' : ''); };
     for (let i = 1; i <= 5; i++) starsEl.appendChild(makeStar(i));
 
-    // === Inspelare + Uppladdning ===
+    /* ====== Inspelare ====== */
     const btnStart = document.getElementById('btnStart');
     const btnStop = document.getElementById('btnStop');
     const btnUpload = document.getElementById('btnUpload');
@@ -182,149 +195,82 @@
     const uploadResult = document.getElementById('uploadResult');
     const recentUploads = document.getElementById('recentUploads');
     const recentCount = document.getElementById('recentCount');
+    const procToggle = document.getElementById('procToggle');
 
     let mediaRecorder, chunks = [], recStartTime = 0, lastBlob = null;
     let timerInt = null;
 
-    const formatTime = (s) => {
-      const m = Math.floor(s / 60).toString().padStart(2,'0');
-      const r = Math.floor(s % 60).toString().padStart(2,'0');
-      return `${m}:${r}`;
-    };
-    const startTimer = () => { recStartTime = Date.now(); timerInt = setInterval(() => {
-      const secs = (Date.now() - recStartTime) / 1000; timerEl.textContent = formatTime(secs);
-    }, 250); };
+    const formatTime = (s) => { const m = Math.floor(s / 60).toString().padStart(2,'0'); const r = Math.floor(s % 60).toString().padStart(2,'0'); return `${m}:${r}`; };
+    const startTimer = () => { recStartTime = Date.now(); timerInt = setInterval(() => { const secs = (Date.now() - recStartTime) / 1000; timerEl.textContent = formatTime(secs); }, 250); };
     const stopTimer = () => { clearInterval(timerInt); timerInt = null; };
 
-    // === Vågform (canvas + WebAudio) ===
-    const waveCvs = document.getElementById('wave');
-    const waveCtx = waveCvs.getContext('2d');
+    // Waveform
+    const waveCvs = document.getElementById('wave'); const waveCtx = waveCvs.getContext('2d');
     let audioCtx, analyser, source, rafId = null, streamRef = null;
-
-    function fitCanvas(){ waveCvs.width = waveCvs.clientWidth; waveCvs.height = waveCvs.clientHeight; }
-    addEventListener('resize', fitCanvas); fitCanvas();
-
-    function drawWave(){
-      const data = new Uint8Array(analyser.fftSize);
-      const draw = () => {
-        analyser.getByteTimeDomainData(data);
-        waveCtx.clearRect(0,0,waveCvs.width,waveCvs.height);
-        waveCtx.lineWidth = 2; waveCtx.strokeStyle = '#7aa2ff';
-        waveCtx.beginPath();
-        const slice = waveCvs.width / data.length;
-        for(let i=0,x=0;i<data.length;i++,x+=slice){
-          const v = data[i] / 128, y = (v * waveCvs.height)/2;
-          i===0 ? waveCtx.moveTo(x,y) : waveCtx.lineTo(x,y);
-        }
-        waveCtx.stroke();
-        rafId = requestAnimationFrame(draw);
-      };
-      draw();
+    function fitCanvas(){ waveCvs.width = waveCvs.clientWidth; waveCvs.height = waveCvs.clientHeight; } addEventListener('resize', fitCanvas); fitCanvas();
+    function drawWave(){ const data = new Uint8Array(analyser.fftSize);
+      const draw = () => { analyser.getByteTimeDomainData(data); waveCtx.clearRect(0,0,waveCvs.width,waveCvs.height); waveCtx.lineWidth = 2; waveCtx.strokeStyle = '#7aa2ff';
+        waveCtx.beginPath(); const slice = waveCvs.width / data.length;
+        for(let i=0,x=0;i<data.length;i++,x+=slice){ const v = data[i] / 128, y = (v * waveCvs.height)/2; i===0 ? waveCtx.moveTo(x,y) : waveCtx.lineTo(x,y); }
+        waveCtx.stroke(); rafId = requestAnimationFrame(draw);
+      }; draw();
     }
-    function stopWave(){
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = null;
-      waveCtx.clearRect(0,0,waveCvs.width,waveCvs.height);
-    }
+    function stopWave(){ if (rafId) cancelAnimationFrame(rafId); rafId = null; waveCtx.clearRect(0,0,waveCvs.width,waveCvs.height); }
 
-    // Snyggare "Senaste uppladdningar"
     function pushRecent(name, sizeKb, url) {
-      const li = document.createElement('li');
-      const when = new Date().toLocaleString();
-      li.innerHTML = `
-        <span class="text-neutral-200">${name}</span>
-        <span class="text-neutral-500">– ${sizeKb} kB • ${when}</span>
-        <a class="underline hover:text-white ml-2" href="${url}" target="_blank" rel="noopener">öppna</a>
-      `;
-      recentUploads.prepend(li);
-      recentCount.textContent = parseInt(recentCount.textContent || '0',10) + 1;
+      const li = document.createElement('li'); const when = new Date().toLocaleString();
+      li.innerHTML = `<span class="text-neutral-200">${name}</span> <span class="text-neutral-500">– ${sizeKb} kB • ${when}</span> <a class="underline hover:text-white ml-2" href="${url}" target="_blank" rel="noopener">öppna</a>`;
+      recentUploads.prepend(li); recentCount.textContent = parseInt(recentCount.textContent || '0',10) + 1;
     }
 
     btnStart.addEventListener('click', async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
-        chunks = [];
+        mediaRecorder = new MediaRecorder(stream); chunks = [];
         mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(chunks, { type: 'audio/webm' });
-          lastBlob = blob;
-          const url = URL.createObjectURL(blob);
-          player.src = url;
-          downloadLink.href = url;
-          downloadLink.download = `audio_${Date.now()}.webm`;
-          downloadLink.classList.remove('hidden');
-          btnUseInNew.classList.remove('hidden');
-          recReady.classList.remove('hidden');
-          recStatus.textContent = `Inspelning klar (${Math.round(blob.size/1024)} kB)`;
+        mediaRecorder.onstop = async () => {
+          let blob = new Blob(chunks, { type: 'audio/webm' });
+          if (procToggle && procToggle.checked) {
+            recStatus.textContent = 'Bearbetar (trim/normalize)…';
+            try { blob = await processAudioBlobTrimNormalize(blob); recStatus.textContent = `Klar (WAV) – ${Math.round(blob.size/1024)} kB`; }
+            catch(e){ recStatus.textContent = 'Kunde inte trimma/normalisera: ' + e.message; }
+          } else { recStatus.textContent = `Inspelning klar (${Math.round(blob.size/1024)} kB)`; }
+          lastBlob = blob; const url = URL.createObjectURL(blob); player.src = url; downloadLink.href = url;
+          const ext = (blob.type.includes('wav') ? 'wav' : 'webm'); downloadLink.download = `audio_${Date.now()}.${ext}`;
+          downloadLink.classList.remove('hidden'); btnUseInNew.classList.remove('hidden'); recReady.classList.remove('hidden');
         };
         mediaRecorder.start();
 
-        // Starta vågform
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        source = audioCtx.createMediaStreamSource(stream);
-        analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048;
-        source.connect(analyser);
-        drawWave();
-        streamRef = stream;
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)(); source = audioCtx.createMediaStreamSource(stream);
+        analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048; source.connect(analyser); drawWave(); streamRef = stream;
 
-        btnStart.disabled = true; btnStop.disabled = false; recStatus.textContent = 'Spelar in…';
-        startTimer();
-      } catch (err) {
-        recStatus.textContent = 'Kunde inte starta inspelning: ' + err.message;
-      }
+        btnStart.disabled = true; btnStop.disabled = false; recStatus.textContent = 'Spelar in…'; startTimer();
+      } catch (err) { recStatus.textContent = 'Kunde inte starta inspelning: ' + err.message; }
     });
 
     btnStop.addEventListener('click', () => {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-        btnStart.disabled = false; btnStop.disabled = true; recStatus.textContent = 'Bearbetar ljud…';
-        stopTimer(); timerEl.textContent = '00:00';
-      }
-      // Stäng vågform/AudioContext/Tracks
-      stopWave();
-      if (audioCtx) { audioCtx.close().catch(()=>{}); audioCtx = null; }
-      if (streamRef) { streamRef.getTracks().forEach(t => t.stop()); streamRef = null; }
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') { mediaRecorder.stop(); btnStart.disabled = false; btnStop.disabled = true; recStatus.textContent = 'Bearbetar ljud…'; stopTimer(); timerEl.textContent = '00:00'; }
+      stopWave(); if (audioCtx) { audioCtx.close().catch(()=>{}); audioCtx = null; } if (streamRef) { streamRef.getTracks().forEach(t => t.stop()); streamRef = null; }
     });
 
     btnUpload.addEventListener('click', async () => {
       try {
         if (!lastBlob) { uploadResult.textContent = 'Ingen inspelning att ladda upp.'; return; }
-        const name = `audio_${Date.now()}.webm`;
-        const sizeKb = Math.round(lastBlob.size/1024);
-        const url = URL.createObjectURL(lastBlob);
-        uploadResult.innerHTML = `Uppladdad: <a class="underline" href="${url}" target="_blank" rel="noopener">${name}</a>`;
-        pushRecent(name, sizeKb, url);
-      } catch(e) {
-        uploadResult.textContent = 'Fel vid uppladdning: ' + e.message;
-      }
+        const ext = (lastBlob.type.includes('wav') ? 'wav' : 'webm'); const name = `audio_${Date.now()}.${ext}`;
+        const sizeKb = Math.round(lastBlob.size/1024); const url = URL.createObjectURL(lastBlob);
+        uploadResult.innerHTML = `Uppladdad: <a class="underline" href="${url}" target="_blank" rel="noopener">${name}</a>`; pushRecent(name, sizeKb, url);
+      } catch(e) { uploadResult.textContent = 'Fel vid uppladdning: ' + e.message; }
     });
 
     fileInput.addEventListener('change', async () => {
-      const f = fileInput.files[0];
-      if (!f) return;
-      const url = URL.createObjectURL(f);
-      uploadResult.innerHTML = `Uppladdad: <a class="underline" href="${url}" target="_blank" rel="noopener">${f.name}</a>`;
-      pushRecent(f.name, Math.round(f.size/1024), url);
+      const f = fileInput.files[0]; if (!f) return;
+      const url = URL.createObjectURL(f); uploadResult.innerHTML = `Uppladdad: <a class="underline" href="${url}" target="_blank" rel="noopener">${f.name}</a>`; pushRecent(f.name, Math.round(f.size/1024), url);
     });
 
-    btnUseInNew.addEventListener('click', async () => {
-      if (!lastBlob) return;
-      const b64 = await blobToBase64(lastBlob);
-      sessionStorage.setItem('last-blob', b64);
-      location.hash = '#new';
-      scrollTo({ top: document.querySelector('#new').offsetTop - 60, behavior: 'smooth' });
-    });
+    btnUseInNew.addEventListener('click', async () => { if (!lastBlob) return; const b64 = await blobToBase64(lastBlob); sessionStorage.setItem('last-blob', b64); location.hash = '#new'; scrollTo({ top: document.querySelector('#new').offsetTop - 60, behavior: 'smooth' }); });
+    async function blobToBase64(blob) { return new Promise((resolve) => { const r = new FileReader(); r.onloadend = () => resolve(r.result); r.readAsDataURL(blob); }); }
 
-    async function blobToBase64(blob) {
-      return new Promise((resolve) => {
-        const r = new FileReader();
-        r.onloadend = () => resolve(r.result);
-        r.readAsDataURL(blob);
-      });
-    }
-
-    // === Reviews (LocalStorage) ===
+    /* ====== Reviews (LocalStorage) ====== */
     const reviewForm = document.getElementById('reviewForm');
     const titleInput = document.getElementById('titleInput');
     const linkInput = document.getElementById('linkInput');
@@ -337,18 +283,78 @@
     const importInput = document.getElementById('importInput');
     const btnImport = document.getElementById('btnImport');
 
+    const searchInput = document.getElementById('searchInput');
+    const sortSelect  = document.getElementById('sortSelect');
+    const tagCloud    = document.getElementById('tagCloud');
+
     const LS_KEY = 'reviews-v1';
     const loadReviews = () => { try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; } };
     const saveReviews = (arr) => localStorage.setItem(LS_KEY, JSON.stringify(arr));
 
+    // Filter-state
+    let activeTags = new Set();
+    let searchTerm = '';
+    let sortMode   = 'newest';
+
+    function buildTagCloud(items){
+      const freq = new Map();
+      for (const it of items) for (const t of (it.tags||[])) freq.set(t, (freq.get(t)||0)+1);
+      const sorted = [...freq.entries()].sort((a,b)=>b[1]-a[1]).slice(0,25);
+      tagCloud.innerHTML = '';
+      if (!sorted.length){ tagCloud.innerHTML = '<span class="text-neutral-400 text-sm">Inga taggar ännu.</span>'; return; }
+      for (const [tag, n] of sorted){
+        const b = document.createElement('button');
+        b.type='button';
+        b.className = 'tagchip px-2 py-1 rounded-lg text-xs text-neutral-200';
+        b.textContent = `${tag} (${n})`;
+        b.dataset.tag = tag;
+        b.addEventListener('click', () => { 
+          if (activeTags.has(tag)) activeTags.delete(tag); else activeTags.add(tag);
+          b.classList.toggle('active');
+          renderList(); 
+        });
+        tagCloud.appendChild(b);
+      }
+    }
+
+    function applyFilters(items){
+      let out = items.slice();
+      // text-sök
+      const q = searchTerm.trim().toLowerCase();
+      if (q){
+        out = out.filter(it => 
+          (it.title||'').toLowerCase().includes(q) ||
+          (it.text ||'').toLowerCase().includes(q) ||
+          (it.link ||'').toLowerCase().includes(q) ||
+          (it.tags||[]).join(' ').toLowerCase().includes(q)
+        );
+      }
+      // taggar
+      if (activeTags.size){
+        out = out.filter(it => {
+          const set = new Set(it.tags||[]);
+          for (const t of activeTags) if (!set.has(t)) return false;
+          return true;
+        });
+      }
+      // sort
+      switch (sortMode){
+        case 'oldest': out.sort((a,b)=> (a.createdAt||0)-(b.createdAt||0)); break;
+        case 'ratingHigh': out.sort((a,b)=> (b.rating||0)-(a.rating||0)); break;
+        case 'ratingLow': out.sort((a,b)=> (a.rating||0)-(b.rating||0)); break;
+        default: out.sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+      }
+      return out;
+    }
+
     function renderList() {
       const data = loadReviews();
+      buildTagCloud(data);
+      const view = applyFilters(data);
       reviewList.innerHTML = '';
-      if (!data.length) {
-        reviewList.innerHTML = '<div class="text-neutral-400">Inga recensioner ännu.</div>';
-        return;
-      }
-      for (const item of data) {
+      if (!view.length) { reviewList.innerHTML = '<div class="text-neutral-400">Inget matchar ditt filter.</div>'; return; }
+
+      for (const item of view) {
         const card = document.createElement('article');
         card.className = 'glass card p-5';
         card.innerHTML = `
@@ -356,10 +362,10 @@
             <div>
               <h3 class="font-semibold text-lg">${escapeHTML(item.title || 'Untitled')}</h3>
               ${item.link ? `<a class="text-sm text-indigo-400 underline break-all" href="${escapeAttr(item.link)}" target="_blank" rel="noopener">${escapeHTML(item.link)}</a>` : ''}
+              ${item.tags?.length ? `<div class="mt-1 text-xs text-neutral-300">${item.tags.map(t=>`<span class='mr-1'>${escapeHTML(t)}</span>`).join('')}</div>` : ''}
             </div>
             <div class="text-sm text-amber-400">${'★'.repeat(item.rating)}<span class="text-neutral-600">${'★'.repeat(5-item.rating)}</span></div>
           </div>
-          ${item.tags?.length ? `<div class="mt-2 text-xs text-neutral-300">${item.tags.map(t=>`<span class='mr-1'>${escapeHTML(t)}</span>`).join('')}</div>` : ''}
           ${item.text ? `<p class="mt-3 text-sm text-neutral-200">${escapeHTML(item.text)}</p>` : ''}
           ${item.summary ? `<p class="mt-2 text-sm text-neutral-400 italic">${escapeHTML(item.summary)}</p>` : ''}
           ${item.audioDataUrl ? `<audio class="mt-3 w-full" controls src="${escapeAttr(item.audioDataUrl)}"></audio>` : ''}
@@ -373,8 +379,7 @@
         });
         card.querySelector('[data-action="copy"]').addEventListener('click', async () => {
           const share = `${item.title}\n${item.link || ''}\nBetyg: ${item.rating}/5\n${item.summary || item.text || ''}`.trim();
-          await navigator.clipboard.writeText(share);
-          alert('Kopierat till urklipp!');
+          await navigator.clipboard.writeText(share); alert('Kopierat till urklipp!');
         });
         reviewList.appendChild(card);
       }
@@ -383,75 +388,56 @@
     function escapeHTML(s='') { return s.replace(/[&<>"]+/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
     function escapeAttr(s='') { return s.replace(/\"/g, '&quot;'); }
 
-    // Export
-    btnExport.addEventListener('click', () => {
-      const blob = new Blob([localStorage.getItem(LS_KEY) || '[]'], {type: 'application/json'});
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'reviews.json'; a.click();
-    });
-
-    // Import
+    // Export / Import
+    btnExport.addEventListener('click', () => { const blob = new Blob([localStorage.getItem(LS_KEY) || '[]'], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'reviews.json'; a.click(); });
     btnImport.addEventListener('click', () => importInput.click());
     importInput.addEventListener('change', async () => {
-      const f = importInput.files[0];
-      if (!f) return;
-      try {
-        const text = await f.text();
-        const incoming = JSON.parse(text);
-        if (!Array.isArray(incoming)) { alert('Ogiltig fil'); return; }
-        const existing = loadReviews();
-        const byId = new Map(existing.map(x => [x.id, x]));
-        for (const it of incoming) {
-          if (!it?.id) it.id = crypto.randomUUID();
-          byId.set(it.id, { ...byId.get(it.id), ...it });
-        }
-        const merged = [...byId.values()].sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
-        saveReviews(merged);
-        renderList();
-        alert(`Importerade ${incoming.length} poster ✅`);
-      } catch (e) {
-        alert('Kunde inte importera: ' + e.message);
-      } finally {
-        importInput.value = '';
-      }
+      const f = importInput.files[0]; if (!f) return;
+      try { const text = await f.text(); const incoming = JSON.parse(text); if (!Array.isArray(incoming)) { alert('Ogiltig fil'); return; }
+        const existing = loadReviews(); const byId = new Map(existing.map(x => [x.id, x]));
+        for (const it of incoming) { if (!it?.id) it.id = crypto.randomUUID(); byId.set(it.id, { ...byId.get(it.id), ...it }); }
+        const merged = [...byId.values()].sort((a,b) => (b.createdAt||0) - (a.createdAt||0)); saveReviews(merged); renderList(); alert(`Importerade ${incoming.length} poster ✅`);
+      } catch(e){ alert('Kunde inte importera: ' + e.message); } finally { importInput.value = ''; }
     });
 
-    // Auto-sammanfattning (dummy)
-    btnAutoSummary.addEventListener('click', () => {
-      const text = textInput.value.trim();
-      if (!text) { textInput.value = 'Snabb notis: Väldigt bra innehåll, tydlig struktur och hög kvalitet.'; return; }
-      const sentences = text.split(/[.!?]\s/).filter(Boolean);
-      const pick = sentences.slice(0,2).join('. ') + (sentences.length>2? '…' : '');
-      textInput.value = pick;
-    });
+    // Quick summary (dummy)
+    btnAutoSummary.addEventListener('click', () => { const text = textInput.value.trim(); if (!text) { textInput.value = 'Snabb notis: Väldigt bra innehåll, tydlig struktur och hög kvalitet.'; return; }
+      const sentences = text.split(/[.!?]\s/).filter(Boolean); const pick = sentences.slice(0,2).join('. ') + (sentences.length>2? '…' : ''); textInput.value = pick; });
 
-    // Spara recension
     reviewForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const arr = loadReviews();
       let audioDataUrl = '';
-      const sess = sessionStorage.getItem('last-blob');
-      if (sess) { audioDataUrl = sess; sessionStorage.removeItem('last-blob'); }
-      if (audioFile.files[0]) {
-        audioDataUrl = await blobToBase64(audioFile.files[0]);
-      }
-      const item = {
-        id: crypto.randomUUID(),
-        title: titleInput.value.trim(),
-        link: linkInput.value.trim(),
-        tags: tagsInput.value.split(',').map(s=>s.trim()).filter(Boolean),
-        text: textInput.value.trim(),
-        summary: '',
-        rating,
-        audioDataUrl,
-        createdAt: Date.now()
-      };
-      if (!item.text && audioDataUrl) item.summary = 'Röstrecension bifogad.';
-      else if (item.text.length > 140) item.summary = item.text.slice(0,140) + '…';
-
-      arr.unshift(item); saveReviews(arr); renderList();
-      reviewForm.reset(); rating = 0; starValue.textContent = '0/5'; paintStars();
-      alert('Sparad!');
+      const sess = sessionStorage.getItem('last-blob'); if (sess) { audioDataUrl = sess; sessionStorage.removeItem('last-blob'); }
+      if (audioFile.files[0]) audioDataUrl = await blobToBase64(audioFile.files[0]);
+      const item = { id: crypto.randomUUID(), title: titleInput.value.trim(), link: linkInput.value.trim(), tags: tagsInput.value.split(',').map(s=>s.trim()).filter(Boolean), text: textInput.value.trim(), summary: '', rating, audioDataUrl, createdAt: Date.now() };
+      if (!item.text && audioDataUrl) item.summary = 'Röstrecension bifogad.'; else if (item.text.length > 140) item.summary = item.text.slice(0,140) + '…';
+      arr.unshift(item); saveReviews(arr); renderList(); reviewForm.reset(); rating = 0; starValue.textContent = '0/5'; paintStars(); alert('Sparad!');
     });
+
+    // Sök/sort events
+    searchInput.addEventListener('input', () => { searchTerm = searchInput.value; renderList(); });
+    sortSelect.addEventListener('change', () => { sortMode = sortSelect.value; renderList(); });
+
+    // === Audio processing (Trim + Normalize + WAV) ===
+    async function blobToArrayBuffer(blob){ return await blob.arrayBuffer(); }
+    async function decodeToBuffer(blob){
+      const arr = await blobToArrayBuffer(blob); const AC = window.AudioContext || window.webkitAudioContext; const ctx = new AC();
+      try { const buf = await new Promise((resolve, reject) => { ctx.decodeAudioData(arr.slice(0), resolve, reject); }); ctx.close(); return buf; } catch (e) { ctx.close(); throw e; }
+    }
+    function trimSilence(float32, threshold = 0.02, frame = 1024){
+      const len = float32.length; let start = 0; for (let i = 0; i < len; i += frame){ let max = 0; for (let j = i; j < Math.min(i+frame, len); j++){ const v = Math.abs(float32[j]); if (v > max) max = v; } if (max > threshold){ start = i; break; } }
+      let end = len; for (let i = len - frame; i > 0; i -= frame){ let max = 0; for (let j = i; j < Math.min(i+frame, len); j++){ const v = Math.abs(float32[j]); if (v > max) max = v; } if (max > threshold){ end = Math.min(i+frame, len); break; } }
+      if (end <= start) return float32; return float32.slice(start, end);
+    }
+    function normalizePCM(float32, peakTarget = 0.98){ let peak = 0; for (let i = 0; i < float32.length; i++) peak = Math.max(peak, Math.abs(float32[i])); if (!peak || peak >= peakTarget) return float32; const gain = peakTarget / peak; const out = new Float32Array(float32.length); for (let i = 0; i < float32.length; i++) out[i] = Math.max(-1, Math.min(1, float32[i] * gain)); return out; }
+    function floatTo16BitPCM(float32){ const out = new Int16Array(float32.length); for (let i = 0; i < float32.length; i++){ let s = Math.max(-1, Math.min(1, float32[i])); out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF; } return out; }
+    function encodeWavMono(float32, sampleRate){ const pcm16 = floatTo16BitPCM(float32); const byteRate = sampleRate * 2; const blockAlign = 2; const dataSize = pcm16.length * 2; const buffer = new ArrayBuffer(44 + dataSize); const view = new DataView(buffer);
+      writeStr(view, 0, 'RIFF'); view.setUint32(4, 36 + dataSize, true); writeStr(view, 8, 'WAVE'); writeStr(view, 12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true); view.setUint32(24, sampleRate, true); view.setUint32(28, byteRate, true); view.setUint16(32, blockAlign, true); view.setUint16(34, 16, true);
+      writeStr(view, 36, 'data'); view.setUint32(40, dataSize, true); let offset = 44; for (let i = 0; i < pcm16.length; i++, offset += 2){ view.setInt16(offset, pcm16[i], true); } return new Blob([view], { type: 'audio/wav' }); }
+    function writeStr(view, offset, str){ for (let i = 0; i < str.length; i++){ view.setUint8(offset + i, str.charCodeAt(i)); } }
+    function mixDownToMono(audioBuffer){ const len = audioBuffer.length; const tmp = new Float32Array(len); const n = audioBuffer.numberOfChannels; for (let c = 0; c < n; c++){ const data = audioBuffer.getChannelData(c); for (let i = 0; i < len; i++) tmp[i] += data[i]; } for (let i = 0; i < len; i++) tmp[i] /= n; return tmp; }
+    async function processAudioBlobTrimNormalize(srcBlob){ const buf = await decodeToBuffer(srcBlob); const ch0 = buf.numberOfChannels > 1 ? mixDownToMono(buf) : buf.getChannelData(0); const trimmed = trimSilence(ch0); const normalized = normalizePCM(trimmed); return encodeWavMono(normalized, buf.sampleRate); }
 
     // Init
     renderList();
