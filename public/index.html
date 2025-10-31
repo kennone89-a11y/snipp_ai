@@ -18,7 +18,7 @@
 </head>
 <body class="bg-neutral-950 text-neutral-100">
 
-  <!-- Minimal topptext (ingen logga/hero) -->
+  <!-- Minimal topptext -->
   <section class="max-w-6xl mx-auto px-4 py-8">
     <h1 class="text-3xl md:text-4xl font-extrabold leading-tight">Röstrecensioner</h1>
     <p class="mt-2 text-neutral-300">Spela in din röst, lägg till taggar och spara. Perfekt för poddar, filmer och ljudböcker.</p>
@@ -134,7 +134,11 @@
   <section id="list" class="max-w-6xl mx-auto px-4 py-12">
     <div class="flex items-end justify-between">
       <h2 class="text-2xl font-bold">📚 Mina recensioner</h2>
-      <button id="btnExport" class="text-sm px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700">Exportera JSON</button>
+      <div class="flex items-center gap-2">
+        <input id="importInput" type="file" accept="application/json" class="hidden">
+        <button id="btnImport" class="text-sm px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700">Importera JSON</button>
+        <button id="btnExport" class="text-sm px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700">Exportera JSON</button>
+      </div>
     </div>
     <div id="reviewList" class="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
   </section>
@@ -223,9 +227,15 @@
       waveCtx.clearRect(0,0,waveCvs.width,waveCvs.height);
     }
 
+    // Snyggare "Senaste uppladdningar"
     function pushRecent(name, sizeKb, url) {
       const li = document.createElement('li');
-      li.innerHTML = `<a class="underline hover:text-white" href="${url}" target="_blank" rel="noopener">${name}</a> <span class="text-neutral-500">(${sizeKb} kB)</span>`;
+      const when = new Date().toLocaleString();
+      li.innerHTML = `
+        <span class="text-neutral-200">${name}</span>
+        <span class="text-neutral-500">– ${sizeKb} kB • ${when}</span>
+        <a class="underline hover:text-white ml-2" href="${url}" target="_blank" rel="noopener">öppna</a>
+      `;
       recentUploads.prepend(li);
       recentCount.textContent = parseInt(recentCount.textContent || '0',10) + 1;
     }
@@ -241,182 +251,4 @@
           lastBlob = blob;
           const url = URL.createObjectURL(blob);
           player.src = url;
-          downloadLink.href = url;
-          downloadLink.download = `audio_${Date.now()}.webm`;
-          downloadLink.classList.remove('hidden');
-          btnUseInNew.classList.remove('hidden');
-          recReady.classList.remove('hidden');
-          recStatus.textContent = `Inspelning klar (${Math.round(blob.size/1024)} kB)`;
-        };
-        mediaRecorder.start();
-
-        // Starta vågform
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        source = audioCtx.createMediaStreamSource(stream);
-        analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048;
-        source.connect(analyser);
-        drawWave();
-        streamRef = stream;
-
-        btnStart.disabled = true; btnStop.disabled = false; recStatus.textContent = 'Spelar in…';
-        startTimer();
-      } catch (err) {
-        recStatus.textContent = 'Kunde inte starta inspelning: ' + err.message;
-      }
-    });
-
-    btnStop.addEventListener('click', () => {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-        btnStart.disabled = false; btnStop.disabled = true; recStatus.textContent = 'Bearbetar ljud…';
-        stopTimer(); timerEl.textContent = '00:00';
-      }
-      // Stäng vågform/AudioContext/Tracks
-      stopWave();
-      if (audioCtx) { audioCtx.close().catch(()=>{}); audioCtx = null; }
-      if (streamRef) { streamRef.getTracks().forEach(t => t.stop()); streamRef = null; }
-    });
-
-    btnUpload.addEventListener('click', async () => {
-      try {
-        if (!lastBlob) { uploadResult.textContent = 'Ingen inspelning att ladda upp.'; return; }
-        const name = `audio_${Date.now()}.webm`;
-        const sizeKb = Math.round(lastBlob.size/1024);
-        const url = URL.createObjectURL(lastBlob);
-        uploadResult.innerHTML = `Uppladdad: <a class="underline" href="${url}" target="_blank" rel="noopener">${name}</a>`;
-        pushRecent(name, sizeKb, url);
-      } catch(e) {
-        uploadResult.textContent = 'Fel vid uppladdning: ' + e.message;
-      }
-    });
-
-    fileInput.addEventListener('change', async () => {
-      const f = fileInput.files[0];
-      if (!f) return;
-      const url = URL.createObjectURL(f);
-      uploadResult.innerHTML = `Uppladdad: <a class="underline" href="${url}" target="_blank" rel="noopener">${f.name}</a>`;
-      pushRecent(f.name, Math.round(f.size/1024), url);
-    });
-
-    btnUseInNew.addEventListener('click', async () => {
-      if (!lastBlob) return;
-      const b64 = await blobToBase64(lastBlob);
-      sessionStorage.setItem('last-blob', b64);
-      location.hash = '#new';
-      scrollTo({ top: document.querySelector('#new').offsetTop - 60, behavior: 'smooth' });
-    });
-
-    async function blobToBase64(blob) {
-      return new Promise((resolve) => {
-        const r = new FileReader();
-        r.onloadend = () => resolve(r.result);
-        r.readAsDataURL(blob);
-      });
-    }
-
-    // === Reviews (LocalStorage) ===
-    const reviewForm = document.getElementById('reviewForm');
-    const titleInput = document.getElementById('titleInput');
-    const linkInput = document.getElementById('linkInput');
-    const tagsInput = document.getElementById('tagsInput');
-    const textInput = document.getElementById('textInput');
-    const audioFile = document.getElementById('audioFile');
-    const reviewList = document.getElementById('reviewList');
-    const btnExport = document.getElementById('btnExport');
-    const btnAutoSummary = document.getElementById('btnAutoSummary');
-
-    const LS_KEY = 'reviews-v1';
-    const loadReviews = () => { try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; } };
-    const saveReviews = (arr) => localStorage.setItem(LS_KEY, JSON.stringify(arr));
-
-    function renderList() {
-      const data = loadReviews();
-      reviewList.innerHTML = '';
-      if (!data.length) {
-        reviewList.innerHTML = '<div class="text-neutral-400">Inga recensioner ännu.</div>';
-        return;
-      }
-      for (const item of data) {
-        const card = document.createElement('article');
-        card.className = 'glass card p-5';
-        card.innerHTML = `
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <h3 class="font-semibold text-lg">${escapeHTML(item.title || 'Untitled')}</h3>
-              ${item.link ? `<a class="text-sm text-indigo-400 underline break-all" href="${escapeAttr(item.link)}" target="_blank" rel="noopener">${escapeHTML(item.link)}</a>` : ''}
-            </div>
-            <div class="text-sm text-amber-400">${'★'.repeat(item.rating)}<span class="text-neutral-600">${'★'.repeat(5-item.rating)}</span></div>
-          </div>
-          ${item.tags?.length ? `<div class="mt-2 text-xs text-neutral-300">${item.tags.map(t=>`<span class='mr-1'>${escapeHTML(t)}</span>`).join('')}</div>` : ''}
-          ${item.text ? `<p class="mt-3 text-sm text-neutral-200">${escapeHTML(item.text)}</p>` : ''}
-          ${item.summary ? `<p class="mt-2 text-sm text-neutral-400 italic">${escapeHTML(item.summary)}</p>` : ''}
-          ${item.audioDataUrl ? `<audio class="mt-3 w-full" controls src="${escapeAttr(item.audioDataUrl)}"></audio>` : ''}
-          <div class="mt-4 flex gap-3 text-sm">
-            <button class="px-3 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700" data-action="copy">Kopiera</button>
-            <button class="px-3 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700" data-action="delete">Ta bort</button>
-          </div>
-        `;
-        card.querySelector('[data-action="delete"]').addEventListener('click', () => {
-          const arr = loadReviews().filter(x => x.id !== item.id); saveReviews(arr); renderList();
-        });
-        card.querySelector('[data-action="copy"]').addEventListener('click', async () => {
-          const share = `${item.title}
-${item.link || ''}
-Betyg: ${item.rating}/5
-${item.summary || item.text || ''}`.trim();
-          await navigator.clipboard.writeText(share);
-          alert('Kopierat till urklipp!');
-        });
-        reviewList.appendChild(card);
-      }
-    }
-
-    function escapeHTML(s='') { return s.replace(/[&<>"]+/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-    function escapeAttr(s='') { return s.replace(/\"/g, '&quot;'); }
-
-    btnExport.addEventListener('click', () => {
-      const blob = new Blob([localStorage.getItem(LS_KEY) || '[]'], {type: 'application/json'});
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'reviews.json'; a.click();
-    });
-
-    btnAutoSummary.addEventListener('click', () => {
-      const text = textInput.value.trim();
-      if (!text) { textInput.value = 'Snabb notis: Väldigt bra innehåll, tydlig struktur och hög kvalitet.'; return; }
-      const sentences = text.split(/[.!?]\s/).filter(Boolean);
-      const pick = sentences.slice(0,2).join('. ') + (sentences.length>2? '…' : '');
-      textInput.value = pick;
-    });
-
-    reviewForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const arr = loadReviews();
-      let audioDataUrl = '';
-      const sess = sessionStorage.getItem('last-blob');
-      if (sess) { audioDataUrl = sess; sessionStorage.removeItem('last-blob'); }
-      if (audioFile.files[0]) {
-        audioDataUrl = await blobToBase64(audioFile.files[0]);
-      }
-      const item = {
-        id: crypto.randomUUID(),
-        title: titleInput.value.trim(),
-        link: linkInput.value.trim(),
-        tags: tagsInput.value.split(',').map(s=>s.trim()).filter(Boolean),
-        text: textInput.value.trim(),
-        summary: '',
-        rating,
-        audioDataUrl,
-        createdAt: Date.now()
-      };
-      if (!item.text && audioDataUrl) item.summary = 'Röstrecension bifogad.';
-      else if (item.text.length > 140) item.summary = item.text.slice(0,140) + '…';
-
-      arr.unshift(item); saveReviews(arr); renderList();
-      reviewForm.reset(); rating = 0; starValue.textContent = '0/5'; paintStars();
-      alert('Sparad!');
-    });
-
-    // Init
-    renderList();
-  </script>
-</body>
-</html>
+          downloadL
