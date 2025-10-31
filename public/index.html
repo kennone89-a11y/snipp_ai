@@ -192,7 +192,7 @@
     }, 250); };
     const stopTimer = () => { clearInterval(timerInt); timerInt = null; };
 
-    // === VåGFORM (canvas + WebAudio) ===
+    // === Vågform (canvas + WebAudio) ===
     const waveCvs = document.getElementById('wave');
     const waveCtx = waveCvs.getContext('2d');
     let audioCtx, analyser, source, rafId = null, streamRef = null;
@@ -360,7 +360,10 @@
           const arr = loadReviews().filter(x => x.id !== item.id); saveReviews(arr); renderList();
         });
         card.querySelector('[data-action="copy"]').addEventListener('click', async () => {
-          const share = `${item.title}\n${item.link || ''}\nBetyg: ${item.rating}/5\n${item.summary || item.text || ''}`.trim();
+          const share = `${item.title}
+${item.link || ''}
+Betyg: ${item.rating}/5
+${item.summary || item.text || ''}`.trim();
           await navigator.clipboard.writeText(share);
           alert('Kopierat till urklipp!');
         });
