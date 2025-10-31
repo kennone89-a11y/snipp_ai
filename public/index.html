@@ -6,57 +6,43 @@
   <title>Kenai Legends</title>
   <meta name="theme-color" content="#0b0f19" />
   <style>
-    :root{
-      --bg:#0b0f19; --card:#111728; --text:#e9eef5; --accent:#7c5cff;
-    }
-    /* Animations */
-    @keyframes fadeIn { from {opacity:0; transform:translateY(14px)} to {opacity:1; transform:translateY(0)} }
-    @keyframes pulseGlow {
-      0%,100% { text-shadow:0 0 20px rgba(255,255,255,.7), 0 0 40px rgba(124,252,255,.5) }
-      50%     { text-shadow:0 0 35px rgba(255,255,255,1), 0 0 70px rgba(124,252,255,.8) }
+    :root{ --bg:#0b0f19; --card:#111728; --text:#e9eef5; --accent:#7c5cff; --ok:#32d583; --err:#ff6b6b; }
+    @keyframes fadeIn{ from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes pulseGlow{
+      0%,100%{ text-shadow:0 0 20px rgba(255,255,255,.7), 0 0 40px rgba(124,252,255,.5) }
+      50%{ text-shadow:0 0 35px rgba(255,255,255,1), 0 0 70px rgba(124,252,255,.8) }
     }
 
     html,body{height:100%;margin:0}
-    body{
-      background:var(--bg);
-      color:var(--text);
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-      overflow-x:hidden;
-    }
+    body{ background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; overflow-x:hidden; }
 
-    /* Header */
-    .topbar{
-      position:fixed; inset:0 0 auto 0; height:56px; display:flex; align-items:center;
-      padding:0 16px; gap:12px; backdrop-filter:saturate(140%) blur(6px);
-      background:linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,0));
-      z-index:10;
-    }
+    .topbar{ position:fixed; inset:0 0 auto 0; height:56px; display:flex; align-items:center; gap:12px;
+      padding:0 16px; background:linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,0)); z-index:10; }
     .logo{ font-weight:700; letter-spacing:.5px }
     .spacer{ flex:1 }
-    .btn{
-      appearance:none; border:0; padding:10px 14px; border-radius:10px; cursor:pointer;
-      background:var(--card); color:var(--text); transition:transform .08s ease, opacity .15s ease;
-    }
+
+    .btn{ appearance:none; border:0; padding:10px 14px; border-radius:10px; cursor:pointer; background:var(--card);
+      color:var(--text); transition:transform .08s ease, opacity .15s ease; }
     .btn:hover{ transform:translateY(-1px) }
     .btn.primary{ background:var(--accent); color:#fff; font-weight:600 }
+    .btn.ghost{ background:transparent; border:1px solid rgba(255,255,255,.12) }
 
-    /* Hero */
-    #hero{
-      min-height:100svh; display:grid; place-items:center; text-align:center; padding:24px;
-    }
-    #hero h1{
-      font-size:clamp(28px, 5vw, 52px);
-      margin:0;
-      animation:fadeIn 1s ease-out both, pulseGlow 4s ease-in-out infinite;
-      letter-spacing:1px; text-transform:uppercase;
-    }
+    #hero{ min-height:86svh; display:grid; place-items:center; text-align:center; padding:24px; }
+    #hero h1{ font-size:clamp(28px, 5vw, 52px); margin:0; animation:fadeIn 1s ease-out both, pulseGlow 4s ease-in-out infinite; letter-spacing:1px; text-transform:uppercase; }
     #hero h1 span{ display:block; font-size:clamp(14px, 2.2vw, 18px); margin-top:8px; opacity:.9 }
+
     .cta-row{ margin-top:22px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap }
-    .card{
-      width:min(920px, 94vw); margin:40px auto 80px; background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:18px;
-    }
+
+    .wrap{ width:min(980px, 94vw); margin:0 auto 80px; display:grid; gap:16px; }
+    .card{ background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:18px; }
+    .card h2{ margin:0 0 8px 0; font-size:18px }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center }
     .muted{ opacity:.75; font-size:14px }
+    .chip{ display:inline-block; padding:4px 8px; border-radius:999px; background:rgba(255,255,255,.08); font-size:12px; }
+    .ok{ color:var(--ok) } .err{ color:var(--err) }
+    audio{ width:100%; outline:none; }
+    input[type="file"]{ display:none }
+    .filelabel{ border:1px dashed rgba(255,255,255,.25); padding:10px 14px; border-radius:10px; cursor:pointer; }
   </style>
 </head>
 <body>
@@ -71,17 +57,114 @@
     <div>
       <h1>KENAI LEGENDS <span>BORN TO PADDLE</span></h1>
       <div class="cta-row">
-        <button class="btn primary" onclick="alert('Ny recension – WIP')">Ny recension</button>
-        <button class="btn" onclick="alert('Sammanfatta – WIP')">Sammanfatta</button>
-        <button class="btn" onclick="alert('Ladda upp röst – WIP')">Ladda upp röst</button>
+        <button class="btn primary" onclick="document.getElementById('uploader').scrollIntoView({behavior:'smooth'})">Ladda upp röst</button>
+        <button class="btn ghost" onclick="alert('Sammanfatta – WIP')">Sammanfatta</button>
+        <button class="btn ghost" onclick="alert('Ny recension – WIP')">Ny recension</button>
       </div>
     </div>
   </section>
 
-  <div class="card">
-    <div class="muted">
-      🚧 Grundlayouten är live utan bakgrundsbild. Nästa steg: koppla domänen och lägga till funktionerna.
+  <div class="wrap" id="uploader">
+    <div class="card">
+      <h2>🎙️ Spela in & ladda upp</h2>
+      <div class="row">
+        <button class="btn primary" id="recBtn">Starta inspelning</button>
+        <button class="btn" id="stopBtn" disabled>Stoppa</button>
+        <button class="btn" id="uploadBtn" disabled>Ladda upp</button>
+        <span id="recStatus" class="chip">Redo</span>
+      </div>
+      <div style="margin-top:10px">
+        <audio id="player" controls></audio>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📁 Ladda upp fil</h2>
+      <div class="row">
+        <label class="filelabel">
+          Välj ljudfil…
+          <input type="file" id="fileInput" accept="audio/*" />
+        </label>
+        <span id="fileStatus" class="chip">Ingen fil vald</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📤 Resultat</h2>
+      <div class="muted" id="result">Ingen uppladdning ännu.</div>
     </div>
   </div>
+
+  <script>
+    // --- Recorder ---
+    const recBtn = document.getElementById('recBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const statusEl = document.getElementById('recStatus');
+    const player = document.getElementById('player');
+    const resultEl = document.getElementById('result');
+    const fileInput = document.getElementById('fileInput');
+    const fileStatus = document.getElementById('fileStatus');
+
+    let mediaRecorder, chunks = [], recordedBlob = null;
+
+    function setStatus(txt, cls=''){ statusEl.textContent = txt; statusEl.className = 'chip ' + cls; }
+    function setResult(html){ resultEl.innerHTML = html; }
+
+    async function startRecording(){
+      if(!navigator.mediaDevices?.getUserMedia){
+        alert('Din webbläsare stödjer inte mikrofoninspelning.');
+        return;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+      mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      chunks = [];
+      mediaRecorder.ondataavailable = e => { if(e.data.size>0) chunks.push(e.data); };
+      mediaRecorder.onstop = () => {
+        recordedBlob = new Blob(chunks, { type: 'audio/webm' });
+        player.src = URL.createObjectURL(recordedBlob);
+        uploadBtn.disabled = false;
+        setStatus('Inspelning klar ✓', 'ok');
+      };
+      mediaRecorder.start();
+      setStatus('Spelar in…', '');
+      recBtn.disabled = true; stopBtn.disabled = false; uploadBtn.disabled = true;
+    }
+
+    function stopRecording(){
+      if(mediaRecorder && mediaRecorder.state !== 'inactive'){
+        mediaRecorder.stop();
+        recBtn.disabled = false; stopBtn.disabled = true;
+      }
+    }
+
+    async function uploadBlob(blob, filename='recording.webm'){
+      const fd = new FormData();
+      fd.append('audio', blob, filename);
+      const res = await fetch('/api/upload', { method:'POST', body: fd });
+      const data = await res.json();
+      if(data.ok){
+        setResult(`✅ Uppladdad: <a href="${data.url}" target="_blank">${data.filename}</a>`);
+      }else{
+        setResult(`❌ Misslyckades: ${data.error || 'okänt fel'}`);
+      }
+    }
+
+    recBtn.addEventListener('click', startRecording);
+    stopBtn.addEventListener('click', stopRecording);
+    uploadBtn.addEventListener('click', () => recordedBlob && uploadBlob(recordedBlob));
+
+    // --- File upload ---
+    fileInput.addEventListener('change', async (e)=>{
+      const file = e.target.files?.[0];
+      if(!file){ fileStatus.textContent = 'Ingen fil vald'; return; }
+      fileStatus.textContent = `Vald: ${file.name}`;
+      try{
+        await uploadBlob(file, file.name);
+      }catch(err){
+        setResult('❌ Misslyckades att ladda upp.');
+      }
+    });
+  </script>
 </body>
 </html>
