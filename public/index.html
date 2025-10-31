@@ -3,68 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kenai Legends</title>
+  <title>Kenai Legends — NO-IMG v1</title>
   <meta name="theme-color" content="#0b0f19" />
-  <meta name="description" content="Kenai Legends – byggd av Kenai" />
+  <!-- BUILD: KL-NOIMG-2025-11-02 -->
 
   <style>
-    /* --- Animationer --- */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
+    @keyframes fadeIn { from { opacity:0; transform: translateY(20px);} to { opacity:1; transform:none; } }
     @keyframes pulseGlow {
-      0%   { text-shadow: 0 0 20px rgba(255,255,255,0.7), 0 0 40px rgba(124,252,255,0.5); }
-      50%  { text-shadow: 0 0 35px rgba(255,255,255,1), 0 0 70px rgba(124,252,255,0.8); }
-      100% { text-shadow: 0 0 20px rgba(255,255,255,0.7), 0 0 40px rgba(124,252,255,0.5); }
+      0% { text-shadow: 0 0 20px rgba(255,255,255,.7), 0 0 40px rgba(124,252,255,.5); }
+      50%{ text-shadow: 0 0 35px rgba(255,255,255,1), 0 0 70px rgba(124,252,255,.8); }
+      100%{ text-shadow: 0 0 20px rgba(255,255,255,.7), 0 0 40px rgba(124,252,255,.5); }
     }
-
-    /* --- Grundläggande styling --- */
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      background: #0b0f19;
-      color: #fff;
-      font-family: "Poppins", system-ui, Segoe UI, Roboto, Arial, sans-serif;
-      overflow: hidden;
-    }
-
-    /* --- Hero-sektion --- */
-    #hero {
-      position: relative;
-      width: 100%;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      flex-direction: column;
-    }
-
-    #hero h1 {
-      font-size: 3rem;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      animation: fadeIn 1.2s ease-out both, pulseGlow 4s ease-in-out infinite;
-    }
-
-    #hero h1 span {
-      display: block;
-      font-size: 1.2rem;
-      margin-top: 8px;
-    }
-
-    @media (max-width: 768px) {
-      #hero h1 { font-size: 2rem; }
-      #hero h1 span { font-size: 1rem; }
-    }
+    html, body { height:100%; margin:0; background:#0b0f19; color:#fff; font-family:"Poppins",system-ui,Segoe UI,Roboto,Arial,sans-serif; overflow:hidden; }
+    /* 🔴 Debug-banner – den här MÅSTE synas om rätt fil laddas */
+    #debugBanner{position:fixed;top:0;left:0;right:0;background:#ff2d55;color:#0b0f19;padding:8px 12px;font-weight:700;letter-spacing:.5px;z-index:9999;text-align:center}
+    #hero{position:relative;width:100%;height:100vh;display:flex;justify-content:center;align-items:center;text-align:center;flex-direction:column}
+    #hero h1{font-size:3rem;letter-spacing:1px;text-transform:uppercase;animation:fadeIn 1.2s ease-out both,pulseGlow 4s ease-in-out infinite}
+    #hero h1 span{display:block;font-size:1.2rem;margin-top:8px}
+    @media (max-width:768px){ #hero h1{font-size:2rem} #hero h1 span{font-size:1rem} }
   </style>
 </head>
-
 <body>
-  <!-- Hero sektion -->
+  <div id="debugBanner">BUILD: KL-NOIMG-2025-11-02 — Om du ser denna banner kör du rätt index.html</div>
   <section id="hero">
     <h1>KENAI LEGENDS<span>BORN TO PADDLE</span></h1>
   </section>
