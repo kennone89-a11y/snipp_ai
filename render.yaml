@@ -1,18 +1,9 @@
 services:
   - type: web
-    name: snipp-sv
+    name: snipp_ai_2
     env: node
     plan: free
+    branch: main
     buildCommand: "npm install"
-    startCommand: "npm start"
-    envVars:
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: ALLOWED_ORIGIN
-        value: ""
-      - key: PORT
-        value: "3000"
-    disk:
-      name: texts
-      mountPath: /opt/render/project/src/texts
-      sizeGB: 1
+    startCommand: "node server.js"
+    autoDeploy: true
