@@ -3,7 +3,7 @@ services:
     name: snipp_ai_2
     env: node
     plan: free
-    branch: main
     buildCommand: "npm install"
     startCommand: "node server.js"
     autoDeploy: true
+    envVars: []

@@ -1,17 +1,17 @@
-import express from "express";
-import path from "path";
-import { fileURLToPath } from "url";
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PUBLIC_DIR = path.join(__dirname, "public");
-app.use(express.static(PUBLIC_DIR, { maxAge: 0 }));
+const PORT = process.env.PORT || 8080;
 
-app.get("/__health", (_, res) => res.type("text").send("OK"));
+app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1h' }));
 
-app.get("*", (_, res) => res.sendFile(path.join(PUBLIC_DIR, "index.html")));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => console.log("Server listening on", port));
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

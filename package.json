@@ -1,13 +1,11 @@
 {
-  "name": "Röstrecensioner",
-  "short_name": "Recensioner",
-  "description": "Spela in röst, spara notiser och recensioner.",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#0b0d12",
-  "theme_color": "#0b0d12",
-  "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
-  ]
+  "name": "kenai-recorder",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
 }
