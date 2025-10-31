@@ -154,7 +154,7 @@
   </section>
 
   <footer class="border-t border-neutral-800 py-10 text-center text-sm text-neutral-400">
-    MVP utan backend • <span class="underline">v0.4 (filter + sök + sort)</span>
+    MVP utan backend • <span class="underline">v0.5 (filter + sök + sort + dela-länk + trim/WAV + PWA)</span>
   </footer>
 
   <script>
@@ -371,6 +371,7 @@
           ${item.audioDataUrl ? `<audio class="mt-3 w-full" controls src="${escapeAttr(item.audioDataUrl)}"></audio>` : ''}
           <div class="mt-4 flex gap-3 text-sm">
             <button class="px-3 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700" data-action="copy">Kopiera</button>
+            <button class="px-3 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700" data-action="share">Dela länk</button>
             <button class="px-3 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700" data-action="delete">Ta bort</button>
           </div>
         `;
@@ -381,12 +382,40 @@
           const share = `${item.title}\n${item.link || ''}\nBetyg: ${item.rating}/5\n${item.summary || item.text || ''}`.trim();
           await navigator.clipboard.writeText(share); alert('Kopierat till urklipp!');
         });
+        card.querySelector('[data-action="share"]').addEventListener('click', async () => {
+          const payload = {
+            v: 1,
+            title: item.title || '',
+            link: item.link || '',
+            tags: item.tags || [],
+            text: item.text || '',
+            summary: item.summary || '',
+            rating: item.rating || 0,
+            audioDataUrl: item.audioDataUrl || '' // kan ge lång URL för långa klipp
+          };
+          const shareParam = toBase64Url(JSON.stringify(payload));
+          const url = `${location.origin}${location.pathname}?share=${shareParam}`;
+          await navigator.clipboard.writeText(url);
+          alert('Delbar länk kopierad till urklipp!');
+        });
         reviewList.appendChild(card);
       }
     }
 
     function escapeHTML(s='') { return s.replace(/[&<>"]+/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
     function escapeAttr(s='') { return s.replace(/\"/g, '&quot;'); }
+
+    // Base64URL helpers (Unicode-säkra)
+    function toBase64Url(str){
+      const b64 = btoa(unescape(encodeURIComponent(str)));
+      return b64.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    }
+    function fromBase64Url(s){
+      s = s.replace(/-/g,'+').replace(/_/g,'/');
+      while (s.length % 4) s += '=';
+      const txt = atob(s);
+      return decodeURIComponent(escape(txt));
+    }
 
     // Export / Import
     btnExport.addEventListener('click', () => { const blob = new Blob([localStorage.getItem(LS_KEY) || '[]'], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'reviews.json'; a.click(); });
@@ -434,10 +463,37 @@
     function floatTo16BitPCM(float32){ const out = new Int16Array(float32.length); for (let i = 0; i < float32.length; i++){ let s = Math.max(-1, Math.min(1, float32[i])); out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF; } return out; }
     function encodeWavMono(float32, sampleRate){ const pcm16 = floatTo16BitPCM(float32); const byteRate = sampleRate * 2; const blockAlign = 2; const dataSize = pcm16.length * 2; const buffer = new ArrayBuffer(44 + dataSize); const view = new DataView(buffer);
       writeStr(view, 0, 'RIFF'); view.setUint32(4, 36 + dataSize, true); writeStr(view, 8, 'WAVE'); writeStr(view, 12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true); view.setUint32(24, sampleRate, true); view.setUint32(28, byteRate, true); view.setUint16(32, blockAlign, true); view.setUint16(34, 16, true);
-      writeStr(view, 36, 'data'); view.setUint32(40, dataSize, true); let offset = 44; for (let i = 0; i < pcm16.length; i++, offset += 2){ view.setInt16(offset, pcm16[i], true); } return new Blob([view], { type: 'audio/wav' }); }
+      writeStr(view, 36, 'data'); view.setUint32(40, dataSize, true); let offset = 44; for (let i = 0; i < pcm16.length; i++, offset += 2){ view.setInt16(offset, pcm16[i], true); } return new Blob([view], { type: 'audio/wav' });
+    }
     function writeStr(view, offset, str){ for (let i = 0; i < str.length; i++){ view.setUint8(offset + i, str.charCodeAt(i)); } }
     function mixDownToMono(audioBuffer){ const len = audioBuffer.length; const tmp = new Float32Array(len); const n = audioBuffer.numberOfChannels; for (let c = 0; c < n; c++){ const data = audioBuffer.getChannelData(c); for (let i = 0; i < len; i++) tmp[i] += data[i]; } for (let i = 0; i < len; i++) tmp[i] /= n; return tmp; }
     async function processAudioBlobTrimNormalize(srcBlob){ const buf = await decodeToBuffer(srcBlob); const ch0 = buf.numberOfChannels > 1 ? mixDownToMono(buf) : buf.getChannelData(0); const trimmed = trimSilence(ch0); const normalized = normalizePCM(trimmed); return encodeWavMono(normalized, buf.sampleRate); }
+
+    // Öppna delad länk (?share=...)
+    (function handleSharedLink(){
+      const p = new URLSearchParams(location.search);
+      const s = p.get('share');
+      if (!s) return;
+      try {
+        const obj = JSON.parse(fromBase64Url(s));
+        if (obj.title) titleInput.value = obj.title;
+        if (obj.link)  linkInput.value  = obj.link;
+        if (obj.tags?.length) tagsInput.value = obj.tags.join(', ');
+        if (obj.text)  textInput.value  = obj.text;
+        if (typeof obj.rating === 'number') {
+          rating = Math.max(0, Math.min(5, obj.rating|0));
+          starValue.textContent = `${rating}/5`;
+          (typeof paintStars === 'function') && paintStars();
+        }
+        if (obj.audioDataUrl) {
+          player.src = obj.audioDataUrl;
+          sessionStorage.setItem('last-blob', obj.audioDataUrl);
+        }
+        location.hash = '#new';
+        scrollTo({ top: document.querySelector('#new').offsetTop - 60, behavior: 'smooth' });
+        alert('Delad recension inläst — redigera och klicka "Spara recension".');
+      } catch(e){ console.warn('Kunde inte läsa delad länk:', e); }
+    })();
 
     // Init
     renderList();
