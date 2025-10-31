@@ -18,6 +18,16 @@
     .tagchip { border:1px solid rgba(255,255,255,.14); }
     .tagchip.active { background:#1c273a; border-color:#3b82f6; }
   </style>
+
+  <!-- Supabase (BYT värden nedan) -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script>
+    // ======= BYT TILL DINA VÄRDEN (Supabase Settings → API) =======
+    const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";
+    const SUPABASE_ANON_KEY = "YOUR-ANON-KEY";
+    // ==============================================================
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  </script>
 </head>
 <body class="bg-neutral-950 text-neutral-100">
 
@@ -154,7 +164,7 @@
   </section>
 
   <footer class="border-t border-neutral-800 py-10 text-center text-sm text-neutral-400">
-    MVP utan backend • <span class="underline">v0.5 (filter + sök + sort + dela-länk + trim/WAV + PWA)</span>
+    MVP utan backend • <span class="underline">v0.6 (Supabase + filter/sök/sort + dela-länk + trim/WAV + PWA)</span>
   </footer>
 
   <script>
@@ -253,13 +263,37 @@
       stopWave(); if (audioCtx) { audioCtx.close().catch(()=>{}); audioCtx = null; } if (streamRef) { streamRef.getTracks().forEach(t => t.stop()); streamRef = null; }
     });
 
+    // ====== Ladda upp till Supabase Storage ======
     btnUpload.addEventListener('click', async () => {
       try {
         if (!lastBlob) { uploadResult.textContent = 'Ingen inspelning att ladda upp.'; return; }
-        const ext = (lastBlob.type.includes('wav') ? 'wav' : 'webm'); const name = `audio_${Date.now()}.${ext}`;
-        const sizeKb = Math.round(lastBlob.size/1024); const url = URL.createObjectURL(lastBlob);
-        uploadResult.innerHTML = `Uppladdad: <a class="underline" href="${url}" target="_blank" rel="noopener">${name}</a>`; pushRecent(name, sizeKb, url);
-      } catch(e) { uploadResult.textContent = 'Fel vid uppladdning: ' + e.message; }
+
+        const ext = (lastBlob.type.includes('wav') ? 'wav' : 'webm');
+        const fileName = `audio_${Date.now()}.${ext}`;
+        const filePath = `uploads/${fileName}`;
+
+        // 1) Ladda upp
+        const { data, error } = await sb.storage.from('audio').upload(filePath, lastBlob, {
+          contentType: lastBlob.type, upsert: false
+        });
+        if (error) throw error;
+
+        // 2) Offentlig URL
+        const { data: pub } = sb.storage.from('audio').getPublicUrl(filePath);
+        const publicUrl = pub.publicUrl;
+
+        // 3) UI + historik
+        uploadResult.innerHTML = `Uppladdad: <a class="underline" href="${publicUrl}" target="_blank" rel="noopener">${fileName}</a>`;
+        pushRecent(fileName, Math.round(lastBlob.size/1024), publicUrl);
+
+        // 4) Spelare + nedladdning + Ny recension
+        player.src = publicUrl;
+        downloadLink.href = publicUrl;
+        downloadLink.download = fileName;
+        sessionStorage.setItem('last-blob', publicUrl);
+      } catch (e) {
+        uploadResult.textContent = 'Fel vid molnuppladdning: ' + e.message;
+      }
     });
 
     fileInput.addEventListener('change', async () => {
@@ -383,6 +417,7 @@
           await navigator.clipboard.writeText(share); alert('Kopierat till urklipp!');
         });
         card.querySelector('[data-action="share"]').addEventListener('click', async () => {
+          let audioRef = item.audioDataUrl || '';
           const payload = {
             v: 1,
             title: item.title || '',
@@ -391,7 +426,7 @@
             text: item.text || '',
             summary: item.summary || '',
             rating: item.rating || 0,
-            audioDataUrl: item.audioDataUrl || '' // kan ge lång URL för långa klipp
+            audioDataUrl: audioRef
           };
           const shareParam = toBase64Url(JSON.stringify(payload));
           const url = `${location.origin}${location.pathname}?share=${shareParam}`;
@@ -405,7 +440,7 @@
     function escapeHTML(s='') { return s.replace(/[&<>"]+/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
     function escapeAttr(s='') { return s.replace(/\"/g, '&quot;'); }
 
-    // Base64URL helpers (Unicode-säkra)
+    // Base64URL helpers
     function toBase64Url(str){
       const b64 = btoa(unescape(encodeURIComponent(str)));
       return b64.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
@@ -463,8 +498,7 @@
     function floatTo16BitPCM(float32){ const out = new Int16Array(float32.length); for (let i = 0; i < float32.length; i++){ let s = Math.max(-1, Math.min(1, float32[i])); out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF; } return out; }
     function encodeWavMono(float32, sampleRate){ const pcm16 = floatTo16BitPCM(float32); const byteRate = sampleRate * 2; const blockAlign = 2; const dataSize = pcm16.length * 2; const buffer = new ArrayBuffer(44 + dataSize); const view = new DataView(buffer);
       writeStr(view, 0, 'RIFF'); view.setUint32(4, 36 + dataSize, true); writeStr(view, 8, 'WAVE'); writeStr(view, 12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true); view.setUint32(24, sampleRate, true); view.setUint32(28, byteRate, true); view.setUint16(32, blockAlign, true); view.setUint16(34, 16, true);
-      writeStr(view, 36, 'data'); view.setUint32(40, dataSize, true); let offset = 44; for (let i = 0; i < pcm16.length; i++, offset += 2){ view.setInt16(offset, pcm16[i], true); } return new Blob([view], { type: 'audio/wav' });
-    }
+      writeStr(view, 36, 'data'); view.setUint32(40, dataSize, true); let offset = 44; for (let i = 0; i < pcm16.length; i++, offset += 2){ view.setInt16(offset, pcm16[i], true); } return new Blob([view], { type: 'audio/wav' }); }
     function writeStr(view, offset, str){ for (let i = 0; i < str.length; i++){ view.setUint8(offset + i, str.charCodeAt(i)); } }
     function mixDownToMono(audioBuffer){ const len = audioBuffer.length; const tmp = new Float32Array(len); const n = audioBuffer.numberOfChannels; for (let c = 0; c < n; c++){ const data = audioBuffer.getChannelData(c); for (let i = 0; i < len; i++) tmp[i] += data[i]; } for (let i = 0; i < len; i++) tmp[i] /= n; return tmp; }
     async function processAudioBlobTrimNormalize(srcBlob){ const buf = await decodeToBuffer(srcBlob); const ch0 = buf.numberOfChannels > 1 ? mixDownToMono(buf) : buf.getChannelData(0); const trimmed = trimSilence(ch0); const normalized = normalizePCM(trimmed); return encodeWavMono(normalized, buf.sampleRate); }
