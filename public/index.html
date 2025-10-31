@@ -23,12 +23,12 @@
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
     // ======= BYT TILL DINA VÄRDEN (Supabase Settings → API) =======
-    const SUPABASE_URL = "https://hwyzzzzxgaghkooeexz.supabase.co";
+   <script>
+  const SUPABASE_URL = "https://hwyzzzzxgaghkooeexz.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOi..."; // en rad
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
 
-    const SUPABASE_ANON_KEY = "DIN-ANON-PUBLIC-KEY";            // <-- BYT (rad 27)
-    // ==============================================================
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  </script>
 </head>
 <body class="bg-neutral-950 text-neutral-100">
 
