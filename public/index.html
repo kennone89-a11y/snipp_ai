@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Röstinspelning – Kenai</title>
+  <!-- RECORDER-OK -->
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
@@ -35,11 +36,9 @@
     <section class="card">
       <div class="row" style="margin-bottom:6px;">
         <button id="startBtn" class="btn btn-start" aria-label="Starta inspelning">
-          <!-- mic -->
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v4a3 3 0 0 0 3 3Z"/><path d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V21a1 1 0 1 0 2 0v-3.08A7 7 0 0 0 19 11Z"/></svg>
         </button>
         <button id="stopBtn" class="btn btn-stop" aria-label="Stoppa inspelning" disabled>
-          <!-- stop -->
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
         </button>
         <span id="timer">00:00</span>
@@ -53,7 +52,6 @@
   </div>
 
 <script>
-  // DOM
   const startBtn = document.getElementById('startBtn');
   const stopBtn  = document.getElementById('stopBtn');
   const timerEl  = document.getElementById('timer');
