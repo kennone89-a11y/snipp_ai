@@ -18,7 +18,7 @@
 </head>
 <body class="bg-neutral-950 text-neutral-100">
 
-  <!-- Minimal topptext (ingen logga, ingen hero) -->
+  <!-- Minimal topptext (ingen logga/hero) -->
   <section class="max-w-6xl mx-auto px-4 py-8">
     <h1 class="text-3xl md:text-4xl font-extrabold leading-tight">Röstrecensioner</h1>
     <p class="mt-2 text-neutral-300">Spela in din röst, lägg till taggar och spara. Perfekt för poddar, filmer och ljudböcker.</p>
@@ -30,19 +30,39 @@
     <div class="mt-4 grid md:grid-cols-3 gap-6">
       <div class="md:col-span-2 glass card p-6">
         <div class="flex items-center gap-3 flex-wrap">
-          <button id="btnStart" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-semibold disabled:opacity-50">Starta inspelning</button>
-          <button id="btnStop" class="px-4 py-2 rounded-lg bg-fuchsia-600 hover:bg-fuchsia-500 font-semibold disabled:opacity-50" disabled>Stoppa</button>
+          <!-- Start (mic-ikon) -->
+          <button id="btnStart" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-semibold disabled:opacity-50" aria-label="Starta">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="inline -mt-0.5 mr-1">
+              <path d="M12 14a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v4a3 3 0 0 0 3 3Z"/>
+              <path d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V21a1 1 0 1 0 2 0v-3.08A7 7 0 0 0 19 11Z"/>
+            </svg>
+            Spela in
+          </button>
+          <!-- Stop (kvadrat-ikon) -->
+          <button id="btnStop" class="px-4 py-2 rounded-lg bg-fuchsia-600 hover:bg-fuchsia-500 font-semibold disabled:opacity-50" aria-label="Stoppa" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="inline -mt-0.5 mr-1">
+              <rect x="6" y="6" width="12" height="12" rx="2"/>
+            </svg>
+            Stoppa
+          </button>
+
           <button id="btnUpload" class="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 font-semibold disabled:opacity-50">Ladda upp</button>
           <span id="recReady" class="text-xs px-2 py-1 rounded bg-emerald-700/30 border border-emerald-700 hidden">Inspelning klar ✓</span>
           <span id="timer" class="text-sm text-neutral-300">00:00</span>
         </div>
+
         <audio id="player" class="mt-4 w-full" controls></audio>
+
+        <!-- Live vågform -->
+        <canvas id="wave" class="mt-3 w-full h-28 rounded-lg bg-neutral-900 border border-neutral-800"></canvas>
+
         <div class="mt-3 flex gap-3">
           <a id="downloadLink" class="px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm hidden">Ladda ned</a>
           <button id="btnUseInNew" class="px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm hidden">Använd i ny recension</button>
         </div>
         <p id="recStatus" class="mt-3 text-sm text-neutral-400"></p>
       </div>
+
       <div class="glass card p-6">
         <h3 class="font-semibold">Tips</h3>
         <ul class="mt-2 text-sm text-neutral-300 space-y-1 list-disc list-inside">
@@ -120,7 +140,7 @@
   </section>
 
   <footer class="border-t border-neutral-800 py-10 text-center text-sm text-neutral-400">
-    MVP utan backend • <span class="underline">v0.1</span>
+    MVP utan backend • <span class="underline">v0.2</span>
   </footer>
 
   <script>
@@ -144,7 +164,7 @@
     };
     for (let i = 1; i <= 5; i++) starsEl.appendChild(makeStar(i));
 
-    // === Inspelare ===
+    // === Inspelare + Uppladdning ===
     const btnStart = document.getElementById('btnStart');
     const btnStop = document.getElementById('btnStop');
     const btnUpload = document.getElementById('btnUpload');
@@ -172,6 +192,37 @@
     }, 250); };
     const stopTimer = () => { clearInterval(timerInt); timerInt = null; };
 
+    // === VåGFORM (canvas + WebAudio) ===
+    const waveCvs = document.getElementById('wave');
+    const waveCtx = waveCvs.getContext('2d');
+    let audioCtx, analyser, source, rafId = null, streamRef = null;
+
+    function fitCanvas(){ waveCvs.width = waveCvs.clientWidth; waveCvs.height = waveCvs.clientHeight; }
+    addEventListener('resize', fitCanvas); fitCanvas();
+
+    function drawWave(){
+      const data = new Uint8Array(analyser.fftSize);
+      const draw = () => {
+        analyser.getByteTimeDomainData(data);
+        waveCtx.clearRect(0,0,waveCvs.width,waveCvs.height);
+        waveCtx.lineWidth = 2; waveCtx.strokeStyle = '#7aa2ff';
+        waveCtx.beginPath();
+        const slice = waveCvs.width / data.length;
+        for(let i=0,x=0;i<data.length;i++,x+=slice){
+          const v = data[i] / 128, y = (v * waveCvs.height)/2;
+          i===0 ? waveCtx.moveTo(x,y) : waveCtx.lineTo(x,y);
+        }
+        waveCtx.stroke();
+        rafId = requestAnimationFrame(draw);
+      };
+      draw();
+    }
+    function stopWave(){
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+      waveCtx.clearRect(0,0,waveCvs.width,waveCvs.height);
+    }
+
     function pushRecent(name, sizeKb, url) {
       const li = document.createElement('li');
       li.innerHTML = `<a class="underline hover:text-white" href="${url}" target="_blank" rel="noopener">${name}</a> <span class="text-neutral-500">(${sizeKb} kB)</span>`;
@@ -198,6 +249,15 @@
           recStatus.textContent = `Inspelning klar (${Math.round(blob.size/1024)} kB)`;
         };
         mediaRecorder.start();
+
+        // Starta vågform
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        source = audioCtx.createMediaStreamSource(stream);
+        analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048;
+        source.connect(analyser);
+        drawWave();
+        streamRef = stream;
+
         btnStart.disabled = true; btnStop.disabled = false; recStatus.textContent = 'Spelar in…';
         startTimer();
       } catch (err) {
@@ -211,6 +271,10 @@
         btnStart.disabled = false; btnStop.disabled = true; recStatus.textContent = 'Bearbetar ljud…';
         stopTimer(); timerEl.textContent = '00:00';
       }
+      // Stäng vågform/AudioContext/Tracks
+      stopWave();
+      if (audioCtx) { audioCtx.close().catch(()=>{}); audioCtx = null; }
+      if (streamRef) { streamRef.getTracks().forEach(t => t.stop()); streamRef = null; }
     });
 
     btnUpload.addEventListener('click', async () => {
@@ -250,7 +314,7 @@
       });
     }
 
-    // === Reviews storage (LocalStorage) ===
+    // === Reviews (LocalStorage) ===
     const reviewForm = document.getElementById('reviewForm');
     const titleInput = document.getElementById('titleInput');
     const linkInput = document.getElementById('linkInput');
@@ -262,10 +326,7 @@
     const btnAutoSummary = document.getElementById('btnAutoSummary');
 
     const LS_KEY = 'reviews-v1';
-
-    const loadReviews = () => {
-      try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; }
-    };
+    const loadReviews = () => { try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; } };
     const saveReviews = (arr) => localStorage.setItem(LS_KEY, JSON.stringify(arr));
 
     function renderList() {
@@ -353,24 +414,6 @@
 
     // Init
     renderList();
-  </script>
-
-  <!-- Safety: ta bort ev. gammal hero/branding om den skulle smyga sig in via cache -->
-  <script>
-    (function () {
-      const byText = (sel, re) => [...document.querySelectorAll(sel)]
-        .filter(el => re.test((el.textContent || '').trim()));
-      // Hero med "KENAI LEGENDS" eller "BORN TO PADDLE"
-      const heroH = byText('h1,h2,h3,p,span,div', /KENAI\s+LEGENDS|BORN\s+TO\s+PADDLE/i);
-      for (const el of heroH) {
-        const sec = el.closest('section') || el.closest('div') || el.parentElement;
-        if (sec) sec.remove();
-      }
-      // Header/nav som eventuellt hade logga
-      document.querySelectorAll('header,nav').forEach(n => n.remove());
-      // Titel
-      document.title = 'Röstrecensioner (MVP)';
-    })();
   </script>
 </body>
 </html>
