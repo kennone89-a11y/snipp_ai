@@ -1,3 +1,5 @@
+// Gör Supabase-klienten globalt tillgänglig i denna fil
+const sb = window.sb;
 (function () {
   // --- helpers
   const $ = (id) => document.getElementById(id);
