@@ -6,24 +6,23 @@
   <title>Röstinspelning – Kenai</title>
   <style>
     :root { color-scheme: dark; }
-    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif; background:#0b0d12; color:#e6e8ef; }
-    .wrap { max-width: 860px; margin: 48px auto; padding: 0 16px; }
-    .card { background: #0f1420; border:1px solid #1f2633; border-radius:16px; padding:20px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
-    h1 { font-size: 32px; margin:0 0 8px; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif; background:#0b0d12; color:#e6e8ef; }
+    .wrap { max-width: 860px; margin: 56px auto; padding: 0 16px; }
+    .card { background:#0f1420; border:1px solid #1f2633; border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.25); }
+    h1 { font-size:32px; margin:0 0 10px; }
     p.muted { color:#9aa3b2; margin:0 0 18px; }
     .row { display:flex; gap:12px; align-items:center; }
-    .btn { width:52px; height:52px; border:0; border-radius:999px; display:grid; place-items:center; cursor:pointer; }
+    .btn { width:56px; height:56px; border:0; border-radius:999px; display:grid; place-items:center; cursor:pointer; }
     .btn:disabled { opacity:.5; cursor:not-allowed; }
-    .btn-start { background:#5b7cff; }
-    .btn-start:hover { filter:brightness(1.08); }
-    .btn-stop { background:#f05fa6; }
-    .btn-stop:hover { filter:brightness(1.08); }
+    .btn-start{ background:#5b7cff; } .btn-start:hover{ filter:brightness(1.08); }
+    .btn-stop { background:#f05fa6; } .btn-stop:hover{ filter:brightness(1.08); }
     #timer { font-size:14px; color:#9aa3b2; }
-    #wave { width:100%; height:96px; background:#0a0f19; border:1px solid #1c2432; border-radius:12px; }
-    .actions { display:flex; gap:10px; margin-top:10px; }
-    .pill { font-size:13px; padding:8px 12px; border-radius:10px; background:#121a27; border:1px solid #1f2633; color:#c8cfdb; text-decoration:none; }
+    #wave { width:100%; height:120px; background:#0a0f19; border:1px solid #1c2432; border-radius:12px; margin-top:12px; }
     audio { width:100%; margin-top:12px; }
-    .status { color:#9aa3b2; font-size:13px; margin-top:8px; }
+    .actions { display:flex; gap:10px; margin-top:10px; }
+    .pill { font-size:13px; padding:8px 12px; border-radius:10px; background:#121a27; border:1px solid #1f2633; color:#c8cfdb; text-decoration:none; display:none; }
+    .status { color:#9aa3b2; font-size:13px; margin-top:8px; min-height:18px; }
   </style>
 </head>
 <body>
@@ -34,35 +33,27 @@
     </header>
 
     <section class="card">
-      <div class="row" style="margin-bottom:12px;">
+      <div class="row" style="margin-bottom:6px;">
         <button id="startBtn" class="btn btn-start" aria-label="Starta inspelning">
-          <!-- mic icon -->
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M12 14a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v4a3 3 0 0 0 3 3Z"/>
-            <path d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V21a1 1 0 1 0 2 0v-3.08A7 7 0 0 0 19 11Z"/>
-          </svg>
+          <!-- mic -->
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v4a3 3 0 0 0 3 3Z"/><path d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V21a1 1 0 1 0 2 0v-3.08A7 7 0 0 0 19 11Z"/></svg>
         </button>
         <button id="stopBtn" class="btn btn-stop" aria-label="Stoppa inspelning" disabled>
-          <!-- stop icon -->
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <rect x="6" y="6" width="12" height="12" rx="2"/>
-          </svg>
+          <!-- stop -->
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
         </button>
         <span id="timer">00:00</span>
       </div>
 
       <canvas id="wave"></canvas>
       <audio id="player" controls></audio>
-
-      <div class="actions">
-        <a id="download" class="pill" style="display:none">Ladda ned</a>
-      </div>
+      <div class="actions"><a id="download" class="pill">Ladda ned</a></div>
       <div id="status" class="status"></div>
     </section>
   </div>
 
 <script>
-  // Elements
+  // DOM
   const startBtn = document.getElementById('startBtn');
   const stopBtn  = document.getElementById('stopBtn');
   const timerEl  = document.getElementById('timer');
@@ -72,118 +63,70 @@
   const download = document.getElementById('download');
   const statusEl = document.getElementById('status');
 
-  // Resize canvas to element size
-  function fitCanvas() {
-    waveCvs.width = waveCvs.clientWidth;
-    waveCvs.height = waveCvs.clientHeight;
-  }
-  addEventListener('resize', fitCanvas);
-  fitCanvas();
+  function fitCanvas(){ waveCvs.width = waveCvs.clientWidth; waveCvs.height = waveCvs.clientHeight; }
+  addEventListener('resize', fitCanvas); fitCanvas();
 
-  // State
   let mediaRecorder, chunks = [];
-  let audioCtx, analyser, source;
-  let rafId = null;
-  let streamRef = null;
+  let audioCtx, analyser, source, rafId = null, streamRef = null;
   let startTs = 0, timerInt = null;
 
-  function formatTime(s) {
-    const m = Math.floor(s/60).toString().padStart(2,'0');
-    const r = Math.floor(s%60).toString().padStart(2,'0');
-    return `${m}:${r}`;
-  }
-  function startTimer() {
-    startTs = Date.now();
-    timerInt = setInterval(() => {
-      const secs = (Date.now() - startTs)/1000;
-      timerEl.textContent = formatTime(secs);
-    }, 250);
-  }
-  function stopTimer() {
-    clearInterval(timerInt);
-    timerInt = null;
-    timerEl.textContent = "00:00";
-  }
+  const formatTime = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+  const startTimer = () => { startTs = Date.now(); timerInt = setInterval(()=>{ timerEl.textContent = formatTime((Date.now()-startTs)/1000); },250); };
+  const stopTimer  = () => { clearInterval(timerInt); timerInt=null; timerEl.textContent='00:00'; };
 
-  function drawWave() {
+  function drawWave(){
     const data = new Uint8Array(analyser.fftSize);
     const draw = () => {
       analyser.getByteTimeDomainData(data);
       waveCtx.clearRect(0,0,waveCvs.width,waveCvs.height);
-      waveCtx.lineWidth = 2;
-      waveCtx.strokeStyle = "#7aa2ff";
+      waveCtx.lineWidth = 2; waveCtx.strokeStyle = '#7aa2ff';
       waveCtx.beginPath();
       const slice = waveCvs.width / data.length;
-      let x = 0;
-      for (let i=0;i<data.length;i++) {
-        const v = data[i] / 128;
-        const y = (v * waveCvs.height) / 2;
-        i === 0 ? waveCtx.moveTo(x,y) : waveCtx.lineTo(x,y);
-        x += slice;
+      for(let i=0,x=0;i<data.length;i++,x+=slice){
+        const v = data[i] / 128, y = (v * waveCvs.height)/2;
+        i===0 ? waveCtx.moveTo(x,y) : waveCtx.lineTo(x,y);
       }
       waveCtx.stroke();
       rafId = requestAnimationFrame(draw);
     };
     draw();
   }
-  function stopWave() {
-    if (rafId) cancelAnimationFrame(rafId);
-    rafId = null;
-    waveCtx.clearRect(0,0,waveCvs.width,waveCvs.height);
-  }
+  function stopWave(){ if(rafId) cancelAnimationFrame(rafId); rafId=null; waveCtx.clearRect(0,0,waveCvs.width,waveCvs.height); }
 
   startBtn.onclick = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
       streamRef = stream;
-
-      // Recorder
       chunks = [];
       mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+      mediaRecorder.ondataavailable = e => { if(e.data.size) chunks.push(e.data); };
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const blob = new Blob(chunks, { type:'audio/webm' });
         const url  = URL.createObjectURL(blob);
         player.src = url;
-        download.href = url;
-        download.download = `kenai-${Date.now()}.webm`;
+        download.href = url; download.download = `kenai-${Date.now()}.webm`;
         download.style.display = 'inline-block';
         statusEl.textContent = `Inspelning klar (${Math.round(blob.size/1024)} kB)`;
       };
       mediaRecorder.start();
 
-      // Waveform
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       source = audioCtx.createMediaStreamSource(stream);
-      analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 2048;
-      source.connect(analyser);
+      analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048; source.connect(analyser);
       drawWave();
 
-      // UI
-      startBtn.disabled = true;
-      stopBtn.disabled = false;
-      statusEl.textContent = "Spelar in…";
-      startTimer();
-    } catch (e) {
-      statusEl.textContent = "Kunde inte starta inspelning: " + e.message;
-    }
+      startBtn.disabled = true; stopBtn.disabled = false; statusEl.textContent = 'Spelar in…'; startTimer();
+    } catch (e) { statusEl.textContent = 'Kunde inte starta inspelning: ' + e.message; }
   };
 
   stopBtn.onclick = () => {
     try {
-      if (mediaRecorder && mediaRecorder.state !== "inactive") {
-        mediaRecorder.stop();
-      }
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
       stopWave();
-      if (audioCtx) { audioCtx.close().catch(()=>{}); audioCtx = null; }
-      if (streamRef) { streamRef.getTracks().forEach(t => t.stop()); streamRef = null; }
-      startBtn.disabled = false;
-      stopBtn.disabled = true;
-      stopTimer();
-    } catch (e) {
-      statusEl.textContent = "Fel vid stopp: " + e.message;
-    }
+      if (audioCtx) { audioCtx.close().catch(()=>{}); audioCtx=null; }
+      if (streamRef) { streamRef.getTracks().forEach(t=>t.stop()); streamRef=null; }
+      startBtn.disabled = false; stopBtn.disabled = true; stopTimer();
+    } catch (e) { statusEl.textContent = 'Fel vid stopp: ' + e.message; }
   };
 </script>
 </body>
