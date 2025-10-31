@@ -8,15 +8,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- Tailwind via CDN (OK för MVP) -->
+  <!-- Tailwind via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root { color-scheme: dark light; }
     html { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
-    body { background: #0b0d12; color: #e6e8ef; }
     .glass { backdrop-filter: blur(8px); background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04)); border: 1px solid rgba(255,255,255,0.12); }
     .card { border-radius: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.18); }
-    a, button { transition: .15s ease; }
   </style>
 </head>
 <body class="bg-neutral-950 text-neutral-100">
@@ -36,22 +34,43 @@
     </div>
   </header>
 
-  <!-- Enkel intro -->
-  <section class="max-w-6xl mx-auto px-4 py-8">
-    <h1 class="text-3xl md:text-4xl font-extrabold leading-tight">Röstrecensioner på sekunder</h1>
-    <p class="mt-2 text-neutral-300">Spela in din röst, lägg till taggar och spara. Perfekt för poddar, filmer och ljudböcker.</p>
+  <!-- Hero -->
+  <section class="relative overflow-hidden">
+    <div class="absolute inset-0 opacity-30" aria-hidden="true">
+      <div class="absolute -top-32 -right-24 w-96 h-96 bg-fuchsia-600 blur-3xl rounded-full"></div>
+      <div class="absolute -bottom-40 -left-20 w-[36rem] h-[36rem] bg-indigo-600 blur-3xl rounded-full"></div>
+    </div>
+    <div class="max-w-6xl mx-auto px-4 py-16 md:py-24 relative z-10">
+      <div class="grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          <h1 class="text-4xl md:text-5xl font-extrabold leading-tight">Röstrecensioner på sekunder.</h1>
+          <p class="mt-4 text-neutral-300 text-lg">Spela in din röst, lägg till taggar och få en snabb, delbar recension. Perfekt för poddar, filmer och ljudböcker.</p>
+          <div class="mt-6 flex gap-3">
+            <a href="#recorder" class="px-5 py-3 rounded-xl bg-white text-neutral-900 font-semibold">Starta inspelning</a>
+            <a href="#list" class="px-5 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700">Visa mina</a>
+          </div>
+        </div>
+        <div class="glass card p-6">
+          <div class="text-sm text-neutral-300">Snabb demo</div>
+          <ul class="mt-2 space-y-2 text-neutral-200 list-disc list-inside">
+            <li>1. Tryck <em>Spela in</em>.</li>
+            <li>2. Stoppa & lyssna.</li>
+            <li>3. Spara och dela.</li>
+          </ul>
+          <div class="mt-4 text-xs text-neutral-400">Ingen server krävs. Allt körs i din webbläsare. (API-hook för AI kan läggas till senare.)</div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- Recorder -->
-  <section id="recorder" class="max-w-6xl mx-auto px-4 pb-12">
-    <h2 class="text-2xl font-bold">🎙️ Spela in & ladda upp</h2>
+  <section id="recorder" class="max-w-6xl mx-auto px-4 py-12">
+    <h2 class="text-2xl font-bold">🎙️ Inspelare</h2>
     <div class="mt-4 grid md:grid-cols-3 gap-6">
       <div class="md:col-span-2 glass card p-6">
-        <div class="flex items-center gap-3 flex-wrap">
-          <button id="btnStart" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-semibold disabled:opacity-50">Starta inspelning</button>
+        <div class="flex items-center gap-3">
+          <button id="btnStart" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-semibold disabled:opacity-50">Spela in</button>
           <button id="btnStop" class="px-4 py-2 rounded-lg bg-fuchsia-600 hover:bg-fuchsia-500 font-semibold disabled:opacity-50" disabled>Stoppa</button>
-          <button id="btnUpload" class="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 font-semibold disabled:opacity-50">Ladda upp</button>
-          <span id="recReady" class="text-xs px-2 py-1 rounded bg-emerald-700/30 border border-emerald-700 hidden">Inspelning klar ✓</span>
           <span id="timer" class="text-sm text-neutral-300">00:00</span>
         </div>
         <audio id="player" class="mt-4 w-full" controls></audio>
@@ -64,30 +83,11 @@
       <div class="glass card p-6">
         <h3 class="font-semibold">Tips</h3>
         <ul class="mt-2 text-sm text-neutral-300 space-y-1 list-disc list-inside">
-          <li>Håll mikrofonen nära.</li>
+          <li>Håll telefonen nära munnen.</li>
           <li>Stäng av notiser under inspelning.</li>
           <li>Max 5 min rekommenderas.</li>
         </ul>
       </div>
-    </div>
-
-    <!-- Upload file (valfritt) -->
-    <div class="mt-4 glass card p-6">
-      <h3 class="font-semibold">📁 Ladda upp fil</h3>
-      <input id="fileInput" type="file" accept="audio/*" class="mt-2 block w-full text-sm" />
-    </div>
-
-    <!-- Resultat -->
-    <div class="mt-4 glass card p-6">
-      <h3 class="font-semibold">🧪 Resultat</h3>
-      <p id="uploadResult" class="text-sm text-neutral-300 mt-2">Ingen uppladdning gjord än.</p>
-    </div>
-
-    <!-- Senaste uppladdningar (dummy-list lokalt) -->
-    <div class="mt-4 glass card p-6">
-      <h3 class="font-semibold">🗂️ Senaste uppladdningar</h3>
-      <ul id="recentUploads" class="list-disc list-inside text-sm text-neutral-300 mt-2"></ul>
-      <p class="text-xs text-neutral-500 mt-1">Totalt: <span id="recentCount">0</span></p>
     </div>
   </section>
 
@@ -143,7 +143,8 @@
 
   <script>
     // === Tema ===
-    document.getElementById('themeToggle').addEventListener('click', () => {
+    const themeToggle = document.getElementById('themeToggle');
+    themeToggle.addEventListener('click', () => {
       document.documentElement.classList.toggle('invert');
     });
 
@@ -170,38 +171,25 @@
     // === Inspelare ===
     const btnStart = document.getElementById('btnStart');
     const btnStop = document.getElementById('btnStop');
-    const btnUpload = document.getElementById('btnUpload');
-    const recReady = document.getElementById('recReady');
     const player = document.getElementById('player');
     const timerEl = document.getElementById('timer');
     const downloadLink = document.getElementById('downloadLink');
     const btnUseInNew = document.getElementById('btnUseInNew');
     const recStatus = document.getElementById('recStatus');
-    const fileInput = document.getElementById('fileInput');
-    const uploadResult = document.getElementById('uploadResult');
-    const recentUploads = document.getElementById('recentUploads');
-    const recentCount = document.getElementById('recentCount');
 
     let mediaRecorder, chunks = [], recStartTime = 0, lastBlob = null;
-    let timerInt = null;
 
     const formatTime = (s) => {
       const m = Math.floor(s / 60).toString().padStart(2,'0');
       const r = Math.floor(s % 60).toString().padStart(2,'0');
       return `${m}:${r}`;
     };
+
+    let timerInt = null;
     const startTimer = () => { recStartTime = Date.now(); timerInt = setInterval(() => {
       const secs = (Date.now() - recStartTime) / 1000; timerEl.textContent = formatTime(secs);
     }, 250); };
     const stopTimer = () => { clearInterval(timerInt); timerInt = null; };
-
-    // Local recent uploads demo
-    function pushRecent(name, sizeKb, url) {
-      const li = document.createElement('li');
-      li.innerHTML = `<a class="underline hover:text-white" href="${url}" target="_blank" rel="noopener">${name}</a> <span class="text-neutral-500">(${sizeKb} kB)</span>`;
-      recentUploads.prepend(li);
-      recentCount.textContent = parseInt(recentCount.textContent || '0',10) + 1;
-    }
 
     btnStart.addEventListener('click', async () => {
       try {
@@ -215,10 +203,9 @@
           const url = URL.createObjectURL(blob);
           player.src = url;
           downloadLink.href = url;
-          downloadLink.download = `audio_${Date.now()}.webm`;
+          downloadLink.download = `kenai-rec-${Date.now()}.webm`;
           downloadLink.classList.remove('hidden');
           btnUseInNew.classList.remove('hidden');
-          recReady.classList.remove('hidden');
           recStatus.textContent = `Inspelning klar (${Math.round(blob.size/1024)} kB)`;
         };
         mediaRecorder.start();
@@ -237,36 +224,10 @@
       }
     });
 
-    // Dummy upload-knapp – simulerar “uppladdad” och fyller lista lokalt
-    btnUpload.addEventListener('click', async () => {
-      try {
-        if (!lastBlob) { uploadResult.textContent = 'Ingen inspelning att ladda upp.'; return; }
-        const name = `audio_${Date.now()}.webm`;
-        const sizeKb = Math.round(lastBlob.size/1024);
-        const url = URL.createObjectURL(lastBlob);
-        uploadResult.innerHTML = `Uppladdad: <a class="underline" href="${url}" target="_blank" rel="noopener">${name}</a>`;
-        pushRecent(name, sizeKb, url);
-      } catch(e) {
-        uploadResult.textContent = 'Fel vid uppladdning: ' + e.message;
-      }
-    });
-
-    // Manuell filuppladdning (visas bara lokalt i listan)
-    fileInput.addEventListener('change', async () => {
-      const f = fileInput.files[0];
-      if (!f) return;
-      const url = URL.createObjectURL(f);
-      uploadResult.innerHTML = `Uppladdad: <a class="underline" href="${url}" target="_blank" rel="noopener">${f.name}</a>`;
-      pushRecent(f.name, Math.round(f.size/1024), url);
-    });
-
-    // Använd i ny recension (sparar i sessionStorage)
     btnUseInNew.addEventListener('click', async () => {
       if (!lastBlob) return;
-      const b64 = await blobToBase64(lastBlob);
-      sessionStorage.setItem('kenai-last-blob', b64);
+      sessionStorage.setItem('kenai-last-blob', await blobToBase64(lastBlob));
       location.hash = '#new';
-      scrollTo({ top: document.querySelector('#new').offsetTop - 60, behavior: 'smooth' });
     });
 
     async function blobToBase64(blob) {
