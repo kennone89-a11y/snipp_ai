@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="sv">
-<head>
+<head><script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>snipp_ai — Live</title>
+
+  <!-- ===== Styles (Design v1) ===== -->
   <style>
     :root{
       --bg:#0b0f14; --bg2:#0e1320; --panel:rgba(15,23,42,.6);
@@ -33,8 +35,11 @@
     .dot{width:8px;height:8px;border-radius:999px;background:#64748b} .dot.live{background:var(--danger)}
     .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
   </style>
+
+  <!-- ===== Supabase JS klient via CDN (v2) ===== -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
-<body data-theme="dark">
+<body>
   <div class="wrap">
     <div class="card">
       <!-- Header -->
@@ -71,7 +76,7 @@
           </div>
         </div>
 
-        <!-- Right: Existerande klipp -->
+        <!-- Right: Info -->
         <div>
           <h3>Uppladdade klipp</h3>
           <div class="muted">Nya klipp hamnar här med publik URL.</div>
@@ -94,28 +99,33 @@
     </div>
   </div>
 
+  <!-- ===== App Script ===== -->
   <script>
-    // ======= KONFIG (FYLL I) =======
-    const SUPABASE_URL  = "https://hywwzzzxgagqhlxooekz.supabase.co 
-    const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA            // <-- byt
+    // ======= KONFIG: BYT DESSA TVÅ (utan avslutande / på URL) =======
+    const SUPABASE_URL  = "https://hywwzzzxgagqhlxooekz.supabase.co;   // <-- byt
+    const SUPABASE_ANON = "sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z";       // <-- byt (Publishable key)
     const BUCKET = "audio";
+
+    // Initiera Supabase-klienten (v2)
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
     // ======= STATE =======
     let mediaRecorder, chunks = [], startedAt = 0, timerInt = null, waveInt = null;
+    const uploads = []; // runtime-lista
 
     // ======= HELPERS =======
     const $ = s => document.querySelector(s);
     const fmt = s => String(s).padStart(2,"0");
     function setTimer(sec){ $("#timer").textContent = `${fmt(Math.floor(sec/60))}:${fmt(sec%60)}` }
-    async function blobToBase64(blob){
-      const buf = await blob.arrayBuffer(); let binary = "";
-      const bytes = new Uint8Array(buf); for(let i=0;i<bytes.byteLength;i++) binary += String.fromCharCode(bytes[i]);
-      return btoa(binary);
-    }
-    function base64ToBlob(b64, mime){ const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0)); return new Blob([bytes], { type: mime || "audio/webm" }); }
     function startWave(){
       const el = $("#wave"); el.innerHTML = "";
-      waveInt = setInterval(()=>{ const bar=document.createElement("div"); bar.className="bar"; bar.style.height=(Math.floor(Math.random()*34)+6)+"px"; el.appendChild(bar); if(el.children.length>160) el.removeChild(el.firstChild); }, 60);
+      waveInt = setInterval(()=>{
+        const bar=document.createElement("div");
+        bar.className="bar";
+        bar.style.height=(Math.floor(Math.random()*34)+6)+"px";
+        el.appendChild(bar);
+        if(el.children.length>160) el.removeChild(el.firstChild);
+      }, 60);
     }
     function stopWave(){ clearInterval(waveInt); waveInt=null; $("#wave").innerHTML=""; }
 
@@ -131,16 +141,16 @@
         const audio = document.createElement("audio"); audio.controls = true; audio.src = c.publicUrl || c.objectUrl;
         left.appendChild(h4); left.appendChild(audio);
 
-        const linkBtn = document.createElement("a"); linkBtn.href = c.publicUrl; linkBtn.target="_blank"; linkBtn.rel="noopener";
-        const btn = document.createElement("button"); btn.textContent = "Öppna URL"; linkBtn.appendChild(btn);
-
-        right.appendChild(linkBtn);
+        if (c.publicUrl){
+          const linkBtn = document.createElement("a"); linkBtn.href = c.publicUrl; linkBtn.target="_blank"; linkBtn.rel="noopener";
+          const btn = document.createElement("button"); btn.textContent = "Öppna URL"; linkBtn.appendChild(btn);
+          right.appendChild(linkBtn);
+        }
         div.appendChild(left); div.appendChild(right);
         wrap.appendChild(div);
       });
     }
 
-    const uploads = []; // enkel runtime-lista på sidan
     $("#year").textContent = new Date().getFullYear();
 
     // ======= RECORD =======
@@ -171,24 +181,16 @@
       }
     };
 
-    // ======= UPLOAD (Supabase Storage REST) =======
+    // ======= UPLOAD via Supabase-klienten =======
     async function uploadToSupabase(path, blob){
-      const url = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(BUCKET)}/${path}`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${SUPABASE_ANON}`,
-          "x-upsert": "true",
-          "Content-Type": "audio/webm"
-        },
-        body: blob
-      });
-      if(!res.ok){
-        const t = await res.text();
-        throw new Error(`Storage ${res.status}: ${t}`);
-      }
-      // Publik URL om bucket är public:
-      return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
+      const { data, error } = await sb
+        .storage
+        .from(BUCKET)
+        .upload(path, blob, { upsert: true, contentType: "audio/webm" });
+      if (error) throw error;
+
+      const { data: pub } = sb.storage.from(BUCKET).getPublicUrl(path);
+      return pub.publicUrl; // klar publik URL
     }
 
     $("#saveBtn").onclick = async () => {
@@ -209,10 +211,10 @@
         renderList(uploads);
         $("#title").value = "";
         $("#saveBtn").disabled = true;
-        alert("Uppladdat ✅\nURL kopierad till klippet i listan.");
+        alert("Uppladdat ✅");
       }catch(e){
         console.error(e);
-        alert("Uppladdning misslyckades: " + e.message + "\n\nKolla: URL, ANON key, CORS, och Storage-policy.");
+        alert("Uppladdning misslyckades: " + e.message + "\n\nKolla: Publishable key, Project URL, CORS, bucket/policy.");
       }
     };
 
