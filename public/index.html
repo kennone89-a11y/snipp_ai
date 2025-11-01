@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>snipp_ai — Live</title>
 
-  <!-- Supabase JS v2 måste laddas FÖRE vårt script -->
+  <!-- Supabase JS v2 (måste laddas före vårt script) -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
   <style>
@@ -28,7 +28,7 @@
   <div class="wrap">
     <div class="card">
       <h1>snipp_ai</h1>
-      <div class="muted">Live-uppladdning till Supabase Storage (bucket <code>audio</code>).</div>
+      <div class="muted">Live-uppladdning till Supabase Storage. Bucket: <code>audio</code>.</div>
 
       <div class="sep"></div>
 
@@ -48,50 +48,35 @@
       <div class="sep"></div>
 
       <h3>Sanity test</h3>
-      <div class="muted">Om denna laddar utan fel och knappen nedan funkar är URL/nyckel korrekta.</div>
+      <div class="muted">Om detta laddar utan fel och knappen funkar, är URL/nyckel rätt.</div>
       <div class="row" style="margin-top:8px">
         <span class="pill">URL: <span id="u">–</span></span>
         <span class="pill">Key prefix: <span id="k">–</span></span>
-        <button id="ping">Lista 1 fil från bucket "audio"</button>
+        <button id="ping">Lista 1 fil från "audio"</button>
       </div>
       <pre id="out" style="margin-top:10px;white-space:pre-wrap;background:#0b1220;border:1px solid var(--line);border-radius:12px;padding:12px;min-height:54px"></pre>
     </div>
   </div>
 
-  <!-- ========= APP SCRIPT (ändra enbart TVÅ rader nedan) ========= -->
   <script>
   (function(){
-    // ======= FYLL I DINA TVÅ VÄRDEN EXAKT (ingen slash på slutet, inga radbrytningar) =======
-    const SUPABASE_URL  = "https://hywwzzzxgagqhlxooekz.supabase.co        // <-- BYT
-    const SUPABASE_ANON = "sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z // <-- BYT
-    // ==========================================================================================
+    // ====== BYT ENDAST DESSA TVÅ RADER (ingen slash på slutet, inga radbrytningar) ======
+    const SUPABASE_URL  = "https://hywwzzzxgagqhlxooekz.supabase.co      // <-- BYT
+    const SUPABASE_ANON = "sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z  // <-- BYT
+    // ===============================================================================
     const BUCKET = "audio";
 
-    // Visa på sidan att värdena är laddade
+    // Visa värden (sanity)
     const u = document.getElementById("u");
     const k = document.getElementById("k");
-    if (u) u.textContent =https://hywwzzzxgagqhlxooekz.supabase.co;
-    if (k) k.textContent = sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z
-    // Initiera Supabase (måste fungera – annars har du fel citattecken/tecken i raderna ovan)
+    if (u) u.textContent = SUPABASE_URL;
+    if (k) k.textContent = SUPABASE_ANON.startsWith("sb") ? "ok" : "fel";
+
+    // Init Supabase
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-    // Exponera i window för Console-test
-    window.sb = sb;
+    window.sb = sb; // så vi kan testa i Console
 
-    // ======= Sanity-knapp =======
-    const pingBtn = document.getElementById("ping");
-    const out = document.getElementById("out");
-    if (pingBtn && out) {
-      pingBtn.onclick = async () => {
-        try {
-          const res = await sb.storage.from(BUCKET).list({ limit: 1 });
-          out.textContent = JSON.stringify(res, null, 2);
-        } catch (e) {
-          out.textContent = "Error: " + e.message;
-        }
-      };
-    }
-
-    // ======= Inspelning & uppladdning =======
+    // ======= UI/helpers =======
     let mediaRecorder, chunks = [], startedAt = 0, timerInt = null, waveInt = null;
     const uploads = [];
     const $ = s => document.querySelector(s);
@@ -124,6 +109,7 @@
       });
     }
 
+    // ======= Recording =======
     $("#recBtn").onclick = async () => {
       if(mediaRecorder && mediaRecorder.state==="recording"){
         mediaRecorder.stop();
@@ -172,6 +158,20 @@
         alert("Uppladdat ✅");
       }catch(e){ console.error(e); alert("Uppladdning misslyckades: "+e.message); }
     };
+
+    // ======= Sanity-knapp =======
+    const pingBtn = document.getElementById("ping");
+    const out = document.getElementById("out");
+    if (pingBtn && out) {
+      pingBtn.onclick = async () => {
+        try {
+          const res = await sb.storage.from(BUCKET).list({ limit: 1 });
+          out.textContent = JSON.stringify(res, null, 2);
+        } catch (e) {
+          out.textContent = "Error: " + e.message;
+        }
+      };
+    }
 
     // init
     renderList(uploads);
