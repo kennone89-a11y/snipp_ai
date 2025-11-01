@@ -4,33 +4,23 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>snipp_ai — Live</title>
-
-  <!-- Supabase v2 måste ligga före vårt script -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-
   <style>
-    :root{
-      --bg:#0b0f14;--bg2:#0e1320;--panel:rgba(15,23,42,.6);
-      --text:#e5e7eb;--muted:#94a3b8;--line:#1f2937;--accent:#38bdf8;
-      --ok:#22c55e;--danger:#ef4444;--radius:18px;--shadow:0 10px 30px rgba(0,0,0,.25)
-    }
-    *{box-sizing:border-box}
-    body{margin:0;background:linear-gradient(120deg,var(--bg),var(--bg2));color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
+    :root{--bg:#0b0f14;--bg2:#0e1320;--panel:rgba(15,23,42,.6);--text:#e5e7eb;--muted:#94a3b8;--line:#1f2937;--accent:#38bdf8;--ok:#22c55e;--radius:18px;--shadow:0 10px 30px rgba(0,0,0,.25)}
+    *{box-sizing:border-box} body{margin:0;background:linear-gradient(120deg,var(--bg),var(--bg2));color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
     .wrap{max-width:1040px;margin:28px auto;padding:0 20px}
     .card{background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow)}
-    h1{margin:0 0 8px;font-size:28px}.muted{color:var(--muted);font-size:14px}
-    .sep{height:1px;background:var(--line);margin:16px 0}
+    h1{margin:0 0 8px;font-size:28px}.muted{color:var(--muted);font-size:14px}.sep{height:1px;background:var(--line);margin:16px 0}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     input[type="text"]{background:#0b1220;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:10px 12px;min-width:260px}
     button{background:#111827;color:#e5e7eb;border:1px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer;transition:.06s transform,.15s border-color}
     button:hover{border-color:#334155}button:active{transform:translateY(1px)}
-    .primary{border-color:var(--accent)}.ok{border-color:var(--ok)}.danger{border-color:#7f1d1d;color:#fecaca}
+    .primary{border-color:var(--accent)}.ok{border-color:var(--ok)}
     .wave{height:42px;border:1px dashed var(--line);border-radius:12px;display:flex;align-items:flex-end;gap:2px;padding:4px;overflow:hidden}
     .bar{width:3px;background:var(--accent);opacity:.85;border-radius:2px}
     .list{display:grid;gap:12px}
     .item{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:12px;background:rgba(2,6,23,.35)}
-    audio{width:100%}
-    .right{display:flex;gap:8px;align-items:center}
+    audio{width:100%}.right{display:flex;gap:8px;align-items:center}
     .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)}
     pre{background:#0b1220;border:1px solid var(--line);border-radius:12px;padding:12px;min-height:54px;white-space:pre-wrap}
   </style>
@@ -68,129 +58,7 @@
     </div>
   </div>
 
- <!-- ========= APP SCRIPT (minimal test) ========= -->
-<script>
-const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co // Byt (ingen slash på slutet)
-const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z // Byt (Publishable key)
-document.getElementById('u').textContent = SUPABASE_URL;
-document.getElementById('k').textContent = SUPABASE_ANON.startsWith('sb') ? 'ok' : 'fel';
-
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-window.sb = sb; // för Console-test
-
-// sanityknapp
-document.getElementById('ping').onclick = async () => {
-  const out = document.getElementById('out');
-  try { const res = await sb.storage.from('audio').list({limit:1}); out.textContent = JSON.stringify(res, null, 2); }
-  catch (e) { out.textContent = 'Error: ' + e.message; }
-};
-</script>
-<!-- ========= /APP SCRIPT ========= -->
-
-
-    // Initiera Supabase
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-    window.sb = sb; // för Console-test
-
-    // ===== Helpers/UI =====
-    let mediaRecorder, chunks = [], startedAt = 0, timerInt = null, waveInt = null;
-    const uploads = [];
-    const $ = s => document.querySelector(s);
-    const fmt = s => String(s).padStart(2, "0");
-    const setTimer = sec => { $("#timer").textContent = `${fmt(Math.floor(sec/60))}:${fmt(sec%60)}` };
-
-    function startWave(){
-      const el = $("#wave"); el.innerHTML = "";
-      waveInt = setInterval(()=>{
-        const b = document.createElement("div");
-        b.className = "bar";
-        b.style.height = (Math.floor(Math.random()*34)+6)+"px";
-        el.appendChild(b);
-        if (el.children.length > 160) el.removeChild(el.firstChild);
-      }, 60);
-    }
-    function stopWave(){ clearInterval(waveInt); waveInt=null; $("#wave").innerHTML=""; }
-
-    function renderList(items){
-      const wrap = $("#list"); wrap.innerHTML="";
-      if (!items.length){ wrap.innerHTML = `<div class="muted">Inga uppladdningar ännu.</div>`; return; }
-      items.slice().reverse().forEach(c=>{
-        const row=document.createElement("div"); row.className="item";
-        const left=document.createElement("div"); const right=document.createElement("div"); right.className="right";
-        const title=document.createElement("div");
-        title.innerHTML=`<strong>${c.title||"Utan titel"}</strong><div class="muted">${new Date(c.created).toLocaleString()} • ${Math.round((c.duration||0))}s • ${Math.round((c.size||0)/1024)} KB</div>`;
-        const audio=document.createElement("audio"); audio.controls=true; audio.src=c.publicUrl||c.objectUrl;
-        left.appendChild(title); left.appendChild(audio);
-        if (c.publicUrl){ const a=document.createElement("a"); a.href=c.publicUrl; a.target="_blank"; a.rel="noopener";
-          const btn=document.createElement("button"); btn.textContent="Öppna URL"; a.appendChild(btn); right.appendChild(a); }
-        row.appendChild(left); row.appendChild(right); wrap.appendChild(row);
-      });
-    }
-
-    // ===== Recording =====
-    $("#recBtn").onclick = async () => {
-      if (mediaRecorder && mediaRecorder.state === "recording"){
-        mediaRecorder.stop();
-        $("#recBtn").textContent = "● Starta inspelning";
-        $("#saveBtn").disabled = false;
-        clearInterval(timerInt); timerInt=null; stopWave();
-        return;
-      }
-      try{
-        chunks = [];
-        const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
-        mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.ondataavailable = e => chunks.push(e.data);
-        mediaRecorder.start();
-        startedAt = Date.now();
-        $("#recBtn").textContent = "■ Stoppa";
-        $("#saveBtn").disabled = true;
-        setTimer(0);
-        timerInt = setInterval(()=>setTimer(Math.floor((Date.now()-startedAt)/1000)),1000);
-        startWave();
-      }catch(err){ alert("Mikrofonfel: " + err.message); }
-    };
-
-    // ===== Upload =====
-    async function uploadToSupabase(path, blob){
-      const { error } = await sb.storage.from(BUCKET).upload(path, blob, { upsert:true, contentType:"audio/webm" });
-      if (error) throw error;
-      const { data: pub } = sb.storage.from(BUCKET).getPublicUrl(path);
-      return pub.publicUrl;
-    }
-
-    $("#saveBtn").onclick = async () => {
-      if (!chunks.length){ alert("Inget inspelat."); return; }
-      const blob = new Blob(chunks, { type:"audio/webm" });
-      const sec = Math.floor((Date.now()-startedAt)/1000)||0;
-      const title = $("#title").value.trim() || "Utan titel";
-      const id = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
-      const folder = new Date().toISOString().slice(0,10);
-      const path = `${folder}/${id}.webm`;
-      try{
-        const publicUrl = await uploadToSupabase(path, blob);
-        const objectUrl = URL.createObjectURL(blob);
-        uploads.push({ id, title, created: Date.now(), duration: sec, size: blob.size, publicUrl, objectUrl });
-        renderList(uploads);
-        $("#title").value=""; $("#saveBtn").disabled=true;
-        alert("Uppladdat ✅");
-      }catch(e){ console.error(e); alert("Uppladdning misslyckades: " + e.message); }
-    };
-
-    // ===== Sanity-knapp =====
-    const pingBtn = document.getElementById("ping");
-    const out = document.getElementById("out");
-    if (pingBtn && out){
-      pingBtn.onclick = async () => {
-        try { const res = await sb.storage.from(BUCKET).list({ limit:1 }); out.textContent = JSON.stringify(res, null, 2); }
-        catch (e) { out.textContent = "Error: " + e.message; }
-      };
-    }
-
-    // init
-    renderList(uploads);
-  })();
-  </script>
-  <!-- ======== /APP SCRIPT ======== -->
+  <!-- Vår externa appkod -->
+  <script src="./app.js"></script>
 </body>
 </html>
