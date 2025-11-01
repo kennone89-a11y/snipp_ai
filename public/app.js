@@ -1,29 +1,30 @@
-// Ingen supabase-klient här – den finns redan på window.sb från index.html
+// Ingen supabase-klient här – den skapas i index.html och läggs på window.sb
 
 // === Hjälpare ===
 const $ = (id) => document.getElementById(id);
 const statusEl = $("status");
 const setStatus = (m, danger = false) => {
   if (!statusEl) return;
-  statusEl.textContent = m || "";
+  statusEl.textContent = m ?? "";
   statusEl.classList.toggle("danger", !!danger);
 };
 
 // === UI-element (ID:n måste matcha index.html) ===
-const recordBtn  = $("btnStart");
-const stopBtn    = $("btnStop");
-const uploadBtn  = $("btnUpload");
-const refreshBtn = $("refreshBtn");
-const player     = $("player");
-const resultEl   = $("result");
-const historyEl  = $("history");
+const recordBtn   = $("btnStart");
+const stopBtn     = $("btnStop");
+const uploadBtn   = $("btnUpload");
+const refreshBtn  = $("refreshBtn");
+const fileInput   = $("fileInput");
+const player      = $("player");
+const resultEl    = $("result");
+const historyEl   = $("history");
 
-// === Global inspelnings-state ===
+// === global inspelnings-state ===
 let mediaRecorder = null;
 let chunks = [];
 let lastBlob = null;
 
-// Gör knapparna klickbara
+// Gör knapparna klickbara (om de är grå)
 function enableButtons() {
   ["btnStart","btnStop","btnUpload"].forEach(id => {
     const el = $(id);
@@ -41,46 +42,33 @@ recordBtn.addEventListener("click", async () => {
       setStatus("❌ Din webbläsare saknar getUserMedia", true);
       return;
     }
+
     setStatus("🎙️ Startar inspelning...");
     chunks = [];
     lastBlob = null;
 
-    const supportsOpus = window.MediaRecorder &&
-      MediaRecorder.isTypeSupported("audio/webm;codecs=opus");
-
+    const supportsOpus = window.MediaRecorder && MediaRecorder.isTypeSupported("audio/webm;codecs=opus");
     const constraints = { audio: true };
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
     const mime = supportsOpus ? "audio/webm;codecs=opus" : "audio/webm";
-    mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
 
+    mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
     mediaRecorder.ondataavailable = (e) => {
       if (e.data && e.data.size) chunks.push(e.data);
     };
-
     mediaRecorder.onstop = () => {
-      try {
-        const blob = new Blob(chunks, { type: supportsOpus ? "audio/webm;codecs=opus" : "audio/webm" });
-        lastBlob = blob;
-        const url = URL.createObjectURL(blob);
-        player.src = url;
-        player.load();
-        player.play().catch(() => {});
-        setStatus("✅ Inspelning klar – redo att ladda upp");
-        uploadBtn.removeAttribute("disabled");
-      } catch (e) {
-        console.error(e);
-        setStatus("❌ Kunde inte skapa ljudfil", true);
-      }
+      lastBlob = new Blob(chunks, { type: mime });
+      player.src = URL.createObjectURL(lastBlob);
+      player.load();
+      player.play().catch(() => {});
+      setStatus("✅ Inspelning klar – redo att ladda upp");
+      uploadBtn.removeAttribute("disabled");
     };
 
     mediaRecorder.start();
-    recordBtn.setAttribute("disabled", "disabled");
-    stopBtn.removeAttribute("disabled");
-    setStatus("⏺️ Spelar in...");
   } catch (err) {
     console.error(err);
-    setStatus(`❌ Fel vid start: ${err.message || "okänt"}`, true);
+    setStatus("❌ Kunde inte starta inspelning", true);
   }
 });
 
@@ -88,71 +76,95 @@ stopBtn.addEventListener("click", () => {
   try {
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
       mediaRecorder.stop();
-      setStatus("⏹️ Stoppar...");
+      setStatus("⏹️ Stoppad");
     }
-    stopBtn.setAttribute("disabled", "disabled");
-    recordBtn.removeAttribute("disabled");
   } catch (e) {
     console.error(e);
-    setStatus(`❌ Fel vid stopp: ${e.message || "okänt"}`, true);
   }
 });
 
-// === UPLOAD till Supabase Storage (bucket: "audio/uploads/") ===
+// === UPLOAD till Supabase Storage ===
 uploadBtn.onclick = async () => {
   try {
-    if (!window.sb) {
-      setStatus("❌ Supabase-klient saknas (window.sb)", true);
-      return;
-    }
     if (!lastBlob) {
       setStatus("❌ Ingen inspelning att ladda upp", true);
       return;
     }
-
-    setStatus("⬆️ Laddar upp...");
-
-    const folder = "uploads"; // mapp i bucket "audio"
-    const ts = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0,14);
-    const mime = lastBlob.type || "audio/webm";
-    const ext  = mime.includes("wav") ? "wav" : "webm";
-    const filename = `audio_${ts}.${ext}`;
-    const path = `${folder}/${filename}`;
-
-    // Ladda upp
-    const { error: upErr } = await window.sb
-      .storage
-      .from("audio")
-      .upload(path, lastBlob, { contentType: mime });
-
-    if (upErr) {
-      setStatus(`❌ Upload fail: ${upErr.message}`, true);
+    if (!window.sb) {
+      setStatus("❌ Supabase-klienten saknas", true);
       return;
     }
 
-    // Hämta public URL
-    const { data: pub } = await window.sb
+    // Filnamn: audio_YYYYMMDD_HHMMSS.webm
+    const ts = new Date().toISOString().replace(/[T:\.Z]/g, "").slice(0, 14);
+    const filename = `audio_${ts}.webm`;
+    const folder = "uploads";
+    const path = `${folder}/${filename}`;
+
+    setStatus("⬆️ Laddar upp...");
+
+    // 1) Ladda upp
+    const { error: upErr } = await window.sb
       .storage
       .from("audio")
-      .getPublicUrl(path);
+      .upload(path, lastBlob, { contentType: lastBlob.type });
 
+    if (upErr) throw upErr;
+
+    // 2) Hämta public URL
+    const { data: pub } = window.sb.storage.from("audio").getPublicUrl(path);
     const publicUrl = pub?.publicUrl || "";
-    setStatus(`✅ Sparat: ${filename}${publicUrl ? " → " + publicUrl : ""}`);
-    resultEl.textContent = publicUrl ? publicUrl : "";
+
+    setStatus(`✅ Sparat: ${filename}`);
+    resultEl.textContent = publicUrl ? publicUrl : "Sparat (ingen public URL)";
 
     await loadHistory();
   } catch (err) {
     console.error(err);
-    setStatus(`❌ Fel: ${err.message || "okänt"}`, true);
+    setStatus(`❌ Fel vid uppladdning: ${err.message || "okänt"}`, true);
   }
 };
 
-// === Historik: lista senaste filer i audio/uploads ===
+// === Ladda upp via fil-input (om användaren väljer en fil) ===
+fileInput.onchange = async (e) => {
+  try {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (!window.sb) {
+      setStatus("❌ Supabase-klienten saknas", true);
+      return;
+    }
+
+    setStatus("⬆️ Laddar upp vald fil...");
+    const folder = "uploads";
+    const path = `${folder}/${file.name}`;
+
+    const { error: upErr } = await window.sb
+      .storage
+      .from("audio")
+      .upload(path, file, { contentType: file.type });
+
+    if (upErr) throw upErr;
+
+    const { data: pub } = window.sb.storage.from("audio").getPublicUrl(path);
+    const publicUrl = pub?.publicUrl || "";
+    setStatus("✅ Fil uppladdad");
+    resultEl.textContent = publicUrl || "Sparat (ingen public URL)";
+
+    await loadHistory();
+  } catch (err) {
+    console.error(err);
+    setStatus(`❌ Fel vid uppladdning: ${err.message || "okänt"}`, true);
+  } finally {
+    fileInput.value = "";
+  }
+};
+
+// === Historia (listar senaste) ===
 async function loadHistory() {
   try {
     if (!window.sb) return;
-    historyEl.innerHTML = "<li class='muted'>Hämtar...</li>";
-
     const { data, error } = await window.sb
       .storage
       .from("audio")
@@ -162,31 +174,30 @@ async function loadHistory() {
 
     const files = Array.isArray(data) ? data : [];
     if (!files.length) {
-      historyEl.innerHTML = "<li class='muted'>Ingen historik ännu.</li>";
+      historyEl.innerHTML = `<li class="muted">Ingen historik ännu.</li>`;
       return;
     }
 
-    const items = await Promise.all(files.map(async (f) => {
-      const filePath = `uploads/${f.name}`;
-      const { data: pu } = await window.sb.storage.from("audio").getPublicUrl(filePath);
-      const publicUrl = pu?.publicUrl || "";
-      const d = new Date(f.created_at || Date.now()).toLocaleString();
-      const sizeKB = f?.metadata?.size ? Math.round(f.metadata.size / 1024) : "?";
+    historyEl.innerHTML = files.map(f => {
+      const dt = new Date(f.created_at).toLocaleString();
+      const sizeKB = (f.size / 1024).toFixed(1);
+      const url = window.sb.storage.from("audio").getPublicUrl(`uploads/${f.name}`).data.publicUrl;
+      const safeName = encodeURIComponent(f.name);
       return `
-        <li class="mt-2">
+        <li>
           <div><strong>${f.name}</strong></div>
-          <div class="muted">${d} · ${sizeKB} KB</div>
-          ${publicUrl ? `<div><a class="tagchip" href="${publicUrl}" target="_blank" rel="noopener">Öppna</a></div>` : ""}
+          <div class="muted">${dt} · ${sizeKB} KB</div>
+          <div><a href="${url}" download>⬇️ Ladda ner</a></div>
         </li>
       `;
-    }));
-
-    historyEl.innerHTML = items.join("");
+    }).join("");
   } catch (e) {
     console.error(e);
-    historyEl.innerHTML = "<li class='muted'>Kunde inte hämta historik.</li>";
+    historyEl.innerHTML = `<li class="muted">Kunde inte hämta historik.</li>`;
   }
 }
 
 refreshBtn.onclick = loadHistory;
+
+// Init
 loadHistory();
