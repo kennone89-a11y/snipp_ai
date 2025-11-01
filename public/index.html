@@ -82,11 +82,18 @@
 
 <!-- BYT DINA VÄRDEN HÄR -->
 <script>
-  const SUPABASE_URL = "https://hywwzzzxgagqhlxooekz.supabase.co";
-  const SUPABASE_ANON_KEY = "PASTE_ANON_PUBLIC_KEY_HERE";
+  <script>
+  const SUPABASE_URL = "https://hyywzzzggxgh0koeez.supabase.co";
+
+  // Lägg in din LÅNGA anon public key mellan backticks (` ... `)
+  const SUPABASE_ANON_KEY = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTM...DIN_HELA_NYCKEL...` 
+    .trim()            // tar bort ev. radbrytning i början/slutet
+    .replace(/\s/g,''); // tar bort alla mellanslag/radbrytningar inne i nyckeln
 
   window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   console.log('sb ready?', !!window.sb);
+</script>
+
 </script>
 
 <script src="app.js?v=6"></script>
