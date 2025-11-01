@@ -79,23 +79,36 @@
 
  <!-- Ladda Supabase + initiera global klient (SB1) -->
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-
 <!-- BYT DINA VÄRDEN HÄR -->
 <script>
-  // RAD ~89
-  const SUPABASE_URL = "https://<DIN-PROJEKTID>.supabase.co";  // din Project URL
+  // 1) Klistra in DIN riktiga URL och ANON KEY
+  const SUPABASE_URL = "https://DIN-PROJEKTID.supabase.co";
+  const SUPABASE_ANON_KEY = `DIN_MEGA_LÅNGA_ANON_PUBLIC_KEY_HÄR`
+    .trim()
+    .replace(/\s/g, "");
 
-  // RAD ~90–93 — KLISTRA IN HELA ANON KEY MELLAN BACKTICKS `...`
-  const SUPABASE_ANON_KEY = `
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...DIN_HELA_NYCKEL...långt
-`.trim().replace(/\s/g, '');
+  // 2) Starta Supabase – men låt inte fel stoppa resten av sidan
+  try {
+    window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log("sb ready?", !!window.sb);
+  } catch (e) {
+    console.error("Supabase init failed:", e);
+    // Minimal stub så att app.js inte kraschar
+    window.sb = {
+      storage: { from() { return { upload: async()=>({ error:new Error("offline") }),
+                                   getPublicUrl:()=>({ data:{ publicUrl:"" } }) }; } }
+    };
+  }
 
-
-  // RAD ~95
-  window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  console.log('sb ready?', !!window.sb);
+  // 3) Aktivera knappar oavsett vad som händer ovan
+  document.addEventListener('DOMContentLoaded', () => {
+    ['btnStart','btnStop','btnUpload'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.removeAttribute('disabled');
+    });
+    console.log('buttons enabled');
+  });
 </script>
-
 
 </script>
 
