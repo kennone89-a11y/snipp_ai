@@ -1,111 +1,309 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Röstrecessioner (MVP – design)</title>
-  <meta name="description" content="Spela in röst, ladda upp och spara recensioner. Frontend-MVP utan backend." />
-
-  <!-- Tailwind (CDN) -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 01: Meta & Title -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>snipp_ai – Offline MVP</title>
+  <!-- 02: Minimal stil (dark/glass) -->
   <style>
-    :root{ color-scheme: dark; }
-    body { background:#0b1020; color:#dbe3ff; }
-    .card { background: rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.10); border-radius:14px; }
-    .glass { background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04)); border: 1px solid rgba(255,255,255,0.10); }
-    .danger { color:#ff7575 }
-    .ok { color:#67f3a6 }
-    .tagchip { border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding: 4px 8px; }
-    .btn { border-radius:10px; padding:10px 14px; font-weight:600; }
-    .btn-primary { background:#5b7cff; }
-    .btn-primary:hover { filter:brightness(1.1); }
-    .btn-ghost { background:transparent; border:1px solid rgba(255,255,255,0.18); }
-    .btn-ghost:hover { background:rgba(255,255,255,0.07); }
-    .muted { color:#a9b3d9 }
+    :root { --bg:#0b0f14; --panel:#0f172a99; --text:#e5e7eb; --muted:#94a3b8; --accent:#38bdf8; --danger:#ef4444; --ok:#22c55e; }
+    *{box-sizing:border-box} body{margin:0;background:linear-gradient(120deg,#0b0f14,#0e1320);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    .wrap{max-width:960px;margin:40px auto;padding:24px}
+    .card{background:rgba(15,23,42,.6);backdrop-filter:blur(10px);border:1px solid #1f2937;border-radius:18px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    h1{margin:0 0 8px;font-size:26px} .muted{color:var(--muted);font-size:14px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    button,.btn{background:#111827;color:#e5e7eb;border:1px solid #1f2937;border-radius:12px;padding:10px 14px;cursor:pointer}
+    button:hover{border-color:#334155}
+    .primary{border-color:var(--accent)} .danger{border-color:#7f1d1d;color:#fecaca}
+    .ok{border-color:#14532d;color:#bbf7d0}
+    input[type="text"]{background:#0b1220;border:1px solid #1f2937;border-radius:12px;color:#e5e7eb;padding:10px 12px;min-width:240px}
+    .list{margin-top:16px;display:grid;gap:10px}
+    .item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border:1px solid #1f2937;border-radius:14px;padding:12px}
+    .meta{font-size:12px;color:var(--muted)}
+    audio{width:100%}
+    .pill{display:inline-block;border:1px solid #334155;border-radius:999px;padding:3px 8px;font-size:12px;color:#cbd5e1}
+    .wave{height:38px;border:1px dashed #334155;border-radius:10px;display:flex;align-items:flex-end;gap:2px;padding:4px;overflow:hidden}
+    .bar{width:3px;background:var(--accent);opacity:.7}
+    .right{display:flex;gap:8px;align-items:center}
+    .grid{display:grid;gap:16px}
+    .two{grid-template-columns:1fr 1fr}
+    @media (max-width:800px){.two{grid-template-columns:1fr}}
+    .sep{height:1px;background:#1f2937;margin:14px 0}
   </style>
 </head>
-<body class="min-h-screen">
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>snipp_ai – Offline</h1>
+      <div class="muted">Spela in röster, spara lokalt, exportera/importera. Supabase kommer sen.</div>
+      <div class="sep"></div>
 
-  <!-- Header -->
-  <header class="max-w-6xl mx-auto px-6 pt-8 pb-4">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-400 to-sky-500"></div>
-        <h1 class="text-2xl font-extrabold tracking-tight">Röstrecessioner</h1>
-        <span class="tagchip text-xs ml-3">MVP – design</span>
+      <!-- 03: Inspelning -->
+      <div class="grid two">
+        <div>
+          <div class="row">
+            <input id="title" type="text" placeholder="Titel (t.ex. 'Rogan avsnitt 2134 – kort review')" />
+            <button id="recBtn" class="primary">● Starta inspelning</button>
+            <span id="timer" class="pill">00:00</span>
+          </div>
+          <div id="wave" class="wave" aria-label="live waveform"></div>
+          <div class="row" style="margin-top:10px">
+            <button id="saveBtn" class="ok" disabled>Spara klipp</button>
+            <button id="resetBtn" class="danger">Rensa allt (lokalt)</button>
+          </div>
+        </div>
+        <!-- 04: Export/Import -->
+        <div>
+          <div class="row">
+            <button id="exportBtn">Exportera .json</button>
+            <input id="importFile" type="file" accept="application/json" />
+            <button id="importBtn">Importera .json</button>
+          </div>
+          <div class="muted" style="margin-top:6px">Tips: Exportera innan du byter dator/mobil. Importera för att återställa.</div>
+        </div>
       </div>
-      <nav class="hidden md:flex items-center gap-3">
-        <a class="tagchip text-xs" href="#">Hem</a>
-        <a class="tagchip text-xs" href="#">Funktioner</a>
-        <a class="tagchip text-xs" href="#">Kontakt</a>
-      </nav>
+
+      <div class="sep"></div>
+
+      <!-- 05: Lista -->
+      <h3 style="margin:0 0 8px">Dina klipp</h3>
+      <div id="list" class="list"></div>
+
+      <div class="sep"></div>
+
+      <!-- 06: “Hook” för Supabase (avstängd) -->
+      <div class="muted">
+        Backend-läge: <span id="backendFlag" class="pill">Offline</span> &nbsp;|&nbsp; 
+        När nycklar funkar: sätt <code>ENABLE_SUPABASE = true</code> i koden (rad markerad nedan) och fyll i URL/KEY.
+      </div>
     </div>
-    <p class="muted mt-2">Spela in din röst, lägg till taggar och spara. Perfekt för poddar, filmer och ljudböcker.</p>
-  </header>
+  </div>
 
-  <!-- Main -->
-  <main class="max-w-6xl mx-auto px-6 pb-20 grid lg:grid-cols-3 gap-6">
-    <!-- Vänster: inspelning + status -->
-    <section class="lg:col-span-2 grid gap-6">
-      <!-- Recorder -->
-      <div class="card p-5">
-        <h2 class="text-lg font-semibold mb-4">🎙️ Spela in & ladda upp</h2>
+  <!-- 07: Script -->
+  <script>
+    // ======= [A] Konfig =======
+    // Byt till true när vi vill testa uppladdning (måste fylla URL/KEY)
+    const ENABLE_SUPABASE = false; // <-- ändra till true sen
+    const SUPABASE_URL = "";       // ex: "https://abcxyz.supabase.co"
+    const SUPABASE_ANON = "";      // ex: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    const BUCKET = "audio";
 
-        <div class="flex flex-wrap items-center gap-2 mb-4">
-          <button id="btnStart" class="btn btn-primary">Spela in</button>
-          <button id="btnStop"  class="btn btn-ghost" disabled>Stoppa</button>
-          <button id="btnUpload" class="btn btn-ghost" disabled>Ladda upp (lokalt)</button>
-          <span id="recTime" class="text-sm muted ml-1">00:00</span>
-        </div>
+    // ======= [B] State =======
+    let mediaRecorder, chunks = [], startedAt = 0, timerInt = null, waveInt = null;
 
-        <audio id="player" class="w-full" controls></audio>
+    // ======= [C] Helpers =======
+    const $ = sel => document.querySelector(sel);
+    const fmt = s => String(s).padStart(2,"0");
+    function setTimerLabel(sec){
+      $("#timer").textContent = `${fmt(Math.floor(sec/60))}:${fmt(sec%60)}`
+    }
+    function download(filename, text){
+      const a = document.createElement('a');
+      a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(text);
+      a.download = filename; a.click();
+    }
+    async function blobToBase64(blob){
+      const buf = await blob.arrayBuffer();
+      let binary = "";
+      const bytes = new Uint8Array(buf);
+      const len = bytes.byteLength;
+      for(let i=0;i<len;i++) binary += String.fromCharCode(bytes[i]);
+      return btoa(binary);
+    }
+    function base64ToBlob(b64, mime){
+      const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      return new Blob([bytes], { type: mime || "audio/webm" });
+    }
+    function getDB(){
+      const raw = localStorage.getItem("snipp_ai_db");
+      return raw ? JSON.parse(raw) : { clips: [] };
+    }
+    function setDB(db){
+      localStorage.setItem("snipp_ai_db", JSON.stringify(db));
+      renderList();
+    }
 
-        <p id="status" class="muted text-sm mt-3">Ingen inspelning gjord än.</p>
-        <div class="mt-4">
-          <details class="glass p-4 rounded-xl">
-            <summary class="cursor-pointer font-semibold">📁 Ladda upp fil (lokalt demo)</summary>
-            <input id="fileInput" type="file" accept="audio/*" class="mt-3 block" />
-            <p class="muted text-xs mt-2">Filer sparas inte på server – bara i din webbläsare (demo-läge).</p>
-          </details>
-        </div>
-      </div>
+    // ======= [D] UI: lista =======
+    function renderList(){
+      const wrap = $("#list"); wrap.innerHTML = "";
+      const db = getDB();
+      if(!db.clips.length){ wrap.innerHTML = `<div class="muted">Inga klipp sparade ännu.</div>`; return; }
+      db.clips
+        .sort((a,b)=>b.created-a.created)
+        .forEach((c, idx) => {
+          const div = document.createElement("div");
+          div.className = "item";
+          const left = document.createElement("div");
+          const right = document.createElement("div"); right.className = "right";
+          const h4 = document.createElement("div");
+          h4.innerHTML = `<strong contenteditable="true" data-id="${c.id}" class="titleEdit">${c.title||"Utan titel"}</strong>
+                          <div class="meta">${new Date(c.created).toLocaleString()} • ${Math.round((c.duration||0))}s • ${Math.round((c.size||0)/1024)} KB</div>`;
+          const audio = document.createElement("audio");
+          audio.controls = true;
+          audio.src = URL.createObjectURL(base64ToBlob(c.data, c.mime || "audio/webm"));
 
-      <!-- Result -->
-      <div class="card p-5">
-        <h3 class="font-semibold mb-2">Resultat</h3>
-        <p id="result" class="muted text-sm">Ingen uppladdning gjord än.</p>
-      </div>
-    </section>
+          left.appendChild(h4); left.appendChild(audio);
+          const playBtn = document.createElement("button"); playBtn.textContent = "▶ Spela";
+          playBtn.onclick = () => { audio.currentTime = 0; audio.play(); };
 
-    <!-- Höger: tips + historik -->
-    <aside class="grid gap-6">
-      <div class="card p-5">
-        <h3 class="font-semibold mb-3">Tips</h3>
-        <ul class="list-disc pl-5 muted space-y-1">
-          <li>Håll mikrofonen nära.</li>
-          <li>Stäng av notiser under inspelning.</li>
-          <li>Max 5 min rekommenderas.</li>
-        </ul>
-      </div>
+          const delBtn = document.createElement("button"); delBtn.textContent = "🗑 Radera"; delBtn.className="danger";
+          delBtn.onclick = () => {
+            const ndb = getDB();
+            ndb.clips = ndb.clips.filter(x => x.id !== c.id);
+            setDB(ndb);
+          };
 
-      <div class="card p-5">
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="font-semibold">Senaste uppladdningar</h3>
-          <button id="refreshBtn" class="tagchip text-xs">Uppdatera</button>
-        </div>
-        <ul id="history" class="space-y-2 muted text-sm">
-          <li class="muted">Ingen historik ännu.</li>
-        </ul>
-      </div>
-    </aside>
-  </main>
+          right.appendChild(playBtn); right.appendChild(delBtn);
+          div.appendChild(left); div.appendChild(right);
+          wrap.appendChild(div);
+        });
 
-  <!-- Footer -->
-  <footer class="max-w-6xl mx-auto px-6 pb-10">
-    <p class="muted text-xs">© 2025 Röstrecessioner (MVP). Frontend-demoläge – backend kopplas in senare.</p>
-  </footer>
+      // Döp om (inline)
+      wrap.querySelectorAll(".titleEdit").forEach(el=>{
+        el.addEventListener("blur", ()=>{
+          const id = el.getAttribute("data-id");
+          const db2 = getDB();
+          const k = db2.clips.find(x=>x.id===id);
+          if(k){ k.title = el.textContent.trim(); setDB(db2); }
+        });
+      });
+    }
 
-  <!-- App JS -->
-  <script src="app.js"></script>
+    // ======= [E] Live waveform (dummy RMS) =======
+    function startWave(){
+      const el = $("#wave"); el.innerHTML = "";
+      waveInt = setInterval(()=>{
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        const h = Math.floor(Math.random()*34)+4; // enkel fake-vågform som rör sig
+        bar.style.height = h + "px";
+        el.appendChild(bar);
+        if(el.children.length>160) el.removeChild(el.firstChild);
+      }, 60);
+    }
+    function stopWave(){
+      clearInterval(waveInt); waveInt = null; $("#wave").innerHTML = "";
+    }
+
+    // ======= [F] Recording =======
+    $("#recBtn").onclick = async () => {
+      if(mediaRecorder && mediaRecorder.state === "recording"){
+        mediaRecorder.stop();
+        $("#recBtn").textContent = "● Starta inspelning";
+        $("#saveBtn").disabled = false;
+        clearInterval(timerInt); timerInt = null; stopWave();
+        return;
+      }
+      chunks = [];
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = e => chunks.push(e.data);
+        mediaRecorder.onstop = () => {};
+        mediaRecorder.start();
+        startedAt = Date.now();
+        $("#recBtn").textContent = "■ Stoppa";
+        $("#saveBtn").disabled = true;
+        setTimerLabel(0);
+        timerInt = setInterval(()=>{
+          const sec = Math.floor((Date.now()-startedAt)/1000);
+          setTimerLabel(sec);
+        }, 1000);
+        startWave();
+      }catch(err){
+        alert("Mikrofonfel: " + err.message);
+      }
+    };
+
+    $("#saveBtn").onclick = async () => {
+      if(!chunks.length){ alert("Inget inspelat."); return; }
+      const blob = new Blob(chunks, { type: "audio/webm" });
+      const b64 = await blobToBase64(blob);
+      const sec = Math.floor((Date.now()-startedAt)/1000) || 0;
+      const db = getDB();
+      const id = crypto.randomUUID();
+      const item = {
+        id,
+        title: $("#title").value.trim() || "Utan titel",
+        created: Date.now(),
+        duration: sec,
+        size: blob.size,
+        mime: "audio/webm",
+        data: b64
+      };
+      db.clips.push(item);
+      setDB(db);
+      $("#title").value = "";
+      $("#saveBtn").disabled = true;
+      alert("Klipp sparat lokalt ✅");
+
+      // ======= [G] Förberedd uppladdning (avstängd) =======
+      if(ENABLE_SUPABASE){
+        try{
+          await uploadToSupabase(item, blob);
+          console.log("Uppladdad till Supabase");
+        }catch(e){
+          console.warn("Supabase uppladdning misslyckades:", e);
+        }
+      }
+    };
+
+    $("#resetBtn").onclick = () => {
+      if(confirm("Rensa ALLT lokalt? (går ej att ångra)")){
+        localStorage.removeItem("snipp_ai_db");
+        renderList();
+      }
+    };
+
+    // ======= [H] Export/Import =======
+    $("#exportBtn").onclick = () => {
+      const db = getDB();
+      const name = `snipp_ai_export_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.json`;
+      download(name, JSON.stringify(db));
+    };
+    $("#importBtn").onclick = async () => {
+      const f = $("#importFile").files?.[0];
+      if(!f){ alert("Välj en .json att importera"); return; }
+      try{
+        const txt = await f.text();
+        const data = JSON.parse(txt);
+        if(!data || !Array.isArray(data.clips)) throw new Error("Fel format");
+        setDB(data);
+        alert("Import klart ✅");
+      }catch(e){
+        alert("Kunde inte importera: " + e.message);
+      }
+    };
+
+    // ======= [I] (Sen) Supabase uppladdning =======
+    async function uploadToSupabase(item, blob){
+      // OBS: Detta körs bara om ENABLE_SUPABASE=true
+      if(!SUPABASE_URL || !SUPABASE_ANON) throw new Error("Saknar URL/ANON key");
+      // Minimal klient utan SDK (fetch mot Storage REST)
+      const path = `${new Date(item.created).toISOString().split('T')[0]}/${item.id}.webm`;
+      const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(BUCKET)}/${path}`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${SUPABASE_ANON}`,
+          "x-upsert": "true",
+          "Content-Type": "audio/webm"
+        },
+        body: blob
+      });
+      if(!res.ok){
+        const t = await res.text();
+        throw new Error(`Storage error ${res.status}: ${t}`);
+      }
+      return path;
+    }
+
+    // ======= [J] Init =======
+    function init(){
+      $("#backendFlag").textContent = ENABLE_SUPABASE ? "Online (Supabase)" : "Offline";
+      renderList();
+    }
+    init();
+  </script>
 </body>
 </html>
