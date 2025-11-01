@@ -68,21 +68,25 @@
     </div>
   </div>
 
-  <!-- ======== APP SCRIPT ======== -->
-  <script>
-  (function () {
-    // ===== BYT ENDAST DESSA TVÅ RADER =====
-    const SUPABASE_URL  = "https://hywwzzzxgagqhlxooekz.supabase.co // <-- BYT (ingen slash på slutet)
-    const SUPABASE_ANON = "sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z  // <-- BYT (Publishable key)
-    // ======================================
+ <!-- ========= APP SCRIPT (minimal test) ========= -->
+<script>
+const SUPABASE_URL  = 'https://<DIN-PROJEKT-DOMÄN>.supabase.co';   // Byt (ingen slash på slutet)
+const SUPABASE_ANON = 'sbp_ELLER_sb_publishable_xxxxxxxxxxxxxxx';  // Byt (Publishable key)
+document.getElementById('u').textContent = SUPABASE_URL;
+document.getElementById('k').textContent = SUPABASE_ANON.startsWith('sb') ? 'ok' : 'fel';
 
-    const BUCKET = "audio";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+window.sb = sb; // för Console-test
 
-    // Visa i UI
-    const u = document.getElementById("u");
-    const k = document.getElementById("k");
-    if (u) u.textContent = SUPABASE_URL;
-    if (k) k.textContent = SUPABASE_ANON.startsWith("sb") ? "ok" : "fel";
+// sanityknapp
+document.getElementById('ping').onclick = async () => {
+  const out = document.getElementById('out');
+  try { const res = await sb.storage.from('audio').list({limit:1}); out.textContent = JSON.stringify(res, null, 2); }
+  catch (e) { out.textContent = 'Error: ' + e.message; }
+};
+</script>
+<!-- ========= /APP SCRIPT ========= -->
+
 
     // Initiera Supabase
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
