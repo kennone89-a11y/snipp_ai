@@ -7,16 +7,16 @@ const sb = window.sb || null; // <-- ENDA deklarationen
   const statusEl = $('status');
   const setStatus = (m) => statusEl.textContent = m;
 
-  // --- el
-  const recordBtn     = $('recordBtn');
-  const stopBtn       = $('stopBtn');
-  const saveLocalBtn  = $('savelocalBtn');
-  const player        = $('player');
-  const resultEl      = $('result');
-  const historyEl     = $('history');
-  const refreshBtn    = $('refreshBtn');
-  const fileInput     = $('fileInput');
-  const uploadBtn     = $('uploadBtn');
+// --- el
+const recordBtn   = $('btnStart');   // ÄNDRA: var 'recordBtn'
+const stopBtn     = $('btnStop');    // ÄNDRA: var 'stopBtn'
+const saveLocalBtn = $('saveLocalBtn');  // (denna kan vara kvar om knappen finns)
+const player      = $('player');
+const result      = $('result');
+const historyEl   = $('history');
+const refreshBtn  = $('refreshBtn');     // ok om finns
+const fileInput   = $('fileInput');
+const uploadBtn   = $('btnUpload');  // ÄNDRA: var 'uploadBtn'
 
   // --- state
   let mediaRecorder = null;
