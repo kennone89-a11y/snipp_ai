@@ -42,6 +42,7 @@ function enableButtons() {
 
   // Tvinga "OK" så UI låses upp direkt
   setStatus('✅ Backend check bypass (tillfälligt)');
+enableButtons();
 
   // Om du tidigare aktiverade knappar efter health, gör det nu:
   try {
@@ -168,5 +169,6 @@ function enableButtons() {
 
   // --- init
   loadHistory();
+  enableButtons();
 })();
 
