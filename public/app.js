@@ -41,23 +41,34 @@ const sb = window.sb;
 
 
   async function transcribeFile(file) {
-    const form = new FormData();
-    form.append('audio', file, file.name || 'file.webm');
-    setStatus('⬆️ Laddar upp & transkriberar...');
-    try {
-      const res = await fetch('/api/transcribe', { method: 'POST', body: form });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      result.value = data.text || '';
-      setStatus(data.saved ? `✅ Sparad: ${data.filename}` : '✅ Klar!');
-      await loadHistory();
-    } catch (err) {
-      console.error(err);
-      setStatus('❌ Fel: ' + (err.message || 'okänt'));
-    }
-  }
+  try {
+    const sb = window.sb;               // global Supabase-klient (från index.html)
+    const bucket = 'audio';             // bucket-namn
+    const folder = 'uploads';           // valfritt “mapp”-prefix
 
-  // --- recording
+    // Skapa filnamn: audio_YYYYMMDD_HHMMSS.ext
+    const ts = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0,14);
+    const ext = (file.type && file.type.includes('wav')) ? 'wav' : 'webm';
+    const filename = `audio_${ts}.${ext}`;
+    const path = `${folder}/${filename}`;
+
+    // Ladda upp till Supabase Storage
+    const { error: upErr } = await sb.storage
+      .from(bucket)
+      .upload(path, file, { upsert: true, contentType: file.type || 'audio/webm' });
+    if (upErr) throw upErr;
+
+    // Public URL (om bucketen är Public)
+    const { data: pub } = sb.storage.from(bucket).getPublicUrl(path);
+
+    setStatus(`✅ Sparat: ${filename}${pub?.publicUrl ? ' → ' + pub.publicUrl : ''}`);
+    await loadHistory?.();
+  } catch (err) {
+    console.error(err);
+    setStatus(`❌ Fel: ${err.message || 'okänt'}`);
+  }
+}
+
   recordBtn.onclick = async () => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setStatus('❌ Din webbläsare saknar getUserMedia'); return;
