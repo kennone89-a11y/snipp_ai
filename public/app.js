@@ -1,84 +1,192 @@
-<!DOCTYPE html>
-<html lang="sv">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Röstrecensioner (MVP)</title>
-  <meta name="description" content="Spela in röst, ladda upp till Supabase och spara recensioner. MVP." />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { background:#0b0d12; color:#e6eef8; }
-    .card { background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:16px; }
-    .tagchip { border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:4px 8px; }
-    .muted { color:#9aa8bf; }
-    .danger { color:#ff6b6b; }
-  </style>
-</head>
-<body class="min-h-screen">
-  <main class="max-w-5xl mx-auto p-6 space-y-6">
-    <header>
-      <h1 class="text-3xl font-extrabold">Röstrecensioner</h1>
-      <p class="muted mt-1">Spela in din röst, ladda upp, få en publik länk.</p>
-    </header>
+// Ingen supabase-klient här – den finns redan på window.sb från index.html
 
-    <!-- Recorder -->
-    <section class="grid md:grid-cols-3 gap-4">
-      <div class="card md:col-span-2">
-        <div class="flex items-center gap-2">
-          <button id="btnStart" class="tagchip">Spela in</button>
-          <button id="btnStop" class="tagchip" disabled>Stoppa</button>
-          <button id="btnUpload" class="tagchip" disabled>Ladda upp</button>
-          <span id="status" class="text-sm muted ml-auto"></span>
-        </div>
+// === Hjälpare ===
+const $ = (id) => document.getElementById(id);
+const statusEl = $("status");
+const setStatus = (m, danger = false) => {
+  if (!statusEl) return;
+  statusEl.textContent = m || "";
+  statusEl.classList.toggle("danger", !!danger);
+};
 
-        <div class="mt-3">
-          <audio id="player" controls class="w-full"></audio>
-        </div>
+// === UI-element (ID:n måste matcha index.html) ===
+const recordBtn  = $("btnStart");
+const stopBtn    = $("btnStop");
+const uploadBtn  = $("btnUpload");
+const refreshBtn = $("refreshBtn");
+const player     = $("player");
+const resultEl   = $("result");
+const historyEl  = $("history");
 
-        <p id="result" class="muted text-sm mt-3"></p>
-      </div>
+// === Global inspelnings-state ===
+let mediaRecorder = null;
+let chunks = [];
+let lastBlob = null;
 
-      <aside class="card">
-        <h3 class="font-semibold mb-2">Tips</h3>
-        <ul class="list-disc list-inside muted space-y-1">
-          <li>Håll mikrofonen nära.</li>
-          <li>Stäng av notiser under inspelning.</li>
-          <li>Max 5 minuter rekommenderas.</li>
-        </ul>
-      </aside>
-    </section>
+// Gör knapparna klickbara
+function enableButtons() {
+  ["btnStart","btnStop","btnUpload"].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.removeAttribute("disabled");
+    el.style.pointerEvents = "auto";
+  });
+}
+enableButtons();
 
-    <!-- Historik -->
-    <section class="card">
-      <div class="flex items-center justify-between">
-        <strong>Senaste uppladdningar</strong>
-        <button id="refreshBtn" class="tagchip">Uppdatera</button>
-      </div>
-      <ul id="history" class="mt-2 text-sm muted"></ul>
-    </section>
-  </main>
-
-  <!-- Supabase v2 -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-
-  <!-- SUPABASE INIT -->
-  <script>
-    // 🔁 BYT UT DESSA TVÅ RADER TILL DINA EGNA VÄRDEN
-    const SUPABASE_URL = "https://hywwzzzxgagqhlxooekz.supabase.co".trim().replace(/\s/g,"");
-    const SUPABASE_ANON_KEY = `
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTcwMzI0NjM4NiwiZXhwIjoxOTg5MDEyMzg2LCJzdWIiOiJhbm9uIiwicm9sZSI6ImFub24ifQ.XQxiOjE3NjE5Mjk5S2NTcsImV4cCI6MjA...
-`.trim().replace(/\s/g,""); // ← KLIStra IN HELA DIN ANON KEY MELLAN backticks (``)
-
-    try {
-      window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      console.log("sb ready?", !!window.sb);
-    } catch (e) {
-      console.error("Supabase init failed:", e);
-      window.sb = null;
+// === RECORD ===
+recordBtn.addEventListener("click", async () => {
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setStatus("❌ Din webbläsare saknar getUserMedia", true);
+      return;
     }
-  </script>
+    setStatus("🎙️ Startar inspelning...");
+    chunks = [];
+    lastBlob = null;
 
-  <!-- App-koden -->
-  <script src="app.js?v=11"></script>
-</body>
-</html>
+    const supportsOpus = window.MediaRecorder &&
+      MediaRecorder.isTypeSupported("audio/webm;codecs=opus");
+
+    const constraints = { audio: true };
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+    const mime = supportsOpus ? "audio/webm;codecs=opus" : "audio/webm";
+    mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data && e.data.size) chunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = () => {
+      try {
+        const blob = new Blob(chunks, { type: supportsOpus ? "audio/webm;codecs=opus" : "audio/webm" });
+        lastBlob = blob;
+        const url = URL.createObjectURL(blob);
+        player.src = url;
+        player.load();
+        player.play().catch(() => {});
+        setStatus("✅ Inspelning klar – redo att ladda upp");
+        uploadBtn.removeAttribute("disabled");
+      } catch (e) {
+        console.error(e);
+        setStatus("❌ Kunde inte skapa ljudfil", true);
+      }
+    };
+
+    mediaRecorder.start();
+    recordBtn.setAttribute("disabled", "disabled");
+    stopBtn.removeAttribute("disabled");
+    setStatus("⏺️ Spelar in...");
+  } catch (err) {
+    console.error(err);
+    setStatus(`❌ Fel vid start: ${err.message || "okänt"}`, true);
+  }
+});
+
+stopBtn.addEventListener("click", () => {
+  try {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+      setStatus("⏹️ Stoppar...");
+    }
+    stopBtn.setAttribute("disabled", "disabled");
+    recordBtn.removeAttribute("disabled");
+  } catch (e) {
+    console.error(e);
+    setStatus(`❌ Fel vid stopp: ${e.message || "okänt"}`, true);
+  }
+});
+
+// === UPLOAD till Supabase Storage (bucket: "audio/uploads/") ===
+uploadBtn.onclick = async () => {
+  try {
+    if (!window.sb) {
+      setStatus("❌ Supabase-klient saknas (window.sb)", true);
+      return;
+    }
+    if (!lastBlob) {
+      setStatus("❌ Ingen inspelning att ladda upp", true);
+      return;
+    }
+
+    setStatus("⬆️ Laddar upp...");
+
+    const folder = "uploads"; // mapp i bucket "audio"
+    const ts = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0,14);
+    const mime = lastBlob.type || "audio/webm";
+    const ext  = mime.includes("wav") ? "wav" : "webm";
+    const filename = `audio_${ts}.${ext}`;
+    const path = `${folder}/${filename}`;
+
+    // Ladda upp
+    const { error: upErr } = await window.sb
+      .storage
+      .from("audio")
+      .upload(path, lastBlob, { contentType: mime });
+
+    if (upErr) {
+      setStatus(`❌ Upload fail: ${upErr.message}`, true);
+      return;
+    }
+
+    // Hämta public URL
+    const { data: pub } = await window.sb
+      .storage
+      .from("audio")
+      .getPublicUrl(path);
+
+    const publicUrl = pub?.publicUrl || "";
+    setStatus(`✅ Sparat: ${filename}${publicUrl ? " → " + publicUrl : ""}`);
+    resultEl.textContent = publicUrl ? publicUrl : "";
+
+    await loadHistory();
+  } catch (err) {
+    console.error(err);
+    setStatus(`❌ Fel: ${err.message || "okänt"}`, true);
+  }
+};
+
+// === Historik: lista senaste filer i audio/uploads ===
+async function loadHistory() {
+  try {
+    if (!window.sb) return;
+    historyEl.innerHTML = "<li class='muted'>Hämtar...</li>";
+
+    const { data, error } = await window.sb
+      .storage
+      .from("audio")
+      .list("uploads", { limit: 20, sortBy: { column: "created_at", order: "desc" } });
+
+    if (error) throw error;
+
+    const files = Array.isArray(data) ? data : [];
+    if (!files.length) {
+      historyEl.innerHTML = "<li class='muted'>Ingen historik ännu.</li>";
+      return;
+    }
+
+    const items = await Promise.all(files.map(async (f) => {
+      const filePath = `uploads/${f.name}`;
+      const { data: pu } = await window.sb.storage.from("audio").getPublicUrl(filePath);
+      const publicUrl = pu?.publicUrl || "";
+      const d = new Date(f.created_at || Date.now()).toLocaleString();
+      const sizeKB = f?.metadata?.size ? Math.round(f.metadata.size / 1024) : "?";
+      return `
+        <li class="mt-2">
+          <div><strong>${f.name}</strong></div>
+          <div class="muted">${d} · ${sizeKB} KB</div>
+          ${publicUrl ? `<div><a class="tagchip" href="${publicUrl}" target="_blank" rel="noopener">Öppna</a></div>` : ""}
+        </li>
+      `;
+    }));
+
+    historyEl.innerHTML = items.join("");
+  } catch (e) {
+    console.error(e);
+    historyEl.innerHTML = "<li class='muted'>Kunde inte hämta historik.</li>";
+  }
+}
+
+refreshBtn.onclick = loadHistory;
+loadHistory();
