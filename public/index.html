@@ -99,6 +99,12 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9....DIN_HELA_NYCKEL....långt
 </script>
 
 <script src="app.js?v=6"></script>
+<script>
+  // Tvinga på knapparna ifall något tidigare script kraschade
+  document.getElementById('btnStart')?.removeAttribute('disabled');
+  document.getElementById('btnStop')?.removeAttribute('disabled');
+  document.getElementById('btnUpload')?.removeAttribute('disabled');
+</script>
 
 </body>
 </html>
