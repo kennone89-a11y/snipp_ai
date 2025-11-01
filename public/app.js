@@ -8,16 +8,16 @@ const sb = window.sb || null;   // <-- ENDA deklarationen
   const statusEl = $('status');
   const setStatus = (m) => statusEl.textContent = m;
 
-  // --- el
-  const recordBtn = $('recordBtn');
-  const stopBtn = $('stopBtn');
-  const saveLocalBtn = $('saveLocalBtn');
-  const player = $('player');
-  const result = $('result');
-  const historyEl = $('history');
-  const refreshBtn = $('refreshBtn');
-  const fileInput = $('fileInput');
-  const uploadBtn = $('uploadBtn');
+// --- el (koppla till ID som finns i index.html) ---
+const recordBtn    = document.getElementById('btnStart');
+const stopBtn      = document.getElementById('btnStop');
+const saveLocalBtn = document.getElementById('saveLocalBtn'); // om du använder den
+const player       = document.getElementById('player');
+const result       = document.getElementById('result');
+const historyEl    = document.getElementById('history');
+const refreshBtn   = document.getElementById('refreshBtn');   // om du använder den
+const fileInput    = document.getElementById('fileInput');
+const uploadBtn    = document.getElementById('btnUpload');
 
   // --- state
   let mediaRecorder = null;
