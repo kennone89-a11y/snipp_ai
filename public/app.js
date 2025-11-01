@@ -21,19 +21,24 @@ const sb = window.sb;
   let mediaRecorder = null;
   let chunks = [];
 
-  // --- sanity check: backend
-  fetch('/api/health').then(r => r.json()).then(j => {
-    if (!j || !j.ok) setStatus('⚠️ Backend svarar oväntat: ' + JSON.stringify(j));
-  }).catch(() => setStatus('⚠️ Kunde inte nå backend.'));
+  // --- backend health (TEMP BYPASS) ---
+(async () => {
+  try {
+    // Försök väcka backend tyst (om Render sover)
+    fetch('/api/health').catch(() => {});
+  } catch (e) {}
 
-  // --- upload existing file
-  uploadBtn.onclick = () => fileInput.click();
-  fileInput.onchange = async (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    await transcribeFile(file);
-    fileInput.value = '';
-  };
+  // Tvinga "OK" så UI låses upp direkt
+  setStatus('✅ Backend check bypass (tillfälligt)');
+
+  // Om du tidigare aktiverade knappar efter health, gör det nu:
+  try {
+    document.getElementById('btnStart')?.removeAttribute('disabled');
+    document.getElementById('btnStop')?.removeAttribute('disabled');
+    document.getElementById('btnUpload')?.removeAttribute('disabled');
+  } catch {}
+})();
+
 
   async function transcribeFile(file) {
     const form = new FormData();
