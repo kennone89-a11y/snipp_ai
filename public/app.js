@@ -1,203 +1,177 @@
-// Ingen supabase-klient här – den skapas i index.html och läggs på window.sb
-
-// === Hjälpare ===
+// ==== Hjälpare ====
 const $ = (id) => document.getElementById(id);
 const statusEl = $("status");
 const setStatus = (m, danger = false) => {
-  if (!statusEl) return;
-  statusEl.textContent = m ?? "";
-  statusEl.classList.toggle("danger", !!danger);
+  statusEl.textContent = m;
+  statusEl.classList.toggle("danger", danger);
+  statusEl.classList.toggle("ok", !danger && m.toLowerCase().includes("redo") || m.toLowerCase().includes("klar"));
 };
 
-// === UI-element (ID:n måste matcha index.html) ===
-const recordBtn   = $("btnStart");
-const stopBtn     = $("btnStop");
-const uploadBtn   = $("btnUpload");
-const refreshBtn  = $("refreshBtn");
-const fileInput   = $("fileInput");
-const player      = $("player");
-const resultEl    = $("result");
-const historyEl   = $("history");
+// ==== UI-element ====
+const btnStart   = $("btnStart");
+const btnStop    = $("btnStop");
+const btnUpload  = $("btnUpload");
+const fileInput  = $("fileInput");
+const recTimeEl  = $("recTime");
+const player     = $("player");
+const resultEl   = $("result");
+const historyEl  = $("history");
+const refreshBtn = $("refreshBtn");
 
-// === global inspelnings-state ===
+// ==== Global inspelnings-state ====
 let mediaRecorder = null;
 let chunks = [];
 let lastBlob = null;
+let tickTimer = null;
+let startedAt = 0;
 
-// Gör knapparna klickbara (om de är grå)
-function enableButtons() {
-  ["btnStart","btnStop","btnUpload"].forEach(id => {
-    const el = $(id);
-    if (!el) return;
-    el.removeAttribute("disabled");
-    el.style.pointerEvents = "auto";
-  });
-}
+// Knappskydd
+const enableButtons = () => {
+  [btnStart, btnStop, btnUpload].forEach(b => b.removeAttribute("disabled"));
+  btnStop.setAttribute("disabled",""); // stopp tills vi startat
+  btnUpload.setAttribute("disabled",""); // uppladdning tills vi har blob
+};
 enableButtons();
 
-// === RECORD ===
-recordBtn.addEventListener("click", async () => {
+// ==== Local "datastore" (demo) ====
+const LS_KEY = "rr_demo_uploads";
+
+function loadUploads(){
   try {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setStatus("❌ Din webbläsare saknar getUserMedia", true);
+    const raw = localStorage.getItem(LS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+function saveUpload(item){
+  const arr = loadUploads();
+  arr.unshift(item);
+  localStorage.setItem(LS_KEY, JSON.stringify(arr.slice(0,20)));
+}
+function fmtDate(ts){
+  return new Date(ts).toLocaleString();
+}
+function fmtKB(n){
+  return Math.max(1, Math.round(n/1024));
+}
+function renderHistory(){
+  const files = loadUploads();
+  if (!files.length){
+    historyEl.innerHTML = `<li class="muted">Ingen historik ännu.</li>`;
+    return;
+  }
+  historyEl.innerHTML = files.map(f => `
+    <li class="flex items-center justify-between gap-3 p-2 rounded-lg glass">
+      <div>
+        <div><strong>${f.name}</strong></div>
+        <div class="muted text-xs">${fmtDate(f.ts)} · ${fmtKB(f.size)} KB</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <a class="tagchip text-xs" href="${f.url}" download="${f.name}">Ladda ner</a>
+        <button class="tagchip text-xs" data-del="${f.id}">Radera</button>
+      </div>
+    </li>
+  `).join("");
+  // delete handlers
+  historyEl.querySelectorAll("[data-del]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.getAttribute("data-del");
+      const arr = loadUploads().filter(x=>x.id!==id);
+      localStorage.setItem(LS_KEY, JSON.stringify(arr));
+      renderHistory();
+    };
+  });
+}
+refreshBtn.onclick = renderHistory;
+renderHistory();
+
+// ==== Record ====
+btnStart.onclick = async () => {
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      setStatus("Din webbläsare saknar getUserMedia", true);
       return;
     }
-
-    setStatus("🎙️ Startar inspelning...");
+    setStatus("Startar inspelning...");
     chunks = [];
     lastBlob = null;
 
-    const supportsOpus = window.MediaRecorder && MediaRecorder.isTypeSupported("audio/webm;codecs=opus");
+    const supportsOpus = window.MediaRecorder && MediaRecorder.isTypeSupported?.("audio/webm;codecs=opus");
     const constraints = { audio: true };
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
     const mime = supportsOpus ? "audio/webm;codecs=opus" : "audio/webm";
-
     mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data && e.data.size) chunks.push(e.data);
-    };
+
+    mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
     mediaRecorder.onstop = () => {
-      lastBlob = new Blob(chunks, { type: mime });
-      player.src = URL.createObjectURL(lastBlob);
+      const blob = new Blob(chunks, { type: mime });
+      lastBlob = blob;
+      player.src = URL.createObjectURL(blob);
       player.load();
-      player.play().catch(() => {});
-      setStatus("✅ Inspelning klar – redo att ladda upp");
-      uploadBtn.removeAttribute("disabled");
+      player.play().catch(()=>{});
+      setStatus("Inspelning klar – redo att ladda upp", false);
+      btnUpload.removeAttribute("disabled");
+      clearInterval(tickTimer); recTimeEl.textContent = "00:00";
     };
 
-    mediaRecorder.start();
-  } catch (err) {
-    console.error(err);
-    setStatus("❌ Kunde inte starta inspelning", true);
-  }
-});
+    mediaRecorder.start(250);
+    startedAt = Date.now();
+    btnStop.removeAttribute("disabled");
+    btnUpload.setAttribute("disabled","");
+    btnStart.setAttribute("disabled","");
 
-stopBtn.addEventListener("click", () => {
-  try {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+    tickTimer = setInterval(()=>{
+      const s = Math.floor((Date.now()-startedAt)/1000);
+      const mm = String(Math.floor(s/60)).padStart(2,"0");
+      const ss = String(s%60).padStart(2,"0");
+      recTimeEl.textContent = `${mm}:${ss}`;
+    },500);
+
+  } catch (err){
+    console.error(err);
+    setStatus("Kunde inte starta inspelning", true);
+  }
+};
+
+btnStop.onclick = () => {
+  try{
+    if (mediaRecorder && mediaRecorder.state !== "inactive"){
       mediaRecorder.stop();
-      setStatus("⏹️ Stoppad");
+      mediaRecorder.stream.getTracks().forEach(t=>t.stop());
     }
-  } catch (e) {
-    console.error(e);
-  }
-});
+  } catch(e){}
+  btnStart.removeAttribute("disabled");
+  btnStop.setAttribute("disabled","");
+};
 
-// === UPLOAD till Supabase Storage ===
-uploadBtn.onclick = async () => {
-  try {
-    if (!lastBlob) {
-      setStatus("❌ Ingen inspelning att ladda upp", true);
+// ==== “Upload” (lokalt demo) ====
+btnUpload.onclick = async () => {
+  try{
+    if (!lastBlob){
+      setStatus("Ingen inspelning att ladda upp", true);
       return;
     }
-    if (!window.sb) {
-      setStatus("❌ Supabase-klienten saknas", true);
-      return;
-    }
-
-    // Filnamn: audio_YYYYMMDD_HHMMSS.webm
-    const ts = new Date().toISOString().replace(/[T:\.Z]/g, "").slice(0, 14);
-    const filename = `audio_${ts}.webm`;
-    const folder = "uploads";
-    const path = `${folder}/${filename}`;
-
-    setStatus("⬆️ Laddar upp...");
-
-    // 1) Ladda upp
-    const { error: upErr } = await window.sb
-      .storage
-      .from("audio")
-      .upload(path, lastBlob, { contentType: lastBlob.type });
-
-    if (upErr) throw upErr;
-
-    // 2) Hämta public URL
-    const { data: pub } = window.sb.storage.from("audio").getPublicUrl(path);
-    const publicUrl = pub?.publicUrl || "";
-
-    setStatus(`✅ Sparat: ${filename}`);
-    resultEl.textContent = publicUrl ? publicUrl : "Sparat (ingen public URL)";
-
-    await loadHistory();
-  } catch (err) {
+    const fileName = `audio_${new Date().toISOString().replace(/[:.]/g,"-")}.webm`;
+    // spara blob-url i historik (demo)
+    const url = URL.createObjectURL(lastBlob);
+    saveUpload({ id: crypto.randomUUID(), name:fileName, size:lastBlob.size, url, ts: Date.now() });
+    renderHistory();
+    resultEl.textContent = `✅ Sparat (lokalt): ${fileName}`;
+    setStatus("Uppladdad (lokalt demo). Backend kopplas in senare.");
+    btnUpload.setAttribute("disabled","");
+  } catch (err){
     console.error(err);
-    setStatus(`❌ Fel vid uppladdning: ${err.message || "okänt"}`, true);
+    setStatus("Fel vid uppladdning (demo)", true);
   }
 };
 
-// === Ladda upp via fil-input (om användaren väljer en fil) ===
+// Filuppladdning (lokalt demo)
 fileInput.onchange = async (e) => {
-  try {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-
-    if (!window.sb) {
-      setStatus("❌ Supabase-klienten saknas", true);
-      return;
-    }
-
-    setStatus("⬆️ Laddar upp vald fil...");
-    const folder = "uploads";
-    const path = `${folder}/${file.name}`;
-
-    const { error: upErr } = await window.sb
-      .storage
-      .from("audio")
-      .upload(path, file, { contentType: file.type });
-
-    if (upErr) throw upErr;
-
-    const { data: pub } = window.sb.storage.from("audio").getPublicUrl(path);
-    const publicUrl = pub?.publicUrl || "";
-    setStatus("✅ Fil uppladdad");
-    resultEl.textContent = publicUrl || "Sparat (ingen public URL)";
-
-    await loadHistory();
-  } catch (err) {
-    console.error(err);
-    setStatus(`❌ Fel vid uppladdning: ${err.message || "okänt"}`, true);
-  } finally {
-    fileInput.value = "";
-  }
+  const f = e.target.files?.[0];
+  if (!f) return;
+  const url = URL.createObjectURL(f);
+  saveUpload({ id: crypto.randomUUID(), name:f.name, size:f.size, url, ts: Date.now() });
+  renderHistory();
+  resultEl.textContent = `✅ Sparat (lokalt): ${f.name}`;
+  setStatus("Uppladdad (lokalt demo).");
 };
-
-// === Historia (listar senaste) ===
-async function loadHistory() {
-  try {
-    if (!window.sb) return;
-    const { data, error } = await window.sb
-      .storage
-      .from("audio")
-      .list("uploads", { limit: 20, sortBy: { column: "created_at", order: "desc" } });
-
-    if (error) throw error;
-
-    const files = Array.isArray(data) ? data : [];
-    if (!files.length) {
-      historyEl.innerHTML = `<li class="muted">Ingen historik ännu.</li>`;
-      return;
-    }
-
-    historyEl.innerHTML = files.map(f => {
-      const dt = new Date(f.created_at).toLocaleString();
-      const sizeKB = (f.size / 1024).toFixed(1);
-      const url = window.sb.storage.from("audio").getPublicUrl(`uploads/${f.name}`).data.publicUrl;
-      const safeName = encodeURIComponent(f.name);
-      return `
-        <li>
-          <div><strong>${f.name}</strong></div>
-          <div class="muted">${dt} · ${sizeKB} KB</div>
-          <div><a href="${url}" download>⬇️ Ladda ner</a></div>
-        </li>
-      `;
-    }).join("");
-  } catch (e) {
-    console.error(e);
-    historyEl.innerHTML = `<li class="muted">Kunde inte hämta historik.</li>`;
-  }
-}
-
-refreshBtn.onclick = loadHistory;
-
-// Init
-loadHistory();
