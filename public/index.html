@@ -80,14 +80,14 @@
  <!-- Ladda Supabase + initiera global klient (SB1) -->
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <!-- BYT DINA VÄRDEN HÄR -->
-<script>
+<<script>
   // 1) Klistra in DIN riktiga URL och ANON KEY
-  const SUPABASE_URL = "https://DIN-PROJEKTID.supabase.co";
-  const SUPABASE_ANON_KEY = `DIN_MEGA_LÅNGA_ANON_PUBLIC_KEY_HÄR`
-    .trim()
-    .replace(/\s/g, "");
+  const SUPABASE_URL = "https://hyyyzzzzgxgah0koeez.supabase.co";   // <-- din exakta Project URL
+  const SUPABASE_ANON_KEY = `
+eyJh6bCi01tU2I1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTM4...DIN_HELA_NYCKEL...
+`.trim().replace(/\s/g, "");
 
-  // 2) Starta Supabase – men låt inte fel stoppa resten av sidan
+  // 2) Starta Supabase — men låt inte fel stoppa resten av sidan
   try {
     window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     console.log("sb ready?", !!window.sb);
@@ -95,12 +95,18 @@
     console.error("Supabase init failed:", e);
     // Minimal stub så att app.js inte kraschar
     window.sb = {
-      storage: { from() { return { upload: async()=>({ error:new Error("offline") }),
-                                   getPublicUrl:()=>({ data:{ publicUrl:"" } }) }; } }
+      storage: {
+        from() { 
+          return { 
+            upload: async () => ({ error: new Error("offline") }),
+            getPublicUrl: () => ({ data: { publicUrl: "" } })
+          }; 
+        }
+      }
     };
   }
+</script>
 
- <script>
   // NÖD-LÄGE: Tvinga på knapparna och tillåt klick
   window.addEventListener('load', () => {
     const ids = ['btnStart', 'btnStop', 'btnUpload'];
