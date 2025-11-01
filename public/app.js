@@ -1,6 +1,6 @@
 // ===== BYT ENDAST DESSA TVÅ RADER =====
-const SUPABASE_URL  = 'https://<DIN-PROJEKT-DOMÄN>.supabase.co';   // ex: https://hwywzzzgaghkhooezk.supabase.co
-const SUPABASE_ANON = 'sbp_ELLER_sb_publishable_xxxxxxxxxxxxxxx';  // Publishable key (börjar med sbp_ eller sb_publishable_)
+const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co   // ex: https://hwywzzzgaghkhooezk.supabase.co
+const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z // Publishable key (börjar med sbp_ eller sb_publishable_)
 // ======================================
 
 const BUCKET = 'audio';
