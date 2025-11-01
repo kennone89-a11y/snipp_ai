@@ -77,18 +77,19 @@
     </section>
   </main>
 
-  <!-- === Ladda Supabase + initiera global klient (SIST) === -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script>
-    // RADER ATT BYTA: 175–176
-    const SUPABASE_URL = https://hywwzzzxgagqhlxooekz.supabase.co       // RAD 175
-    const SUPABASE_ANON_KEY = "PASTE_ANON_PUBLIC_KEY_HERE"; // RAD 176 (hela nyckeln på EN rad)
+ <!-- Ladda Supabase + initiera global klient (SB1) -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
-    // Gör klienten global
-    window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log('sb ready?', !!window.sb);
-  </script>
-  <!-- Ladda appen allra sist (cache-bust) -->
-  <script src="app.js?v=6"></script>
+<!-- BYT DINA VÄRDEN HÄR -->
+<script>
+  const SUPABASE_URL = "https://hywwzzzxgagqhlxooekz.supabase.co";
+  const SUPABASE_ANON_KEY = "PASTE_ANON_PUBLIC_KEY_HERE";
+
+  window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  console.log('sb ready?', !!window.sb);
+</script>
+
+<script src="app.js?v=6"></script>
+
 </body>
 </html>
