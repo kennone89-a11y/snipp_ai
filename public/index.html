@@ -1,28 +1,34 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>snipp_ai — Live</title>
+
+  <!-- Supabase JS v2 via CDN -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
   <style>
-    :root{--bg:#0b0f14;--bg2:#0e1320;--panel:rgba(15,23,42,.6);--text:#e5e7eb;--muted:#94a3b8;--line:#1f2937;--accent:#38bdf8;--ok:#22c55e;--radius:18px;--shadow:0 10px 30px rgba(0,0,0,.25)}
-    *{box-sizing:border-box} body{margin:0;background:linear-gradient(120deg,var(--bg),var(--bg2));color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
-    .wrap{max-width:1040px;margin:28px auto;padding:0 20px}
-    .card{background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow)}
-    h1{margin:0 0 8px;font-size:28px}.muted{color:var(--muted);font-size:14px}.sep{height:1px;background:var(--line);margin:16px 0}
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    input[type="text"]{background:#0b1220;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:10px 12px;min-width:260px}
-    button{background:#111827;color:#e5e7eb;border:1px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer;transition:.06s transform,.15s border-color}
-    button:hover{border-color:#334155}button:active{transform:translateY(1px)}
-    .primary{border-color:var(--accent)}.ok{border-color:var(--ok)}
-    .wave{height:42px;border:1px dashed var(--line);border-radius:12px;display:flex;align-items:flex-end;gap:2px;padding:4px;overflow:hidden}
-    .bar{width:3px;background:var(--accent);opacity:.85;border-radius:2px}
-    .list{display:grid;gap:12px}
-    .item{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:12px;background:rgba(2,6,23,.35)}
-    audio{width:100%}.right{display:flex;gap:8px;align-items:center}
+    :root{
+      --bg:#0b0f14; --panel:#0e1320; --line:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#38bdf8;
+      --radius:12px;
+    }
+    body{margin:0;background:linear-gradient(120deg,var(--bg),var(--panel));color:var(--text);font-family:system-ui,Segoe UI,Roboto,Inter,sans-serif}
+    .wrap{max-width:980px;margin:32px auto;padding:16px}
+    .card{background:rgba(14,19,32,.6);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:0 10px 25px rgba(0,0,0,.25)}
+    h1{margin:0 0 16px;font-size:28px}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    input[type="text"]{flex:1;min-width:220px;background:#0b1220;border:1px solid var(--line);border-radius:10px;padding:10px;color:var(--text)}
+    button{background:#111827;color:#e5e7eb;border:1px solid var(--line);border-radius:10px;padding:10px 14px;cursor:pointer;transition:transform .06s ease,opacity .15s}
+    button:active{transform:translateY(1px)}
+    .primary{border-color:var(--accent);box-shadow:0 0 0 0 rgba(56,189,248,.0)}
     .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)}
-    pre{background:#0b1220;border:1px solid var(--line);border-radius:12px;padding:12px;min-height:54px;white-space:pre-wrap}
+    .list{display:grid;grid-template-columns:1fr auto;gap:10px}
+    .item{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border:1px dashed var(--line);border-radius:10px;padding:10px;background:rgba(2,6,23,.35)}
+    .sep{height:1px;background:var(--line);margin:20px 0}
+    pre{background:#0b1220;border:1px solid var(--line);border-radius:10px;padding:12px;min-height:48px;white-space:pre-wrap}
+    .muted{color:var(--muted)}
+    .right{display:flex;gap:8px;align-items:center}
   </style>
 </head>
 <body>
@@ -35,33 +41,33 @@
 
       <div class="row">
         <input id="title" type="text" placeholder="Titel (t.ex. 'Rogan #2134 — kort review')" />
-        <button id="recBtn" class="primary">● Starta inspelning</button>
-        <button id="saveBtn" class="ok" disabled>Ladda upp</button>
+        <button id="recBtn" class="primary">▶️ Starta inspelning</button>
+        <button id="saveBtn" disabled>⬆️ Ladda upp</button>
         <span class="pill"><span id="timer">00:00</span></span>
       </div>
 
-      <div id="wave" class="wave" style="margin-top:10px" aria-label="live waveform"></div>
+      <div id="wave" class="wave" style="margin-top:12px" aria-label="live waveform"></div>
 
       <div class="sep"></div>
+
       <h3 style="margin:0 0 8px">Dina uppladdningar</h3>
       <div id="list" class="list"></div>
 
       <div class="sep"></div>
+
       <h3>Sanity test</h3>
       <div class="muted">Om detta laddar utan fel och knappen funkar, är URL/nyckel rätt.</div>
       <div class="row" style="margin-top:8px">
-        <span class="pill">URL: <span id="u">–</span></span>
-        <span class="pill">Key prefix: <span id="k">–</span></span>
+        <span class="pill">URL: <span id="u">…</span></span>
+        <span class="pill">Key prefix: <span id="k">…</span></span>
         <button id="ping">Lista 1 fil från "audio"</button>
       </div>
+
       <pre id="out"></pre>
     </div>
   </div>
-<script src="/app.js"></script>
-</body>
-</html>
 
- 
-
+  <!-- Vår externa app-kod -->
+  <script src="./app.js"></script>
 </body>
 </html>
