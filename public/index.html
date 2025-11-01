@@ -87,22 +87,20 @@
   <!-- ============= SUPABASE INIT ============= -->
   <!-- STEP 1: Klistra in din exakta Project URL mellan backticks -->
   <script>
-    const SUPABASE_URL = https://hywwzzzxgagqhlxooekz.supabase.co
-`.trim().replace(/\s/g, "");
+   <script>
+  const SUPABASE_URL = "https://hywwzzzxgagqhlxooekz.supabase.co".trim().replace(/\s/g,"");
+  const SUPABASE_ANON_KEY = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA...`
+    .trim().replace(/\s/g,"");
 
-    /* STEP 2: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA
-`.trim().replace(/\s/g, "");
+  try {
+    window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log("sb ready?", !!window.sb);
+  } catch (e) {
+    console.error("Supabase init failed:", e);
+    window.sb = null;
+  }
+</script>
 
-    // Skapa global klient och skydda resten av sidan om något går fel
-    try {
-      window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      console.log("sb ready?", !!window.sb);
-    } catch (e) {
-      console.error("Supabase init failed:", e);
-      window.sb = null;
-    }
-  </script>
-  <!-- =========== /SUPABASE INIT =========== -->
 
   <!-- Din app-logik -->
   <script src="app.js?v=11"></script>
