@@ -82,17 +82,19 @@
 
 <!-- BYT DINA VÄRDEN HÄR -->
 <script>
-  <script>
-  const SUPABASE_URL = "https://hyywzzzggxgh0koeez.supabase.co";
+  // RAD ~89
+  const SUPABASE_URL = "https://<DIN-PROJEKTID>.supabase.co";  // din Project URL
 
-  // Lägg in din LÅNGA anon public key mellan backticks (` ... `)
-  const SUPABASE_ANON_KEY = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTM...DIN_HELA_NYCKEL...` 
-    .trim()            // tar bort ev. radbrytning i början/slutet
-    .replace(/\s/g,''); // tar bort alla mellanslag/radbrytningar inne i nyckeln
+  // RAD ~90–93 — KLISTRA IN HELA ANON KEY MELLAN BACKTICKS `...`
+  const SUPABASE_ANON_KEY = `
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9....DIN_HELA_NYCKEL....långt
+`.trim().replace(/\s/g, '');
 
+  // RAD ~95
   window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   console.log('sb ready?', !!window.sb);
 </script>
+
 
 </script>
 
