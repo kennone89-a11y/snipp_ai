@@ -3,120 +3,82 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Röstrecessioner (MVP)</title>
-
-  <!-- Tailwind (snabb styling) -->
+  <title>Röstrecensioner (MVP)</title>
+  <meta name="description" content="Spela in röst, ladda upp till Supabase och spara recensioner. MVP." />
   <script src="https://cdn.tailwindcss.com"></script>
-
   <style>
-    :root { color-scheme: dark light; }
     body { background:#0b0d12; color:#e6eef8; }
-    .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; box-shadow: 0 12px 28px rgba(0,0,0,.18); }
-    .tagchip { border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 2px 8px; }
-    button { transition: .15s ease; }
+    .card { background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:16px; }
+    .tagchip { border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:4px 8px; }
+    .muted { color:#9aa8bf; }
+    .danger { color:#ff6b6b; }
   </style>
 </head>
-
-<body class="min-h-screen bg-neutral-950 text-neutral-100">
-  <main class="max-w-6xl mx-auto p-6 md:p-8 space-y-6">
-    <header class="mb-2">
-      <h1 class="text-3xl md:text-4xl font-extrabold leading-tight">Röstrecessioner</h1>
-      <p class="text-neutral-300">Spela in din röst, lägg till taggar och spara. Perfekt för poddar, filmer och ljudböcker.</p>
+<body class="min-h-screen">
+  <main class="max-w-5xl mx-auto p-6 space-y-6">
+    <header>
+      <h1 class="text-3xl font-extrabold">Röstrecensioner</h1>
+      <p class="muted mt-1">Spela in din röst, ladda upp, få en publik länk.</p>
     </header>
 
     <!-- Recorder -->
-    <section id="recorder" class="grid md:grid-cols-3 gap-6">
-      <!-- Vänster: inspelning -->
-      <div class="card p-4 md:col-span-2 space-y-4">
-        <h2 class="text-xl font-bold">Spela in & ladda upp</h2>
-
-        <div class="flex flex-wrap items-center gap-2">
-          <button id="btnStart" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-semibold" aria-label="Starta">Spela in</button>
-          <button id="btnStop"  class="px-4 py-2 rounded-lg bg-fuchsia-600 hover:bg-fuchsia-500 font-semibold" aria-label="Stoppa" disabled>Stoppa</button>
-          <button id="btnUpload" class="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 font-semibold disabled:opacity-50" disabled>Ladda upp</button>
-          <span id="recReady" class="ml-3 inline-flex items-center text-sm text-emerald-400 border border-emerald-700 rounded px-2 py-0.5 hidden">Inspelning klar</span>
+    <section class="grid md:grid-cols-3 gap-4">
+      <div class="card md:col-span-2">
+        <div class="flex items-center gap-2">
+          <button id="btnStart" class="tagchip">Spela in</button>
+          <button id="btnStop" class="tagchip" disabled>Stoppa</button>
+          <button id="btnUpload" class="tagchip" disabled>Ladda upp</button>
+          <span id="status" class="text-sm muted ml-auto"></span>
         </div>
 
-        <audio id="player" class="w-full mt-2" controls></audio>
-
-        <div class="mt-4">
-          <p id="status" class="text-sm text-neutral-400">Ingen uppladdning gjord än.</p>
+        <div class="mt-3">
+          <audio id="player" controls class="w-full"></audio>
         </div>
+
+        <p id="result" class="muted text-sm mt-3"></p>
       </div>
 
-      <!-- Höger: tips -->
-      <aside class="card p-4 space-y-2">
-        <h3 class="text-lg font-semibold">Tips</h3>
-        <ul class="list-disc list-inside text-neutral-300 text-sm space-y-1">
+      <aside class="card">
+        <h3 class="font-semibold mb-2">Tips</h3>
+        <ul class="list-disc list-inside muted space-y-1">
           <li>Håll mikrofonen nära.</li>
           <li>Stäng av notiser under inspelning.</li>
-          <li>Max 5 min rekommenderas.</li>
+          <li>Max 5 minuter rekommenderas.</li>
         </ul>
       </aside>
     </section>
 
-    <!-- Filuppladdning -->
-    <details class="card p-4">
-      <summary class="cursor-pointer font-semibold">📁 Ladda upp fil</summary>
-      <div class="mt-3">
-        <input id="fileInput" type="file" accept="audio/*" class="block" />
-      </div>
-    </details>
-
-    <!-- Resultat -->
-    <div class="card p-4">
-      <h3 class="font-semibold">Resultat</h3>
-      <p id="result" class="text-sm text-neutral-400">Ingen uppladdning gjord än.</p>
-    </div>
-
     <!-- Historik -->
-    <div class="card p-4">
+    <section class="card">
       <div class="flex items-center justify-between">
         <strong>Senaste uppladdningar</strong>
-        <button id="refreshBtn" class="secondary tagchip">Uppdatera</button>
+        <button id="refreshBtn" class="tagchip">Uppdatera</button>
       </div>
-      <ul id="history" class="mt-2 text-sm text-neutral-300">
-        <li class="text-muted">Ingen historik ännu.</li>
-      </ul>
-    </div>
+      <ul id="history" class="mt-2 text-sm muted"></ul>
+    </section>
   </main>
 
-  <!-- Supabase-klient -->
+  <!-- Supabase v2 -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
-  <!-- ============= SUPABASE INIT ============= -->
-  <!-- STEP 1: Klistra in din exakta Project URL mellan backticks -->
+  <!-- SUPABASE INIT -->
   <script>
-   <script>
-  const SUPABASE_URL = "https://hywwzzzxgagqhlxooekz.supabase.co".trim().replace(/\s/g,"");
-  const SUPABASE_ANON_KEY = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA...`
-    .trim().replace(/\s/g,"");
+    // 🔁 BYT UT DESSA TVÅ RADER TILL DINA EGNA VÄRDEN
+    const SUPABASE_URL = "https://hywwzzzxgagqhlxooekz.supabase.co".trim().replace(/\s/g,"");
+    const SUPABASE_ANON_KEY = `
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTcwMzI0NjM4NiwiZXhwIjoxOTg5MDEyMzg2LCJzdWIiOiJhbm9uIiwicm9sZSI6ImFub24ifQ.XQxiOjE3NjE5Mjk5S2NTcsImV4cCI6MjA...
+`.trim().replace(/\s/g,""); // ← KLIStra IN HELA DIN ANON KEY MELLAN backticks (``)
 
-  try {
-    window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log("sb ready?", !!window.sb);
-  } catch (e) {
-    console.error("Supabase init failed:", e);
-    window.sb = null;
-  }
-</script>
-
-
-  <!-- Din app-logik -->
-  <script src="app.js?v=11"></script>
-
-  <!-- (Valfritt) Nöd-läge om knappar låser sig – lämna avstängt om allt funkar
-  <script>
-    window.addEventListener('load', () => {
-      ['btnStart','btnStop','btnUpload'].forEach(id => {
-        const el = document.getElementById(id); if (!el) return;
-        el.removeAttribute('disabled');
-        el.classList.remove('opacity-50');
-        el.style.pointerEvents = 'auto';
-      });
-      console.log('force-enabled buttons (nöd-läge)');
-    });
+    try {
+      window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      console.log("sb ready?", !!window.sb);
+    } catch (e) {
+      console.error("Supabase init failed:", e);
+      window.sb = null;
+    }
   </script>
-  -->
+
+  <!-- App-koden -->
+  <script src="app.js?v=11"></script>
 </body>
 </html>
