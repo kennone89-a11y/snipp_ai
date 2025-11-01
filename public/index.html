@@ -61,20 +61,24 @@
   <script>
   (function(){
     // ====== BYT ENDAST DESSA TVÅ RADER (ingen slash på slutet, inga radbrytningar) ======
-    const SUPABASE_URL  = "https://hywwzzzxgagqhlxooekz.supabase.co      // <-- BYT
-    const SUPABASE_ANON = "sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z  // <-- BYT
-    // ===============================================================================
-    const BUCKET = "audio";
+    <script>
+(function () {
+  const SUPABASE_URL = 'https://hywwzzzxgagqhlxooekz.supabase.co
+  const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z
+  const BUCKET = 'audio';
 
-    // Visa värden (sanity)
-    const u = document.getElementById("u");
-    const k = document.getElementById("k");
-    if (u) u.textContent = SUPABASE_URL;
-    if (k) k.textContent = SUPABASE_ANON.startsWith("sb") ? "ok" : "fel";
+  const u = document.getElementById('u');
+  const k = document.getElementById('k');
+  if (u) u.textContent = SUPABASE_URL;
+  if (k) k.textContent = SUPABASE_ANON.startsWith('sb') ? 'ok' : 'fel';
 
-    // Init Supabase
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-    window.sb = sb; // så vi kan testa i Console
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  window.sb = sb;
+
+  // …resten av din kod nedan oförändrad …
+})();
+</script>
+
 
     // ======= UI/helpers =======
     let mediaRecorder, chunks = [], startedAt = 0, timerInt = null, waveInt = null;
