@@ -1,53 +1,133 @@
 // Gör Supabase-klienten tolerant om init skulle faila
 const sb = window.sb || null; // <-- ENDA deklarationen
 
-(function () {
-  // --- helpers
-  const $ = (id) => document.getElementById(id);
-  const statusEl = $('status');
-  const setStatus = (m) => statusEl.textContent = m;
+// --- Gör knapparna klickbara och synliga ---
+function enableButtons() {
+  ['btnStart','btnStop','btnUpload'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.removeAttribute('disabled');
+    el.classList.remove('opacity-50');
+    el.style.pointerEvents = 'auto';
+  });
+}
 
-// --- el
-const recordBtn   = $('btnStart');   // ÄNDRA: var 'recordBtn'
-const stopBtn     = $('btnStop');    // ÄNDRA: var 'stopBtn'
-const saveLocalBtn = $('saveLocalBtn');  // (denna kan vara kvar om knappen finns)
-const player      = $('player');
-const result      = $('result');
-const historyEl   = $('history');
-const refreshBtn  = $('refreshBtn');     // ok om finns
-const fileInput   = $('fileInput');
-const uploadBtn   = $('btnUpload');  // ÄNDRA: var 'uploadBtn'
+// --- Enkel status-helper ---
+function ok(msg){ setStatus(`✅ ${msg}`); }
+function info(msg){ setStatus(`ℹ️ ${msg}`); }
+function fail(msg){ setStatus(`❌ Fel: ${msg}`); }
 
-  // --- state
-  let mediaRecorder = null;
-  let chunks = [];
+// --- Supabase upload + public URL ---
+async function uploadToSupabase(file){
+  if (!window.sb) throw new Error('Supabase-klient saknas (sb=null).');
+  const bucket = 'audio';
+  const ts = new Date().toISOString().replace(/[:.]/g,'-');
+  const ext = (file.type.includes('webm') ? 'webm' : (file.type.includes('wav') ? 'wav' : 'webm'));
+  const path = `uploads/audio_${ts}.${ext}`;
 
-  // Gör knapparna klickbara oavsett läge
-  function enableButtons() {
-    ['btnStart','btnStop','btnUpload'].forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.removeAttribute('disabled');          // ta bort disabled
-      el.classList.remove('opacity-50');       // ta bort gråning
-      el.style.pointerEvents = 'auto';         // säkerställ klick
-    });
+  // ladda upp
+  const { error: upErr } = await sb.storage
+    .from(bucket)
+    .upload(path, file, { contentType: file.type || 'audio/webm' });
+  if (upErr) throw upErr;
+
+  // public url
+  const { data, error: pubErr } = await sb.storage
+    .from(bucket)
+    .getPublicUrl(path);
+  if (pubErr) throw pubErr;
+
+  return { path, publicUrl: data.publicUrl || (data.publicUrl ?? '') };
+}
+
+// --- Transcribe/upload knappen kör denna ---
+async function transcribeFile(file){
+  try{
+    info('Laddar upp & transkriberar...');
+    const { publicUrl } = await uploadToSupabase(file);
+    ok('Uppladdad! ' + publicUrl);
+    await loadHistory();
+    return true;
+  }catch(e){
+    console.error(e);
+    fail(e.message || 'okänt');
+    return false;
   }
+}
 
-  // --- backend health (TEMP BYPASS) ---
-  (async () => {
-    try {
-      // Försök väcka backend tyst (om Render sover)
-      fetch('/api/health').catch(() => {});
-    } catch (e) {}
-    // Tvinga “OK” så UI låses upp direkt
-    setStatus('✅ Backend check bypass (tillfälligt)');
+// --- Recording-state ---
+let lastBlob = null;
 
-    // Om du tidigare aktiverade knappar efter health, gör det nu:
-    try {
-      document.getElementById('btnStart')?.removeAttribute('disabled');
-      document.getElementById('btnStop')?.removeAttribute('disabled');
-      document.getElementById('btnUpload')?.removeAttribute('disabled');
-    } catch (e) {}
+// --- Starta inspelning ---
+recordBtn.onclick = async () => {
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      fail('Din webbläsare saknar getUserMedia');
+      return;
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    chunks = [];
+    const mime = (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm;codecs=opus'))
+      ? 'audio/webm;codecs=opus'
+      : 'audio/webm';
+    mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
+
+    mediaRecorder.ondataavailable = (e)=>{ if (e.data && e.data.size) chunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      lastBlob = new Blob(chunks, { type: 'audio/webm' });
+      player.src = URL.createObjectURL(lastBlob);
+      player.load();
+      ok('Inspelning klar – klicka "Ladda upp"');
+    };
+
+    mediaRecorder.start();
+    info('Spelar in...');
+  } catch (e){
+    console.error(e);
+    fail(e.message || 'Kunde inte starta inspelning');
+  }
+};
+
+// --- Stoppa inspelning ---
+stopBtn.onclick = () => {
+  try{
+    if (mediaRecorder && mediaRecorder.state !== 'inactive'){
+      mediaRecorder.stop();
+      info('Stoppar...');
+    } else {
+      info('Ingen aktiv inspelning');
+    }
+  }catch(e){
+    console.error(e);
+    fail(e.message || 'Kunde inte stoppa');
+  }
+};
+
+// --- Ladda upp (sen transkribera) ---
+uploadBtn.onclick = async () => {
+  if (!lastBlob){
+    info('Ingen inspelning att ladda upp.');
+    return;
+  }
+  await transcribeFile(lastBlob);
+};
+
+// --- Dummy historik så sidan inte klagar (du kan ersätta med din riktiga) ---
+async function loadHistory(){
+  try{
+    historyEl.innerHTML = '<li class="text-muted">Ingen uppladdning gjord än.</li>';
+  }catch(e){
+    console.error(e);
+  }
+}
+
+// --- Backend health bypass (tyst) för att inte blocka UI ---
+(async () => {
+  try { await fetch('/api/health').catch(()=>{}); } catch {}
+  // efter “health”, säkerställ att knapparna är aktiva
+  enableButtons();
+})();
+
   })();
 
   // --- upload till Supabase ---
