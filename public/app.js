@@ -1,23 +1,29 @@
-// ============================================================================
-// public/app.js — Ersätt hela filens innehåll med detta
-// ============================================================================
+// Ingen const sb här – klienten ligger på window.sb från index.html
 
-// Supabase-klient injiceras i index.html
-const sb = window.sb || null;
-
-// Snabb DOM-hjälpare
+// Hjälpare
 const $ = (id) => document.getElementById(id);
+const statusEl = $('#status');
+const setStatus = (m, danger = false) => {
+  if (!statusEl) return;
+  statusEl.textContent = m;
+  statusEl.classList.toggle('danger', !!danger);
+};
 
-// UI-element (ID:n måste matcha index.html)
-const recordBtn  = $("btnStart");
-const stopBtn    = $("btnStop");
-const uploadBtn  = $("btnUpload");
-const refreshBtn = $("refreshBtn");
-const fileInput  = $("fileInput");
-const player     = $("player");
-const statusEl   = $("status");
-const resultEl   = $("result");
-const historyEl  = $("history");
+// UI-element (måste matcha index.html)
+const recordBtn   = $('#btnStart');
+const stopBtn     = $('#btnStop');
+const uploadBtn   = $('#btnUpload');
+const refreshBtn  = $('#refreshBtn');
+const fileInput   = $('#fileInput');
+const player      = $('#player');
+const resultEl    = $('#result');
+const historyEl   = $('#history');
+
+// …resten av din kod (event-lyssnare, inspelning, uppladdning osv)
+// Viktigt: Använd window.sb överallt där du anropar Supabase:
+/// ex: const { error } = await window.sb.storage.from('audio').upload(path, file, { contentType: mime });
+
+
 
 // Status-helper
 const setStatus = (m, danger = false) => {
