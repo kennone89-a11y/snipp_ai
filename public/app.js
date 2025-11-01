@@ -22,6 +22,16 @@ const sb = window.sb || null;   // <-- ENDA deklarationen
   // --- state
   let mediaRecorder = null;
   let chunks = [];
+// Gör knapparna klickbara oavsett läge
+function enableButtons() {
+  ['btnStart','btnStop','btnUpload'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.removeAttribute('disabled');       // ta bort disabled
+    el.classList.remove('opacity-50');    // ta bort gråning
+    el.style.pointerEvents = 'auto';      // säkerställ klick
+  });
+}
 
   // --- backend health (TEMP BYPASS) ---
 (async () => {
