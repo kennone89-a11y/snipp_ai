@@ -107,20 +107,25 @@ eyJh6bCi01tU2I1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTM4...DIN_H
   }
 </script>
 
-  // NÖD-LÄGE: Tvinga på knapparna och tillåt klick
+ <!-- Ladda app-koden -->
+<script src="app.js?v=6"></script>
+
+<!-- (valfritt) NÖD-LÄGE: tvinga knappar klickbara om något krånglar -->
+<script>
   window.addEventListener('load', () => {
-    const ids = ['btnStart', 'btnStop', 'btnUpload'];
-    ids.forEach(id => {
+    ['btnStart', 'btnStop', 'btnUpload'].forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.removeAttribute('disabled');
-      // Ta bort ev. gråning från Tailwind-klasser
-      el.classList.remove('opacity-50');
-      el.style.pointerEvents = 'auto';
+      el.removeAttribute('disabled');          // ta bort disabled
+      el.classList.remove('opacity-50');        // ta bort gråning
+      el.style.pointerEvents = 'auto';          // säkerställ klick
     });
     console.log('Force-enabled buttons');
   });
 </script>
+</body>
+</html>
+
 
 </script>
 
