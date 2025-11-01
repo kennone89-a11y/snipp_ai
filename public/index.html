@@ -107,27 +107,41 @@ eyJh6bCi01tU2I1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTM4...DIN_H
   }
 </script>
 
- <!-- Ladda app-koden -->
+<!-- Ladda Supabase lib -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+<!-- STEG 2: Din URL + ANON KEY och createClient -->
+<script>
+  const SUPABASE_URL = `https://DIN-PROJEKTID.supabase.co`.trim().replace(/\s/g,"");
+  const SUPABASE_ANON_KEY = `
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9....DIN_HELA_NYCKEL...
+`.trim().replace(/\s/g,"");
+
+  try {
+    window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log("sb ready?", !!window.sb);
+  } catch (e) {
+    console.error("Supabase init failed:", e);
+    window.sb = null;
+  }
+</script>
+
+<!-- Ladda app-koden (SKA ligga efter blocket ovan) -->
 <script src="app.js?v=6"></script>
 
-<!-- (valfritt) NÖD-LÄGE: tvinga knappar klickbara om något krånglar -->
+<!-- (valfritt) NÖD-LÄGE: tvinga knappar klickbara -->
 <script>
   window.addEventListener('load', () => {
-    ['btnStart', 'btnStop', 'btnUpload'].forEach(id => {
+    ['btnStart','btnStop','btnUpload'].forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.removeAttribute('disabled');          // ta bort disabled
-      el.classList.remove('opacity-50');        // ta bort gråning
-      el.style.pointerEvents = 'auto';          // säkerställ klick
+      el.removeAttribute('disabled');
+      el.classList.remove('opacity-50');
+      el.style.pointerEvents = 'auto';
     });
-    console.log('Force-enabled buttons');
   });
 </script>
-</body>
-</html>
 
-
-</script>
 
 <script src="app.js?v=6"></script>
 <script>
