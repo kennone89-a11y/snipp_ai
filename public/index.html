@@ -87,8 +87,9 @@
 
   // RAD ~90–93 — KLISTRA IN HELA ANON KEY MELLAN BACKTICKS `...`
   const SUPABASE_ANON_KEY = `
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9....DIN_HELA_NYCKEL....långt
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...DIN_HELA_NYCKEL...långt
 `.trim().replace(/\s/g, '');
+
 
   // RAD ~95
   window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
