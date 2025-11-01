@@ -1,29 +1,36 @@
 <!DOCTYPE html>
 <html lang="sv">
-<head><script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>snipp_ai — Live</title>
 
-  <!-- ===== Styles (Design v1) ===== -->
+  <!-- Supabase-klient (v2) -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <!-- Styles (Design v1) -->
   <style>
     :root{
       --bg:#0b0f14; --bg2:#0e1320; --panel:rgba(15,23,42,.6);
       --text:#e5e7eb; --muted:#94a3b8; --line:#1f2937;
-      --accent:#38bdf8; --ok:#22c55e; --danger:#ef4444; --radius:18px; --shadow:0 10px 30px rgba(0,0,0,.25);
+      --accent:#38bdf8; --ok:#22c55e; --danger:#ef4444;
+      --radius:18px; --shadow:0 10px 30px rgba(0,0,0,.25);
     }
-    *{box-sizing:border-box} body{margin:0;background:linear-gradient(120deg,var(--bg),var(--bg2));color:var(--text);font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(120deg,var(--bg),var(--bg2));color:var(--text);font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
     .wrap{max-width:1040px;margin:28px auto;padding:0 20px}
     .card{background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow)}
-    h1{margin:0 0 6px;font-size:28px} h3{margin:0 0 10px;font-size:18px} .muted{color:var(--muted);font-size:14px} .sep{height:1px;background:var(--line);margin:16px 0}
+    h1{margin:0 0 6px;font-size:28px} h3{margin:0 0 10px;font-size:18px} .muted{color:var(--muted);font-size:14px}
+    .sep{height:1px;background:var(--line);margin:16px 0}
     .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px}
     .brand{display:flex;align-items:center;gap:10px}
     .logo{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--accent),transparent 70%),#0ea5e9}
     .nav{display:flex;gap:10px;flex-wrap:wrap}
     .pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .grid{display:grid;gap:16px} .two{grid-template-columns:1.1fr .9fr} @media (max-width:900px){.two{grid-template-columns:1fr}}
-    input[type="text"], input[type="file"]{background:#0b1220;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:10px 12px;min-width:260px}
+    .grid{display:grid;gap:16px} .two{grid-template-columns:1.1fr .9fr}
+    @media (max-width:900px){.two{grid-template-columns:1fr}}
+    input[type="text"]{background:#0b1220;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:10px 12px;min-width:260px}
     button{background:#111827;color:#e5e7eb;border:1px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer;transition:transform .06s ease,border-color .15s ease}
     button:hover{border-color:#334155} button:active{transform:translateY(1px)}
     .primary{border-color:var(--accent)} .ok{border-color:var(--ok)} .danger{border-color:#7f1d1d;color:#fecaca}
@@ -31,13 +38,11 @@
     .bar{width:3px;background:var(--accent);opacity:.85;border-radius:2px}
     .list{margin-top:12px;display:grid;gap:12px}
     .item{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:12px;background:rgba(2,6,23,.35)}
-    .meta{font-size:12px;color:var(--muted)} audio{width:100%} .right{display:flex;gap:8px;align-items:center}
+    .meta{font-size:12px;color:var(--muted)} audio{width:100%}
+    .right{display:flex;gap:8px;align-items:center}
     .dot{width:8px;height:8px;border-radius:999px;background:#64748b} .dot.live{background:var(--danger)}
     .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
   </style>
-
-  <!-- ===== Supabase JS klient via CDN (v2) ===== -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <div class="wrap">
@@ -62,7 +67,6 @@
 
       <!-- Controls -->
       <div class="grid two">
-        <!-- Left: Recording -->
         <div>
           <div class="row" style="align-items:flex-start">
             <input id="title" type="text" placeholder="Titel (t.ex. 'Rogan #2134 – kort review')" />
@@ -76,7 +80,6 @@
           </div>
         </div>
 
-        <!-- Right: Info -->
         <div>
           <h3>Uppladdade klipp</h3>
           <div class="muted">Nya klipp hamnar här med publik URL.</div>
@@ -85,13 +88,11 @@
 
       <div class="sep"></div>
 
-      <!-- List -->
       <h3 style="margin:0 0 8px">Dina uppladdningar</h3>
       <div id="list" class="list"></div>
 
       <div class="sep"></div>
 
-      <!-- Footer -->
       <div class="foot">
         <div class="muted">© <span id="year"></span> Kenai — Live MVP.</div>
         <div class="muted">Design v1 · Glas + gradient</div>
@@ -99,11 +100,11 @@
     </div>
   </div>
 
-  <!-- ===== App Script ===== -->
+  <!-- App Script -->
   <script>
-    // ======= KONFIG: BYT DESSA TVÅ (utan avslutande / på URL) =======
-    const SUPABASE_URL  = "https://hywwzzzxgagqhlxooekz.supabase.co   
-    const SUPABASE_ANON = "sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z";       // <-- byt (Publishable key)
+    // ======= KONFIG: BYT DESSA TVÅ =======
+    const SUPABASE_URL  = "https://hywwzzzxgagqhlxooekz.supabase.co";   // <-- byt (ingen slash på slutet)
+    const SUPABASE_ANON = "sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z;      // <-- byt (Publishable key som börjar med sbp_)
     const BUCKET = "audio";
 
     // Initiera Supabase-klienten (v2)
@@ -111,11 +112,12 @@
 
     // ======= STATE =======
     let mediaRecorder, chunks = [], startedAt = 0, timerInt = null, waveInt = null;
-    const uploads = []; // runtime-lista
+    const uploads = [];
 
     // ======= HELPERS =======
     const $ = s => document.querySelector(s);
     const fmt = s => String(s).padStart(2,"0");
+    $("#year").textContent = new Date().getFullYear();
     function setTimer(sec){ $("#timer").textContent = `${fmt(Math.floor(sec/60))}:${fmt(sec%60)}` }
     function startWave(){
       const el = $("#wave"); el.innerHTML = "";
@@ -150,8 +152,6 @@
         wrap.appendChild(div);
       });
     }
-
-    $("#year").textContent = new Date().getFullYear();
 
     // ======= RECORD =======
     $("#recBtn").onclick = async () => {
@@ -188,9 +188,8 @@
         .from(BUCKET)
         .upload(path, blob, { upsert: true, contentType: "audio/webm" });
       if (error) throw error;
-
       const { data: pub } = sb.storage.from(BUCKET).getPublicUrl(path);
-      return pub.publicUrl; // klar publik URL
+      return pub.publicUrl;
     }
 
     $("#saveBtn").onclick = async () => {
