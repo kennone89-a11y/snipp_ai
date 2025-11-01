@@ -100,13 +100,19 @@
     };
   }
 
-  // 3) Aktivera knappar oavsett vad som händer ovan
-  document.addEventListener('DOMContentLoaded', () => {
-    ['btnStart','btnStop','btnUpload'].forEach(id => {
+ <script>
+  // NÖD-LÄGE: Tvinga på knapparna och tillåt klick
+  window.addEventListener('load', () => {
+    const ids = ['btnStart', 'btnStop', 'btnUpload'];
+    ids.forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.removeAttribute('disabled');
+      if (!el) return;
+      el.removeAttribute('disabled');
+      // Ta bort ev. gråning från Tailwind-klasser
+      el.classList.remove('opacity-50');
+      el.style.pointerEvents = 'auto';
     });
-    console.log('buttons enabled');
+    console.log('Force-enabled buttons');
   });
 </script>
 
