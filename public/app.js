@@ -1,6 +1,8 @@
-// Gör Supabase-klienten globalt tillgänglig i denna fil
-const sb = window.sb;
+// Gör Supabase-klienten tolerant om init skulle faila
+const sb = window.sb || null;   // <-- ENDA deklarationen
+
 (function () {
+
   // --- helpers
   const $ = (id) => document.getElementById(id);
   const statusEl = $('status');
