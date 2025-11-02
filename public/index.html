@@ -19,14 +19,16 @@
     audio{width:100%} .pill{padding:4px 8px;background:#0b1220;border:1px solid var(--line);border-radius:999px;font-size:12px}
     .list .item{padding:12px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:#0b1220}
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    /* ==== SUPABASE – BYT DINA VÄRDEN HÄR ==== */
-    const SUPABASE_URL = "https://hywwzzzxgagqhlxooekz.supabase.co
-"; /* ← BYT HÄR: exakt en https:// */
-    const SUPABASE_ANON_KEY = yJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA
-    `.replace(/\s+/g,""); // lämna backticks – tar bort radbrytningar/blanksteg
-    /* ======================================= */
+  const SUPABASE_URL = "https://hywwzzzxgagqhlxooekz.supabase.co
+";            // exakt EN https://
+  const SUPABASE_ANON_KEY = `
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA
+  `.replace(/\s+/g,""); // lämna kvar backticks + den här .replace()!
+
+  window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
+
 
     // init
     window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
