@@ -10,19 +10,43 @@
     h1{margin:0 0 12px}
     #meta{color:#667}
     audio{width:100%}
+    .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .btn{background:#0b1220;color:#fff;border:1px solid #1f2937;border-radius:10px;padding:8px 12px;text-decoration:none}
   </style>
 </head>
 <body>
   <h1>🎧 Review</h1>
   <audio id="p" controls></audio>
   <p id="meta"></p>
+  <div class="row">
+    <a id="copy" href="#" class="btn">Kopiera länk</a>
+    <a id="w" href="#" class="btn" target="_blank" rel="noopener">WhatsApp</a>
+    <a id="g" href="#" class="btn" target="_blank" rel="noopener">Telegram</a>
+  </div>
 
   <script>
-    const src  = new URL(location.href).searchParams.get("src");
-    const a    = document.getElementById("p");
+    const q = new URL(location.href).searchParams;
+    const src = q.get("src");
+    const title = q.get("t") || "Review";
+
+    document.title = `Kenai — ${title}`;
+    document.querySelector("h1").textContent = `🎧 ${title}`;
+
+    const a = document.getElementById("p");
     const meta = document.getElementById("meta");
-    if (!src) { meta.textContent = "Ingen ljudlänk angiven."; }
-    else { a.src = src; meta.textContent = "Direktlänk: " + src; }
+
+    if (!src) {
+      meta.textContent = "Ingen ljudlänk angiven.";
+    } else {
+      a.src = src;
+      meta.textContent = "Direktlänk: " + src;
+
+      // share-knappar
+      const share = location.href;
+      document.getElementById('copy').onclick = (e)=>{ e.preventDefault(); navigator.clipboard.writeText(share).then(()=>{ document.getElementById('copy').textContent='Kopierad!'; }); };
+      document.getElementById('w').href = `https://wa.me/?text=${encodeURIComponent(share)}`;
+      document.getElementById('g').href = `https://t.me/share/url?url=${encodeURIComponent(share)}&text=${encodeURIComponent('Lyssna på min review')}`;
+    }
   </script>
 </body>
 </html>
