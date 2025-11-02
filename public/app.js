@@ -6,11 +6,11 @@ const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';         
 /* ================================== */
 
 window.addEventListener('DOMContentLoaded', () => {
-  // 0) Sanity: CDN måste finnas
+  // 0) CDN måste finnas
   if (!window.supabase) {
-    console.error('Supabase CDN not loaded');
     const out = document.getElementById('out');
     if (out) out.textContent = 'ERROR: Supabase CDN not loaded';
+    console.error('Supabase CDN not loaded');
     return;
   }
 
@@ -19,13 +19,13 @@ window.addEventListener('DOMContentLoaded', () => {
   window.sb = sb;
   console.log('sb ready?', typeof sb); // ska vara "object"
 
-  // 2) Visa URL & key‐prefix i UI om fälten finns
+  // 2) Visa värden i UI
   const u = document.getElementById('u');
   const k = document.getElementById('k');
   if (u) u.textContent = SUPABASE_URL;
   if (k) k.textContent = SUPABASE_ANON?.slice(0, 2) || '';
 
-  // 3) Koppla "Lista 1 fil…"‐knappen
+  // 3) Koppla list-knapp
   const pingBtn = document.getElementById('ping');
   const out = document.getElementById('out');
   if (pingBtn && out) {
