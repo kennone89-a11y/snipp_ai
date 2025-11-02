@@ -89,6 +89,7 @@
 
     <div class="card" style="margin-top:16px">
       <h3 style="margin-top:0">Sanity test</h3>
+      <button class="btn" onclick="micTest()">iPhone mic-test</button>
       <button id="btnList" class="btn">Lista 10 från "audio/reviews"</button>
       <pre id="out" style="background:#0b1220;border:1px solid var(--line);border-radius:12px;padding:10px;white-space:pre-wrap;margin-top:10px"></pre>
     </div>
@@ -102,6 +103,15 @@
     const player=$('#player'), timer=$('#timer'), out=$('#out');
 
     const setTimer=ms=>{const s=Math.floor(ms/1000),m=String(Math.floor(s/60)).padStart(2,'0'),ss=String(s%60).padStart(2,'0');timer.textContent=`${m}:${ss}`};
+async function micTest(){
+  try{
+    const s = await navigator.mediaDevices.getUserMedia({ audio:true });
+    s.getTracks().forEach(t => t.stop()); // vi testar bara åtkomst
+    alert("Mic OK: getUserMedia funkar.");
+  }catch(e){
+    alert("Mic FAIL: " + (e?.name || e));
+  }
+}
 
   async function startRec(){
   try{
