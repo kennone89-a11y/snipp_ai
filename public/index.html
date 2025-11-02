@@ -5,8 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>snipp_ai – Live</title>
 
-  <!-- Supabase CDN (v2) -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+ <!-- Supabase måste laddas först -->
+<script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
+<!-- Vår appkod -->
+<script src="./app.js" defer></script>
+
 
   <style>
     :root { --bg:#0b0f14; --panel:#0f1722; --line:#213245; --text:#e9edf2; --muted:#9bb0c7; --acc:#66d1ff; }
