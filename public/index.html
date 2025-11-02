@@ -5,28 +5,45 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>snipp_ai — Live</title>
 
-  <!-- Supabase v2 UMD (global: window.supabase) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <!-- Supabase JS v2 via CDN (måste ligga innan app.js) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- Minimal, mörk, snygg CSS så sidan inte blir vit -->
   <style>
-    :root{--bg:#0b0f14;--panel:#0e1320;--line:#1f2937;--text:#e5e7eb;--muted:#94a3b8;--accent:#38bdf8}
+    :root {
+      --bg:#070b14; --panel:#0f172a; --line:#23324e; --muted:#94a3b8;
+      --text:#e6eefb; --accent:#38bdf8; --ok:#22c55e; --danger:#ef4444;
+      --radius:16px;
+    }
     *{box-sizing:border-box}
-    body{margin:0;background:radial-gradient(120deg,var(--bg),var(--panel));color:var(--text);font-family:system-ui,Segoe UI,Roboto,Inter,sans-serif}
-    .wrap{max-width:1040px;margin:28px auto;padding:20px}
-    .card{background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    h1{margin:0 0 6px;font-size:28px}
-    .muted{color:var(--muted);font-size:14px}
-    .sep{height:1px;background:var(--line);margin:16px 0}
-    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    input[type="text"]{background:transparent;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:10px 12px;min-width:260px}
-    button{background:#111827;color:#e5e7eb;border:1px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer;transition:.06s transform}
-    button:active{transform:scale(.98)}
-    .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)}
-    .bar{width:3px;background:var(--accent);opacity:.85;border-radius:2px}
-    .list{display:grid;gap:12px}
-    .item{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:12px}
-    pre{background:#0b1220;border:1px solid var(--line);border-radius:12px;padding:12px;min-height:54px;white-space:pre-wrap}
+    body{margin:0;background:linear-gradient(120deg,var(--bg),#0a1022);
+         color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial}
+    .wrap{max-width:980px;margin:32px auto;padding:20px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+          padding:22px; box-shadow:0 6px 28px rgba(0,0,0,.25)}
+    h1{margin:0 0 10px;font-weight:700}
+    .muted{color:var(--muted)}
+    .sep{height:16px}
+    input[type="text"]{background:#0b1324;border:1px solid var(--line);color:var(--text);
+      padding:10px 12px;border-radius:12px;min-width:260px}
+    button{background:#0b1324; border:1px solid var(--line); color:var(--text);
+      padding:10px 14px; border-radius:12px; cursor:pointer; transition:.06s transform}
+    button.primary{background:var(--accent)}
+    button.ok{background:#0b1324;border-color:var(--ok)}
+    button.danger{background:#0b1324;border-color:var(--danger)}
+    button:active{transform:translateY(1px)}
+    .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);
+      padding:6px 10px;border-radius:999px; font-size:12px; color:var(--muted)}
+    #wave{display:flex;gap:4px;height:48px;align-items:flex-end;background:rgba(255,255,255,.02);
+      border:1px dashed var(--line);border-radius:12px;padding:6px;overflow:hidden}
+    .bar{width:3px;background:var(--accent);border-radius:4px}
+    .row{display:flex;gap:12px;align-items:center}
+    .list{display:grid;grid-template-columns:1fr auto;gap:12px}
+    .item{display:grid;grid-template-columns:1fr auto;background:rgba(255,255,255,.02);
+      border:1px solid var(--line);border-radius:12px;padding:12px}
+    .left .name{font-weight:600}
+    pre{background:#0b1324;border:1px solid var(--line);border-radius:12px;
+      padding:12px;min-height:48px;white-space:pre-wrap}
+    a{color:#93c5fd}
   </style>
 </head>
 <body>
@@ -36,33 +53,34 @@
       <div class="muted">Live-uppladdning till Supabase Storage. Bucket: <code>audio</code>.</div>
 
       <div class="sep"></div>
-
       <div class="row">
         <input id="title" type="text" placeholder="Titel (t.ex. 'Rogan #2134 — kort review')" />
-        <button id="recBtn" class="primary">▶️ Starta inspelning</button>
-        <button id="saveBtn" class="ok" disabled>⬆️ Ladda upp</button>
-        <span class="pill">⏱️ <span id="timer">00:00</span></span>
+        <button id="recBtn" class="primary">▶ Starta inspelning</button>
+        <button id="saveBtn" class="ok" disabled>Ladda upp</button>
+        <span class="pill">⏱ <span id="timer">00:00</span></span>
       </div>
 
-      <div id="wave" class="wave" style="margin-top:10px" aria-label="live waveform"></div>
+      <div class="sep"></div>
+      <div id="wave" aria-label="live waveform"></div>
 
-      <div class="sep" style="height:10px"></div>
-      <h3 style="margin:0 0 8px">Dina uppladdningar</h3>
-      <div id="list" class="list"></div>
+      <div class="sep"></div>
+      <h3>Dina uppladdningar</h3>
+      <div class="list" id="list"></div>
 
-      <div class="sep" style="height:10px"></div>
+      <div class="sep"></div>
       <h3>Sanity test</h3>
-      <div class="muted">Om detta laddar utan fel och knappen funkar, är URL/nyckel rätt.</div>
+      <div class="muted">Om detta laddar utan fel är URL/nyckel rätt.</div>
       <div class="row" style="margin-top:8px">
-        <span class="pill">URL: <span id="u"></span></span>
-        <span class="pill">Key prefix: <span id="k"></span></span>
-        <button id="ping">Lista 1 fil från "audio"</button>
+        <span class="pill">URL: <span id="u">–</span></span>
+        <span class="pill">Key prefix: <span id="k">–</span></span>
+        <button id="ping" class="">Lista 1 fil från “audio”</button>
       </div>
+      <div class="sep"></div>
       <pre id="out"></pre>
     </div>
   </div>
 
-  <!-- Din appkod -->
+  <!-- vår app -->
   <script src="./app.js"></script>
 </body>
 </html>
