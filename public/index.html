@@ -1,92 +1,242 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>snipp_ai – Live</title>
-
-  <!-- Supabase via CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     :root{
-      --bg:#0b0f14; --panel:rgba(19,23,29,.9); --text:#e7eef8; --muted:#9aa3ad;
+      --bg:#0b0f14; --panel:rgba(19,23,29,.9); --text:#e7eef8; --muted:#93a3ad;
       --line:#1f2937; --accent:#38bdf8; --ok:#22c55e;
       --radius:16px; --gap:12px;
     }
     *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial}
-    .wrap{max-width:920px;margin:32px auto;padding:0 16px}
-    .card{background:var(--panel);backdrop-filter:blur(8px);border:1px solid var(--line);
-          border-radius:var(--radius);padding:22px;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--text); font-family:system-ui,Segoe UI,Roboto,Arial;
+    }
+    .wrap{max-width:920px; margin:24px auto; padding:12px}
+    .card{
+      background:var(--panel); border:1px solid var(--line);
+      border-radius:var(--radius); padding:20px; box-shadow:0 0 1px rgba(0,0,0,.08);
+      backdrop-filter: blur(8px);
+    }
     h1{margin:0 0 8px}
-    .muted{color:var(--muted);font-size:14px}
-    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    input[type="text"]{flex:1;background:#0b1220;border:1px solid var(--line);border-radius:12px;
-      color:inherit;padding:10px 12px;min-width:260px}
-    button{border:1px solid var(--line);background:#09111d;border-radius:12px;
-      color:var(--text);padding:10px 14px;cursor:pointer;transition:.15s transform}
-    button:hover{transform:translateY(-1px)}
-    .primary{background:linear-gradient(135deg,#0ea5e9,#22d3ee)}
-    .ok{background:linear-gradient(135deg,#16a34a,#22c55e)}
-    .pill{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);
-      border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)}
-    audio{width:100%}
-    .sep{height:10px}
-    .list{display:grid;gap:10px;margin-top:8px}
-    .item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;
-      border:1px solid var(--line);border-radius:12px;padding:10px}
-    .right a{color:#7dd3fc;text-decoration:none}
-    pre{background:#0b1220;border:1px solid var(--line);border-radius:12px;
-      padding:12px;white-space:pre-wrap;min-height:54px}
+    .muted{color:var(--muted); font-size:14px}
+    .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+    input[type="text"]{
+      flex:1; min-width:260px; background:#0b1220; color:var(--text);
+      border:1px solid var(--line); border-radius:12px; padding:12px;
+    }
+    button{
+      border:0; border-radius:12px; padding:10px 14px; cursor:pointer; font-weight:600;
+    }
+    .btn{ background:#0b1220; color:#fff; border:1px solid var(--line); }
+    .btn:hover{ border-color:#243044 }
+    .primary{ background:var(--accent); color:#041017 }
+    .ok{ background:var(--ok); color:#02140b }
+    audio{ width:100% }
+    .pill{padding:4px 8px; background:#0b1220; border:1px solid var(--line); border-radius:999px; font-size:12px}
+    .list .item{ padding:12px; border:1px solid var(--line); border-radius:12px; margin-bottom:10px; background:#0b1220}
+    .item strong{ font-size:12px }
   </style>
+
+  <!-- Supabase client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- App script -->
+  <script>
+    /***********************
+     *  SUPABASE – KONFIG   *
+     ***********************/
+    const SUPABASE_URL = "https://hywwzzzxgagqhlxooekz.supabase.co";     // ← BYT HÄR (från Project API)
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA";             // ← BYT HÄR (EN rad, inga radbrytningar)
+
+    // Init global klient
+    window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Unik sökväg: reviews/<timestamp>-<random>.webm
+    function makePath () {
+      const ts = Date.now();
+      const r  = Math.random().toString(36).slice(2,8);
+      return `reviews/${ts}-${r}.webm`;
+    }
+
+    // Ladda upp Blob/File till bucket "audio" och få public URL
+    async function uploadAudioBlob (blob) {
+      const path = makePath();
+      const up = await window.sb.storage.from("audio").upload(path, blob, {
+        contentType: "audio/webm", upsert: false
+      });
+      if (up.error) throw up.error;
+      const pub = window.sb.storage.from("audio").getPublicUrl(path);
+      return { path, publicUrl: pub.data.publicUrl };
+    }
+
+    // Exponera för andra scripts
+    window.uploadAudioBlob = uploadAudioBlob;
+  </script>
 </head>
+
 <body>
   <div class="wrap">
     <div class="card">
       <h1>snipp_ai</h1>
-      <div class="muted">Live-uppladdning till Supabase Storage. Bucket: <code>audio</code>.</div>
+      <p class="muted">Live-uppladdning till Supabase Storage. Bucket: <span class="pill">audio</span>.</p>
 
-      <div class="sep"></div>
+      <div class="row" style="margin-top:12px">
+        <input id="title" type="text" placeholder="Titel (t.ex. Rogan #2134 — kort review)" />
+        <button id="btnStart" class="primary">Starta inspelning</button>
+        <button id="btnStop"  class="btn" disabled>Stoppa</button>
+        <button id="btnUpload" class="ok" disabled>Ladda upp</button>
+        <span id="timer" class="pill">00:00</span>
+      </div>
 
-      <!-- Rad: inspelning -->
+      <div style="margin-top:14px">
+        <audio id="player" controls></audio>
+      </div>
+
+      <a id="last-upload" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px">—</a>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3 style="margin-top:0">Dina uppladdningar</h3>
+      <div id="review-list" class="list"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3 style="margin-top:0">Sanity test</h3>
+      <p class="muted">Om detta laddar utan fel och knappen funkar, är URL/nyckel rätt.</p>
       <div class="row">
-        <input id="title" type="text" placeholder="Titel (t.ex. 'Rogan #2134 — kort review')" />
-        <button id="recBtn" class="primary">Starta inspelning</button>
-        <button id="saveBtn" class="ok" disabled>Ladda upp</button>
-        <span class="pill">⏱ <span id="timer">00:00</span></span>
+        <button id="btnList" class="btn">Lista 10 från "audio/reviews"</button>
       </div>
-
-      <div class="sep"></div>
-
-      <!-- Lokal förhandslyssning -->
-      <audio id="player" controls></audio>
-
-      <div class="sep"></div>
-
-      <!-- Live waveform (tom placeholder) -->
-      <div id="wave" aria-label="live waveform"></div>
-
-      <div class="sep"></div>
-
-      <h3>Dina uppladdningar</h3>
-      <div id="list" class="list"></div>
-
-      <div class="sep"></div>
-
-      <h3>Sanity test</h3>
-      <div class="muted">Om detta laddar utan fel och knappen funkar, är URL/nyckel rätt.</div>
-      <div class="row" style="margin-top:8px">
-        <span class="pill">URL: <span id="u"></span></span>
-        <span class="pill">Key prefix: <span id="k"></span></span>
-        <button id="ping">Lista 1 fil från "audio"</button>
-      </div>
-      <div class="sep"></div>
-      <pre id="out"></pre>
+      <pre id="out" style="margin-top:10px;background:#0b1220;padding:10px;border-radius:12px;white-space:pre-wrap;max-height:40vh;overflow:auto"></pre>
     </div>
   </div>
 
-  <!-- Vår appkod -->
-  <script src="./app.js"></script>
+  <script>
+    /***********************
+     *  INSPELNING (Web API)
+     ***********************/
+    let mediaRecorder, chunks = [], audioBlob = null, timerInt = null, startedAt = 0;
+
+    const $ = sel => document.querySelector(sel);
+    const btnStart  = $('#btnStart');
+    const btnStop   = $('#btnStop');
+    const btnUpload = $('#btnUpload');
+    const player    = $('#player');
+    const timer     = $('#timer');
+    const out       = $('#out');
+
+    function setTimer(ms){
+      const s = Math.floor(ms/1000);
+      const m = String(Math.floor(s/60)).padStart(2,'0');
+      const ss = String(s%60).padStart(2,'0');
+      timer.textContent = `${m}:${ss}`;
+    }
+
+    async function startRec(){
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+        chunks = []; audioBlob = null;
+        mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+        mediaRecorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+        mediaRecorder.onstop = () => {
+          audioBlob = new Blob(chunks, { type: "audio/webm" });
+          player.src = URL.createObjectURL(audioBlob);
+          btnUpload.disabled = false;
+          stream.getTracks().forEach(t=>t.stop());
+        };
+        mediaRecorder.start();
+        startedAt = Date.now();
+        timerInt = setInterval(()=> setTimer(Date.now() - startedAt), 250);
+        btnStart.disabled = true; btnStop.disabled = false; btnUpload.disabled = true;
+      }catch(e){
+        alert("Kunde inte starta inspelning. Ge mikrofon-tillstånd.");
+        console.error(e);
+      }
+    }
+
+    function stopRec(){
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+      }
+      clearInterval(timerInt); setTimer(0);
+      btnStart.disabled = false; btnStop.disabled = true;
+    }
+
+    async function doUpload(){
+      if (!audioBlob) return alert("Spela in först.");
+      try{
+        const { publicUrl, path } = await uploadAudioBlob(audioBlob);
+
+        // valfritt: spara i lokal historik
+        const list = JSON.parse(localStorage.getItem("uploads") || "[]");
+        const title = ($('#title').value || '').trim();
+        list.unshift({ url: publicUrl, path, title, t: Date.now() });
+        localStorage.setItem("uploads", JSON.stringify(list));
+
+        // visa snabb-länk
+        const a = $('#last-upload');
+        a.href = publicUrl; a.textContent = "Spela upp senaste";
+
+        console.log("✅ Uppladdad:", publicUrl);
+        await loadReviews();   // uppdatera listan
+      }catch(e){
+        console.error("Upload error:", e);
+        alert("Kunde inte ladda upp. Kolla konsolen.");
+      }
+    }
+
+    btnStart.onclick  = startRec;
+    btnStop.onclick   = stopRec;
+    btnUpload.onclick = doUpload;
+
+    /***********************
+     *  LISTA UPPLADDNINGAR
+     ***********************/
+    async function loadReviews(limit=25){
+      const resp = await window.sb.storage.from("audio")
+        .list("reviews", { limit, sortBy:{ column:"created_at", order:"desc" }});
+      const holder = $('#review-list');
+      if (resp.error){ console.error(resp.error); holder.innerHTML = "<p class='muted'>Kunde inte lista filer.</p>"; return; }
+      holder.innerHTML = "";
+      for(const f of resp.data || []){
+        const pub = window.sb.storage.from("audio").getPublicUrl(`reviews/${f.name}`);
+        const url = pub.data.publicUrl;
+        const name = f.name;
+        holder.insertAdjacentHTML("beforeend", `
+          <div class="item">
+            <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+              <strong>${name}</strong>
+              <a href="${url}" target="_blank" rel="noopener">Öppna</a>
+            </div>
+            <audio controls src="${url}" style="width:100%;margin-top:6px"></audio>
+            <button class="btn" style="margin-top:6px"
+              onclick="navigator.clipboard.writeText('${url}').then(()=>this.textContent='Kopierad!')">
+              Kopiera länk
+            </button>
+          </div>
+        `);
+      }
+    }
+    document.addEventListener("DOMContentLoaded", loadReviews);
+
+    /***********************
+     *  SANITY-TEST KNAPP
+     ***********************/
+    $('#btnList').onclick = async () => {
+      out.textContent = "";
+      try{
+        const ping = await sb.auth.getSession();
+        out.textContent += "AUTH: " + (ping.error || "✓ PASS") + "\n";
+        const list = await sb.storage.from("audio").list("reviews", { limit: 10 });
+        out.textContent += "LIST: " + (list.error ? list.error.message : (list.data?.length+" filer")) + "\n";
+      }catch(e){
+        out.textContent += "ERROR: " + e + "\n";
+      }
+    };
+  </script>
 </body>
 </html>
