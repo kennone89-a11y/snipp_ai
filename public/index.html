@@ -10,7 +10,7 @@
     :root{
       --bg:#0b0f14; --panel:rgba(19,23,29,.9); --text:#e7eef8; --muted:#93a3ad;
       --line:#1f2937; --accent:#38bdf8; --ok:#22c55e;
-      --radius:16px; --gap:12px;
+      --radius:16px;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -29,7 +29,7 @@
       border:1px solid var(--line); border-radius:12px; padding:12px;
     }
     button{
-      border:0; border-radius:12px; padding:10px 14px; cursor:pointer; font-weight:600;
+      border:0; border-radius:12px; padding:10px 14px; cursor:pointer; font-weight:600
     }
     .btn{ background:#0b1220; color:#fff; border:1px solid var(--line); }
     .btn:hover{ border-color:#243044 }
@@ -39,6 +39,7 @@
     .pill{padding:4px 8px; background:#0b1220; border:1px solid var(--line); border-radius:999px; font-size:12px}
     .list .item{ padding:12px; border:1px solid var(--line); border-radius:12px; margin-bottom:10px; background:#0b1220}
     .item strong{ font-size:12px }
+    pre{background:#0b1220;border:1px solid var(--line);border-radius:12px;padding:10px;white-space:pre-wrap}
   </style>
 
   <!-- Supabase client -->
@@ -47,23 +48,23 @@
   <!-- App script -->
   <script>
     /***********************
-     *  SUPABASE – KONFIG   *
+     *  SUPABASE – KONFIG  *
      ***********************/
     const SUPABASE_URL = "https://hywwzzzxgagqhlxooekz.supabase.co
-";     // ← BYT HÄR (om inte redan gjort)
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA>";             // ← BYT HÄR (EN rad)
+";   // ← BYT (från Project API)
+    const SUPABASE_ANON_KEY = "<eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA>";           // ← BYT (EN rad)
 
     // Init global klient
     window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Unik sökväg: reviews/<timestamp>-<random>.webm
+    // Unik sökväg
     function makePath () {
       const ts = Date.now();
       const r  = Math.random().toString(36).slice(2,8);
       return `reviews/${ts}-${r}.webm`;
     }
 
-    // Ladda upp Blob/File till bucket "audio" och få public URL
+    // Uppladdning → public URL
     async function uploadAudioBlob (blob) {
       const path = makePath();
       const up = await window.sb.storage.from("audio").upload(path, blob, {
@@ -74,8 +75,7 @@
       return { path, publicUrl: pub.data.publicUrl };
     }
 
-    // Exponera för andra scripts
-    window.uploadAudioBlob = uploadAudioBlob;
+    window.uploadAudioBlob = uploadAudioBlob; // export globalt
   </script>
 </head>
 
@@ -111,7 +111,7 @@
       <div class="row">
         <button id="btnList" class="btn">Lista 10 från "audio/reviews"</button>
       </div>
-      <pre id="out" style="margin-top:10px;background:#0b1220;padding:10px;border-radius:12px;white-space:pre-wrap;max-height:40vh;overflow:auto"></pre>
+      <pre id="out"></pre>
     </div>
   </div>
 
@@ -178,7 +178,7 @@
         localStorage.setItem("uploads", JSON.stringify(list));
 
         // share-länk för “Spela upp senaste”
-        const shareUrl = `${location.origin}/share.html?src=${encodeURIComponent(publicUrl)}`;
+        const shareUrl = `${location.origin}/share.html?src=${encodeURIComponent(publicUrl)}&t=${encodeURIComponent(title || 'Review')}`;
         const a = document.getElementById("last-upload");
         a.href = shareUrl; a.textContent = "Spela upp senaste";
 
@@ -208,7 +208,9 @@
         const pub = window.sb.storage.from("audio").getPublicUrl(`reviews/${f.name}`);
         const url = pub.data.publicUrl;
         const name = f.name;
-        const shareUrl = `${location.origin}/share.html?src=${encodeURIComponent(url)}`;
+
+        const title = (document.getElementById('title')?.value || 'Review').trim(); // bästa gissning
+        const shareUrl = `${location.origin}/share.html?src=${encodeURIComponent(url)}&t=${encodeURIComponent(title || 'Review')}`;
         const wa  = `https://wa.me/?text=${encodeURIComponent(shareUrl)}`;
         const tg  = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent('Lyssna på min review')}`;
 
@@ -234,12 +236,11 @@
      *  SANITY-TEST KNAPP
      ***********************/
     document.getElementById('btnList').onclick = async () => {
-      const out = document.getElementById('out');
       out.textContent = "";
       try{
         const ping = await sb.auth.getSession();
         out.textContent += "AUTH: " + (ping.error || "✓ PASS") + "\n";
-        const list = await sb.storage.from("audio").list("reviews", { limit: 10 }); // limit som TAL
+        const list = await sb.storage.from("audio").list("reviews", { limit: 10 });
         out.textContent += "LIST: " + (list.error ? list.error.message : (list.data?.length+" filer")) + "\n";
       }catch(e){
         out.textContent += "ERROR: " + e + "\n";
