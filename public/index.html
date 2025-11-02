@@ -1,33 +1,28 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
+  <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>snipp_ai — Live</title>
+  <title>snipp_ai – Live</title>
 
-  <!-- Supabase JS v2 via CDN -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <!-- Supabase v2 via jsDelivr (global 'supabase') -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
+
+  <!-- Liten sanity-log: ser direkt att CDN:et laddade -->
+  <script>
+    console.log('cdn supabase loaded?', typeof supabase);
+  </script>
 
   <style>
-    :root{
-      --bg:#0b0f14; --panel:#0e1320; --line:#1f2937; --muted:#94a3b8; --ok:#22c55e; --danger:#ef4444; --accent:#38bdf8;
-      --radius:14px;
-    }
-    *{box-sizing:border-box}
-    body{margin:0; background:linear-gradient(120deg,var(--bg),var(--panel)); color:#e5e7eb; font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
-    .wrap{max-width:1020px; margin:32px auto; padding:20px}
-    .card{background:rgba(14,19,32,0.9); backdrop-filter:blur(10px); border:1px solid var(--line); border-radius:var(--radius); padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    h1{margin:4px 0 10px; font-size:28px}
-    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
-    input[type="text"], input[type="file"]{background:#0b1220; border:1px solid var(--line); border-radius:12px; color:#e5e7eb; padding:10px 12px; min-width:260px}
-    button{background:#111827; color:#e5e7eb; border:1px solid var(--line); border-radius:12px; padding:10px 14px; cursor:pointer; transition:transform .06s ease, border-color .15s ease}
-    button.primary{border-color:var(--accent)}
-    button.ok{border-color:var(--ok)}
-    button.danger{border-color:var(--danger); color:#fecaca}
-    .bar{width:8px; background:var(--accent); opacity:.85; border-radius:2px}
-    .grid{display:grid; grid-template-columns:1fr auto; gap:10px}
-    .pill{display:inline-flex; gap:8px; align-items:center; border:1px solid var(--line); border-radius:999px; padding:6px 10px; font-size:12px; color:var(--muted)}
-    pre#out{background:#0b1220; border:1px solid var(--line); border-radius:12px; padding:10px; min-height:54px; white-space:pre-wrap}
+    /* (låt din befintliga CSS ligga kvar här) */
+  </style>
+</head>
+
+    /* (låt din befintliga CSS ligga kvar här) */
+  </style>
+</head>
+
   </style>
 </head>
 <body>
