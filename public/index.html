@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>snipp_ai – Live</title>
+  <link rel="icon" href="/favicon.ico">
 
   <style>
     :root{
@@ -13,9 +14,7 @@
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{
-      margin:0; background:var(--bg); color:var(--text); font-family:system-ui,Segoe UI,Roboto,Arial;
-    }
+    body{ margin:0; background:var(--bg); color:var(--text); font-family:system-ui,Segoe UI,Roboto,Arial; }
     .wrap{max-width:920px; margin:24px auto; padding:12px}
     .card{
       background:var(--panel); border:1px solid var(--line);
@@ -50,8 +49,8 @@
     /***********************
      *  SUPABASE – KONFIG   *
      ***********************/
-    const SUPABASE_URL = "https://hywwzzzxgagqhlxooekz.supabase.co";     // ← BYT HÄR (från Project API)
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA";             // ← BYT HÄR (EN rad, inga radbrytningar)
+    const SUPABASE_URL = "https://<ditt-projekt>.supabase.co";     // ← BYT HÄR (om inte redan gjort)
+    const SUPABASE_ANON_KEY = "<din-anon-public-key>";             // ← BYT HÄR (EN rad)
 
     // Init global klient
     window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -171,15 +170,16 @@
       try{
         const { publicUrl, path } = await uploadAudioBlob(audioBlob);
 
-        // valfritt: spara i lokal historik
+        // spara i lokal historik
         const list = JSON.parse(localStorage.getItem("uploads") || "[]");
         const title = ($('#title').value || '').trim();
         list.unshift({ url: publicUrl, path, title, t: Date.now() });
         localStorage.setItem("uploads", JSON.stringify(list));
 
-        // visa snabb-länk
-        const a = $('#last-upload');
-        a.href = publicUrl; a.textContent = "Spela upp senaste";
+        // share-länk för “Spela upp senaste”
+        const shareUrl = `${location.origin}/share.html?src=${encodeURIComponent(publicUrl)}`;
+        const a = document.getElementById("last-upload");
+        a.href = shareUrl; a.textContent = "Spela upp senaste";
 
         console.log("✅ Uppladdad:", publicUrl);
         await loadReviews();   // uppdatera listan
@@ -194,29 +194,35 @@
     btnUpload.onclick = doUpload;
 
     /***********************
-     *  LISTA UPPLADDNINGAR
+     *  LISTA UPPLADDNINGAR (med delning)
      ***********************/
     async function loadReviews(limit=25){
       const resp = await window.sb.storage.from("audio")
         .list("reviews", { limit, sortBy:{ column:"created_at", order:"desc" }});
-      const holder = $('#review-list');
+      const holder = document.getElementById('review-list');
       if (resp.error){ console.error(resp.error); holder.innerHTML = "<p class='muted'>Kunde inte lista filer.</p>"; return; }
       holder.innerHTML = "";
+
       for(const f of resp.data || []){
         const pub = window.sb.storage.from("audio").getPublicUrl(`reviews/${f.name}`);
         const url = pub.data.publicUrl;
         const name = f.name;
+        const shareUrl = `${location.origin}/share.html?src=${encodeURIComponent(url)}`;
+        const wa  = `https://wa.me/?text=${encodeURIComponent(shareUrl)}`;
+        const tg  = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent('Lyssna på min review')}`;
+
         holder.insertAdjacentHTML("beforeend", `
           <div class="item">
             <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
               <strong>${name}</strong>
-              <a href="${url}" target="_blank" rel="noopener">Öppna</a>
+              <a href="${shareUrl}" target="_blank" rel="noopener">Öppna</a>
             </div>
             <audio controls src="${url}" style="width:100%;margin-top:6px"></audio>
-            <button class="btn" style="margin-top:6px"
-              onclick="navigator.clipboard.writeText('${url}').then(()=>this.textContent='Kopierad!')">
-              Kopiera länk
-            </button>
+            <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+              <button class="btn" onclick="navigator.clipboard.writeText('${shareUrl}').then(()=>this.textContent='Kopierad!')">Kopiera länk</button>
+              <a class="btn" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>
+              <a class="btn" href="${tg}" target="_blank" rel="noopener">Telegram</a>
+            </div>
           </div>
         `);
       }
@@ -226,12 +232,13 @@
     /***********************
      *  SANITY-TEST KNAPP
      ***********************/
-    $('#btnList').onclick = async () => {
+    document.getElementById('btnList').onclick = async () => {
+      const out = document.getElementById('out');
       out.textContent = "";
       try{
         const ping = await sb.auth.getSession();
         out.textContent += "AUTH: " + (ping.error || "✓ PASS") + "\n";
-        const list = await sb.storage.from("audio").list("reviews", { limit: 10 });
+        const list = await sb.storage.from("audio").list("reviews", { limit: 10 }); // limit som TAL
         out.textContent += "LIST: " + (list.error ? list.error.message : (list.data?.length+" filer")) + "\n";
       }catch(e){
         out.textContent += "ERROR: " + e + "\n";
