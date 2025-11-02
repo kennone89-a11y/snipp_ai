@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>snipp_ai – Live</title>
-  <link rel="icon" href="/favicon.ico" />
   <style>
     :root{--bg:#0b0f14;--panel:#0f1721;--text:#e7eef8;--muted:#93a3ad;--line:#1f2937;--accent:#38bdf8;--ok:#22c55e;--r:16px}
     *{box-sizing:border-box} html,body{height:100%} body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
@@ -14,27 +13,27 @@
     .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
     input{flex:1;min-width:260px;background:#0b1220;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px}
     button{border:0;border-radius:12px;padding:10px 14px;cursor:pointer;font-weight:600}
-    .btn{background:#0b1220;color:#fff;border:1px solid var(--line)} .btn:hover{border-color:#243044}
-    .primary{background:var(--accent);color:#041017} .ok{background:var(--ok);color:#02140b}
+    .btn{background:#0b1220;color:#fff;border:1px solid var(--line)} .primary{background:var(--accent);color:#041017} .ok{background:var(--ok);color:#02140b}
     audio{width:100%} .pill{padding:4px 8px;background:#0b1220;border:1px solid var(--line);border-radius:999px;font-size:12px}
     .list .item{padding:12px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:#0b1220}
   </style>
+
+  <!-- Supabase client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <script>
-  const SUPABASE_URL = "https://hywwzzzxgagqhlxooekz.supabase.co
-";            // exakt EN https://
-  const SUPABASE_ANON_KEY = `
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA
-  `.replace(/\s+/g,""); // lämna kvar backticks + den här .replace()!
-
-  window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-</script>
-
+    /* ====== SUPABASE (BYT ENDAST DESSA 2 RADER) ====== */
+    const SUPABASE_URL = "https://hywwzzzxgagqhlxooekz.supabase.co";             // EXAKT en https://
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA"; // HELA anon key på EN rad
+    /* ================================================== */
 
     // init
     window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // helper
+    // path helper
     function makePath(){ return `reviews/${Date.now()}-${Math.random().toString(36).slice(2,8)}.webm`; }
+
+    // upload helper -> public URL
     async function uploadAudioBlob(blob){
       const path = makePath();
       const up = await sb.storage.from("audio").upload(path, blob, { contentType:"audio/webm", upsert:false });
@@ -42,14 +41,14 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp
       const pub = sb.storage.from("audio").getPublicUrl(path);
       return { path, publicUrl: pub.data.publicUrl };
     }
-    window.uploadAudioBlob = uploadAudioBlob;
+    window.uploadAudioBlob = uploadAudioBlob; // behövs av knappen
   </script>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
       <h1>snipp_ai</h1>
-      <p class="muted">Live-uppladdning till Supabase Storage (bucket: <b>audio</b>).</p>
+      <p class="muted">Live-uppladdning till Supabase Storage. Bucket: <b>audio</b>.</p>
 
       <div class="row" style="margin-top:12px">
         <input id="title" type="text" placeholder="Titel (valfritt)" />
@@ -60,7 +59,6 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp
       </div>
 
       <div style="margin-top:14px"><audio id="player" controls></audio></div>
-      <a id="last-upload" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px">—</a>
     </div>
 
     <div class="card" style="margin-top:16px">
@@ -76,7 +74,7 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp
   </div>
 
   <script>
-    // inspelning
+    // --- inspelning (lokalt) ---
     let mediaRecorder, chunks=[], audioBlob=null, tInt=null, t0=0;
     const $ = s=>document.querySelector(s);
     const btnStart=$('#btnStart'), btnStop=$('#btnStop'), btnUpload=$('#btnUpload');
@@ -101,15 +99,13 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp
       if(!audioBlob) return alert("Spela in först.");
       try{
         const { publicUrl } = await uploadAudioBlob(audioBlob);
-        const title = ($('#title').value || 'Review').trim();
-        const shareUrl = `${location.origin}/share.html?src=${encodeURIComponent(publicUrl)}&t=${encodeURIComponent(title)}`;
-        const a = $('#last-upload'); a.href=shareUrl; a.textContent="Spela upp senaste";
         await loadReviews();
+        console.log("Uppladdad:", publicUrl);
       }catch(e){ console.error(e); alert("Upload fail – se konsolen."); }
     }
     btnStart.onclick=startRec; btnStop.onclick=stopRec; btnUpload.onclick=doUpload;
 
-    // lista
+    // --- lista uppladdningar (direkt URL, inget share) ---
     async function loadReviews(limit=25){
       const holder = document.getElementById('review-list');
       const resp = await sb.storage.from("audio").list("reviews", { limit, sortBy:{column:"created_at",order:"desc"} });
@@ -117,27 +113,21 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp
       holder.innerHTML="";
       for(const f of resp.data||[]){
         const url = sb.storage.from("audio").getPublicUrl(`reviews/${f.name}`).data.publicUrl;
-        const title = ($('#title')?.value || 'Review').trim();
-        const shareUrl = `${location.origin}/share.html?src=${encodeURIComponent(url)}&t=${encodeURIComponent(title)}`;
         holder.insertAdjacentHTML("beforeend", `
           <div class="item">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
               <strong>${f.name}</strong>
-              <a href="${shareUrl}" target="_blank" rel="noopener">Öppna</a>
+              <a href="${url}" target="_blank" rel="noopener">Öppna</a>
             </div>
             <audio controls src="${url}" style="margin-top:6px"></audio>
-            <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
-              <button class="btn" onclick="navigator.clipboard.writeText('${shareUrl}').then(()=>this.textContent='Kopierad!')">Kopiera länk</button>
-              <a class="btn" href="https://wa.me/?text=${encodeURIComponent(shareUrl)}" target="_blank" rel="noopener">WhatsApp</a>
-              <a class="btn" href="https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent('Lyssna på min review')}" target="_blank" rel="noopener">Telegram</a>
-            </div>
+            <button class="btn" style="margin-top:6px" onclick="navigator.clipboard.writeText('${url}').then(()=>this.textContent='Kopierad!')">Kopiera länk</button>
           </div>
         `);
       }
     }
     document.addEventListener("DOMContentLoaded", loadReviews);
 
-    // sanity
+    // --- sanity knappen ---
     document.getElementById('btnList').onclick = async () => {
       out.textContent = "";
       try{
