@@ -1,15 +1,25 @@
 <!doctype html>
 <html lang="sv">
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Kenai — Review</title>
-<body style="font-family:system-ui,Segoe UI,Roboto,Arial;max-width:720px;margin:24px auto;padding:16px">
-  <h1 style="margin:0 0 12px">🎧 Review</h1>
-  <audio id="p" controls style="width:100%"></audio>
-  <p id="meta" style="color:#6b7280"></p>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Kenai — Review</title>
+  <link rel="icon" href="/favicon.ico">
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;max-width:720px;margin:24px auto;padding:16px}
+    h1{margin:0 0 12px}
+    #meta{color:#667}
+    audio{width:100%}
+  </style>
+</head>
+<body>
+  <h1>🎧 Review</h1>
+  <audio id="p" controls></audio>
+  <p id="meta"></p>
+
   <script>
-    const src = new URL(location.href).searchParams.get("src");
-    const a = document.getElementById("p");
+    const src  = new URL(location.href).searchParams.get("src");
+    const a    = document.getElementById("p");
     const meta = document.getElementById("meta");
     if (!src) { meta.textContent = "Ingen ljudlänk angiven."; }
     else { a.src = src; meta.textContent = "Direktlänk: " + src; }
