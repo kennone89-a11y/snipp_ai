@@ -1,28 +1,32 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-  <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>snipp_ai – Live</title>
+  <title>snipp_ai — Live</title>
 
-  <!-- Supabase v2 via jsDelivr (global 'supabase') -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
+  <!-- Supabase v2 UMD (global: window.supabase) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 
-  <!-- Liten sanity-log: ser direkt att CDN:et laddade -->
-  <script>
-    console.log('cdn supabase loaded?', typeof supabase);
-  </script>
-
+  <!-- Minimal, mörk, snygg CSS så sidan inte blir vit -->
   <style>
-    /* (låt din befintliga CSS ligga kvar här) */
-  </style>
-</head>
-
-    /* (låt din befintliga CSS ligga kvar här) */
-  </style>
-</head>
-
+    :root{--bg:#0b0f14;--panel:#0e1320;--line:#1f2937;--text:#e5e7eb;--muted:#94a3b8;--accent:#38bdf8}
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(120deg,var(--bg),var(--panel));color:var(--text);font-family:system-ui,Segoe UI,Roboto,Inter,sans-serif}
+    .wrap{max-width:1040px;margin:28px auto;padding:20px}
+    .card{background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    h1{margin:0 0 6px;font-size:28px}
+    .muted{color:var(--muted);font-size:14px}
+    .sep{height:1px;background:var(--line);margin:16px 0}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    input[type="text"]{background:transparent;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:10px 12px;min-width:260px}
+    button{background:#111827;color:#e5e7eb;border:1px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer;transition:.06s transform}
+    button:active{transform:scale(.98)}
+    .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)}
+    .bar{width:3px;background:var(--accent);opacity:.85;border-radius:2px}
+    .list{display:grid;gap:12px}
+    .item{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:12px}
+    pre{background:#0b1220;border:1px solid var(--line);border-radius:12px;padding:12px;min-height:54px;white-space:pre-wrap}
   </style>
 </head>
 <body>
@@ -31,13 +35,13 @@
       <h1>snipp_ai</h1>
       <div class="muted">Live-uppladdning till Supabase Storage. Bucket: <code>audio</code>.</div>
 
-      <div class="sep" style="height:8px"></div>
+      <div class="sep"></div>
 
       <div class="row">
         <input id="title" type="text" placeholder="Titel (t.ex. 'Rogan #2134 — kort review')" />
-        <button id="recBtn" class="primary">● Starta inspelning</button>
-        <button id="saveBtn" class="ok" disabled>Ladda upp</button>
-        <span class="pill"><span id="timer">00:00</span></span>
+        <button id="recBtn" class="primary">▶️ Starta inspelning</button>
+        <button id="saveBtn" class="ok" disabled>⬆️ Ladda upp</button>
+        <span class="pill">⏱️ <span id="timer">00:00</span></span>
       </div>
 
       <div id="wave" class="wave" style="margin-top:10px" aria-label="live waveform"></div>
@@ -47,7 +51,6 @@
       <div id="list" class="list"></div>
 
       <div class="sep" style="height:10px"></div>
-
       <h3>Sanity test</h3>
       <div class="muted">Om detta laddar utan fel och knappen funkar, är URL/nyckel rätt.</div>
       <div class="row" style="margin-top:8px">
@@ -59,7 +62,7 @@
     </div>
   </div>
 
-  <!-- Vår externa appkod -->
+  <!-- Din appkod -->
   <script src="./app.js"></script>
 </body>
 </html>
