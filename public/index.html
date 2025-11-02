@@ -79,7 +79,7 @@
 
       <div style="margin-top:14px"><audio id="player" controls></audio></div>
       <small id="codec" class="muted" style="display:block;margin-top:6px"></small>
-
+  
     </div>
 
     <div class="card" style="margin-top:16px">
@@ -105,7 +105,7 @@
 
   async function startRec(){
   try{
-    // Bas-kontroller på iOS
+    // Snabbt stödcheck
     if (!navigator.mediaDevices?.getUserMedia) {
       alert("Din webbläsare stödjer inte mikrofoninspelning.");
       return;
@@ -118,12 +118,12 @@
     const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
     chunks = []; audioBlob = null;
 
-    // Välj bästa codec (m4a på iPhone/Safari, webm annars)
+    // Välj bästa codec
     mime = preferred.find(t => MediaRecorder.isTypeSupported(t)) || "";
     mediaRecorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
 
     mediaRecorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-    mediaRecorder.onstart = () => { // synlig bekräftelse på mobil
+    mediaRecorder.onstart = () => {
       const el = document.getElementById('codec');
       if (el) el.textContent = `Spelar in… (${mime || 'default'})`;
     };
@@ -136,12 +136,11 @@
       stream.getTracks().forEach(t => t.stop());
     };
 
-    // VIKTIGT på iOS: starta med timeslice (ms) så att ondataavailable triggar
+    // Viktigt på iOS: ge timeslice så ondataavailable triggar
     mediaRecorder.start(1000);
 
     t0 = Date.now();
     tInt = setInterval(() => setTimer(Date.now() - t0), 250);
-
     btnStart.disabled = true;
     btnStop.disabled  = false;
     btnUpload.disabled = true;
@@ -149,6 +148,9 @@
   } catch(e) {
     alert("Ge mikrofontillstånd.");
     console.error(e);
+  }
+}
+
   }
 }
 
