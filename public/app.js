@@ -12,12 +12,19 @@ const FOLDER = 'clips';              // undermapp i bucketen
 const $ = sel => document.querySelector(sel);
 const fmt = s => String(s).padStart(2,'0');
 
-// state
-let mediaRecorder = null;
-let chunks = [];
-let startedAt = 0;
-let timerInt = null;
-let waveInt = null;
+async function startRec() {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  // <-- PASTA HÄR
+}// välj bästa mimeType och skapa MediaRecorder
+let mime = 'audio/webm;codecs=opus';
+if (!MediaRecorder.isTypeSupported(mime)) {
+  mime = 'audio/webm';
+}
+mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
+console.log('Recorder mime:', mime);
+
+
+
 
 // init supabase (via CDN: global "supabase" finns)
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
