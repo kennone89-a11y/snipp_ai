@@ -1,38 +1,44 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>snipp_ai – Live</title>
 
- <!-- Supabase måste laddas först -->
-<script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
-<!-- Vår appkod -->
-<script src="./app.js" defer></script>
-
+  <!-- Supabase via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    :root { --bg:#0b0f14; --panel:#0f1722; --line:#213245; --text:#e9edf2; --muted:#9bb0c7; --acc:#66d1ff; }
-    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--text); }
-    .wrap { max-width:880px; margin:40px auto; padding:22px; }
-    .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:22px; }
-    h1 { margin:0 0 8px; font-weight:600; font-size:24px; }
-    .muted { color:var(--muted); }
-    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    input[type="text"] { flex:1; min-width:260px; background:#0e1520; color:var(--text); border:1px solid var(--line);
-      border-radius:10px; padding:10px; }
-    button { background:#10243e; color:var(--text); border:1px solid var(--line); border-radius:10px; padding:10px 14px;
-      cursor:pointer; }
-    button.primary { background:#113357; border-color:#2a4971; }
-    button.ok { background:#133b2f; border-color:#1f5b49; }
-    .pill { display:inline-flex; gap:6px; align-items:center; border:1px solid var(--line); color:var(--muted);
-      padding:6px 10px; border-radius:999px; font-size:12px; }
-    .sep { height:10px; }
-    .list { display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; margin-top:10px; }
-    .item { border:1px dashed var(--line); padding:10px; border-radius:10px; }
-    .right { display:flex; gap:8px; }
-    audio { width:100%; }
-    pre { background:#0e1520; border:1px solid var(--line); border-radius:10px; min-height:120px; padding:12px; white-space:pre-wrap; }
+    :root{
+      --bg:#0b0f14; --panel:rgba(19,23,29,.9); --text:#e7eef8; --muted:#9aa3ad;
+      --line:#1f2937; --accent:#38bdf8; --ok:#22c55e;
+      --radius:16px; --gap:12px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial}
+    .wrap{max-width:920px;margin:32px auto;padding:0 16px}
+    .card{background:var(--panel);backdrop-filter:blur(8px);border:1px solid var(--line);
+          border-radius:var(--radius);padding:22px;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+    h1{margin:0 0 8px}
+    .muted{color:var(--muted);font-size:14px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    input[type="text"]{flex:1;background:#0b1220;border:1px solid var(--line);border-radius:12px;
+      color:inherit;padding:10px 12px;min-width:260px}
+    button{border:1px solid var(--line);background:#09111d;border-radius:12px;
+      color:var(--text);padding:10px 14px;cursor:pointer;transition:.15s transform}
+    button:hover{transform:translateY(-1px)}
+    .primary{background:linear-gradient(135deg,#0ea5e9,#22d3ee)}
+    .ok{background:linear-gradient(135deg,#16a34a,#22c55e)}
+    .pill{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);
+      border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)}
+    audio{width:100%}
+    .sep{height:10px}
+    .list{display:grid;gap:10px;margin-top:8px}
+    .item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;
+      border:1px solid var(--line);border-radius:12px;padding:10px}
+    .right a{color:#7dd3fc;text-decoration:none}
+    pre{background:#0b1220;border:1px solid var(--line);border-radius:12px;
+      padding:12px;white-space:pre-wrap;min-height:54px}
   </style>
 </head>
 <body>
@@ -43,9 +49,10 @@
 
       <div class="sep"></div>
 
+      <!-- Rad: inspelning -->
       <div class="row">
         <input id="title" type="text" placeholder="Titel (t.ex. 'Rogan #2134 — kort review')" />
-        <button id="recBtn" class="primary">▶️ Starta inspelning</button>
+        <button id="recBtn" class="primary">Starta inspelning</button>
         <button id="saveBtn" class="ok" disabled>Ladda upp</button>
         <span class="pill">⏱ <span id="timer">00:00</span></span>
       </div>
@@ -56,12 +63,20 @@
       <audio id="player" controls></audio>
 
       <div class="sep"></div>
-      <h3 class="muted">Dina uppladdningar</h3>
+
+      <!-- Live waveform (tom placeholder) -->
+      <div id="wave" aria-label="live waveform"></div>
+
+      <div class="sep"></div>
+
+      <h3>Dina uppladdningar</h3>
       <div id="list" class="list"></div>
 
       <div class="sep"></div>
-      <h3 class="muted">Sanity test</h3>
-      <div class="row" style="margin-top:6px;">
+
+      <h3>Sanity test</h3>
+      <div class="muted">Om detta laddar utan fel och knappen funkar, är URL/nyckel rätt.</div>
+      <div class="row" style="margin-top:8px">
         <span class="pill">URL: <span id="u"></span></span>
         <span class="pill">Key prefix: <span id="k"></span></span>
         <button id="ping">Lista 1 fil från "audio"</button>
@@ -71,7 +86,7 @@
     </div>
   </div>
 
-  <!-- vår appkod -->
+  <!-- Vår appkod -->
   <script src="./app.js"></script>
 </body>
 </html>
