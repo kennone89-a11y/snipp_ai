@@ -4,172 +4,169 @@ window.addEventListener('DOMContentLoaded', () => {
   console.log('app.js loaded');
 
   /** ====== BYT ENDAST DESSA TVÅ ====== */
-  const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co; // <-- BYT (utan slash på slutet)
-  const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';  // <-- BYT
+  const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co; 
+  const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';  
   /** ================================== */
 
   const BUCKET = 'audio';
-  const FOLDER = 'clips';
+const FOLDER = 'clips';
 
-  // --- element
-  const $ = s => document.querySelector(s);
-  const recBtn  = $('#recBtn');
-  const saveBtn = $('#saveBtn');
-  const player  = $('#player');
-  const titleEl = $('#title');
-  const timerEl = $('#timer');
-  const listEl  = $('#list');
-  const out     = $('#out');
-  const pingBtn = $('#ping');
+const $ = (sel) => document.querySelector(sel);
 
-  // sanity-rutor om de finns
-  const u = $('#u'), k = $('#k');
-  if (u) u.textContent = SUPABASE_URL;
-  if (k) k.textContent = SUPABASE_ANON.startsWith('sb') ? 'ok' : 'fel';
+// UI refs
+const recBtn  = $('#recBtn');
+const saveBtn = $('#saveBtn');
+const player  = $('#player');
+const timerEl = $('#timer');
+const listEl  = $('#list');
+const out     = $('#out');
+const uLabel  = $('#u');
+const kLabel  = $('#k');
+const pingBtn = $('#ping');
+const titleEl = $('#title');
 
-  // --- init supabase (skydda om CDN saknas)
-  let sb = null;
-  try {
-    if (window.supabase) {
-      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-      window.sb = sb; // för konsoltest
-      console.log('supabase client ok');
-    } else {
-      console.warn('Supabase CDN hittas inte (window.supabase saknas).');
-    }
-  } catch (e) {
-    console.error('Supabase init error:', e);
-  }
+// Supabase via CDN
+let sb = null;
+if (window.supabase) {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  window.sb = sb; // för console-test
+}
 
-  // --- inspelning state
-  let mediaRecorder = null;
-  let chunks = [];
-  let lastBlob = null;
-  let timerInt = null;
-  const fmt = s => String(s).padStart(2,'0');
+// Sanity-etiketter
+if (uLabel) uLabel.textContent = SUPABASE_URL;
+if (kLabel) kLabel.textContent = SUPABASE_ANON.startsWith('sb') ? 'ok' : 'fel';
 
-  function startTimer() {
-    const t0 = Date.now();
-    stopTimer();
-    timerInt = setInterval(() => {
-      const s = Math.floor((Date.now()-t0)/1000);
-      timerEl.textContent = `${fmt(Math.floor(s/60))}:${fmt(s%60)}`;
-    }, 500);
-  }
-  function stopTimer(){ if (timerInt) { clearInterval(timerInt); timerInt=null; } }
+// ---- Recording state ----
+let mediaRecorder = null;
+let chunks = [];
+let startedAt = 0;
+let timerInt = null;
 
-  async function startRec() {
+// Hjälp: mime som stöds
+function pickMime() {
+  let mime = 'audio/webm;codecs=opus';
+  if (!MediaRecorder.isTypeSupported(mime)) mime = 'audio/webm';
+  return mime;
+}
+
+// Timer
+function startTimer() {
+  const fmt = (n) => String(n).padStart(2, '0');
+  timerInt = setInterval(() => {
+    const sec = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+    timerEl.textContent = `${fmt(Math.floor(sec / 60))}:${fmt(sec % 60)}`;
+  }, 250);
+}
+function stopTimer() {
+  clearInterval(timerInt);
+  timerInt = null;
+  timerEl.textContent = '00:00';
+}
+
+// Renderrad i listan
+function addListItem(name, publicUrl) {
+  const row = document.createElement('div');
+  row.className = 'item';
+  row.innerHTML = `
+    <div class="left"><strong>${name}</strong></div>
+    <div class="right">${publicUrl ? `<a href="${publicUrl}" target="_blank" rel="noopener">Öppna URL</a>` : ''}</div>
+  `;
+  listEl.prepend(row);
+}
+
+// ---- Handlers ----
+recBtn?.addEventListener('click', async () => {
+  if (!mediaRecorder) {
+    // START
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      // välj bästa MIME som stöds
-      let mime = 'audio/webm;codecs=opus';
-      if (!MediaRecorder.isTypeSupported(mime)) mime = 'audio/webm';
-
+      const mime = pickMime();
       mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
       chunks = [];
+      mediaRecorder.ondataavailable = (e) => { if (e.data) chunks.push(e.data); };
+      mediaRecorder.start();
+      startedAt = Date.now();
+      startTimer();
 
-      mediaRecorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-
-      mediaRecorder.onstart = () => {
-        recBtn.textContent = '⏹ Stoppa inspelning';
-        saveBtn.disabled = true;
-        startTimer();
-      };
-
-      mediaRecorder.onstop = () => {
-        stopTimer();
-        recBtn.textContent = '▶️ Starta inspelning';
-
-        // bygg blob + lokal förhandslyssning
-        lastBlob = new Blob(chunks, { type: 'audio/webm' });
-        try {
-          const url = URL.createObjectURL(lastBlob);
-          player.src = url;
-          player.play().catch(()=>{});
-        } catch(e) { console.error('Preview error:', e); }
-
-        saveBtn.disabled = false;
-      };
-
-      mediaRecorder.start(200);
+      recBtn.textContent = 'Stoppa';
+      saveBtn.disabled = true;
     } catch (e) {
-      console.error('startRec error:', e);
-      alert('Kunde inte starta mikrofonen.');
+      console.error('Mic error:', e);
+      alert('Kunde inte starta mikrofon: ' + e.message);
     }
+  } else {
+    // STOP
+    try {
+      mediaRecorder.stop();
+      mediaRecorder.stream.getTracks().forEach(t => t.stop());
+    } catch (_) {}
+    mediaRecorder = null;
+    stopTimer();
+
+    // Lokal förhandslyssning
+    try {
+      const blob = new Blob(chunks, { type: 'audio/webm' });
+      const localUrl = URL.createObjectURL(blob);
+      player.src = localUrl;
+      player.play().catch(() => {}); // autoplay kan blockas
+      saveBtn.disabled = false;
+    } catch (e) {
+      console.error('Preview error:', e);
+    }
+
+    recBtn.textContent = 'Starta inspelning';
   }
+});
 
-  function stopRec() {
-    try { mediaRecorder && mediaRecorder.state === 'recording' && mediaRecorder.stop(); }
-    catch(e){ console.error('stopRec error:', e); }
-  }
+saveBtn?.addEventListener('click', async () => {
+  try {
+    if (!sb) return alert('Supabase-klient saknas');
+    if (!chunks.length) return alert('Ingen inspelning att spara');
 
-  async function uploadCurrent() {
-    if (!lastBlob) return alert('Ingen inspelning att ladda upp.');
+    saveBtn.disabled = true;
 
-    // om supabase inte finns: bara spara lokalt i listan
-    if (!sb) {
-      addToList('(lokal) clip.webm', null);
-      alert('Supabase ej init – kolla CDN/taggar. Uppladdning hoppades över.');
+    const clean = (s) => (s || '').trim().replace(/[^\w\- ]/g,'').replace(/\s+/g,'_');
+    const title = clean(titleEl?.value || 'untitled');
+    const stamp = Date.now();
+    const fileName = `${stamp}_${title || 'clip'}.webm`;
+    const path = `${FOLDER}/${fileName}`;
+
+    const blob = new Blob(chunks, { type: 'audio/webm' });
+
+    // 1) upload
+    const { error: upErr } = await sb.storage.from(BUCKET).upload(path, blob, {
+      contentType: 'audio/webm',
+      upsert: false
+    });
+    if (upErr) {
+      alert('Upload fail: ' + upErr.message);
+      saveBtn.disabled = false;
       return;
     }
 
-    const safeTitle = (titleEl.value || 'untitled').trim()
-      .replace(/[^\w\- ]/g,'').replace(/\s+/g,'_') || 'clip';
-    const name = `${Date.now()}_${safeTitle}.webm`;
-    const path = `${FOLDER}/${name}`;
-
-    try {
-      const up = await sb.storage.from(BUCKET).upload(path, lastBlob, {
-        contentType: 'audio/webm',
-        upsert: true,
-      });
-      if (up.error) throw up.error;
-
-      const pub = sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
-      addToList(name, pub);
-      saveBtn.disabled = true;
-    } catch (e) {
-      console.error('upload error:', e);
-      alert('Upload fail: ' + e.message);
+    // 2) public URL
+    const { data: pub, error: pErr } = sb.storage.from(BUCKET).getPublicUrl(path);
+    if (pErr) {
+      alert('Public URL fail: ' + pErr.message);
+      saveBtn.disabled = false;
+      return;
     }
-  }
 
-  function addToList(name, url) {
-    const row = document.createElement('div');
-    row.className = 'item';
-    row.innerHTML = `<div>${name}</div>`;
-    const right = document.createElement('div');
-    right.className = 'right';
-    if (url) {
-      const a = document.createElement('a');
-      a.textContent = 'Öppna URL';
-      a.href = url; a.target = '_blank'; a.rel='noopener';
-      right.appendChild(a);
-    }
-    const wrap = document.createElement('div');
-    wrap.style.display='grid';
-    wrap.style.gridTemplateColumns='1fr auto';
-    wrap.style.gap='10px';
-    wrap.appendChild(row); wrap.appendChild(right);
-    listEl.prepend(wrap);
+    addListItem(fileName, pub.publicUrl);
+    chunks = [];
+    saveBtn.disabled = true;
+  } catch (e) {
+    console.error(e);
+    alert('Fel vid uppladdning: ' + e.message);
+    saveBtn.disabled = false;
   }
-
-  async function listOne() {
-    if (!sb) { out.textContent = 'Supabase ej init.'; return; }
-    try {
-      const { data, error } = await sb.storage.from(BUCKET).list(FOLDER, { limit: 1 });
-      out.textContent = JSON.stringify({ data, error }, null, 2);
-    } catch (e) {
-      out.textContent = 'Error: ' + e.message;
-    }
-  }
-
-  // --- bind knappar (ALLTID binds; om tidigare JS kraschade syntes inget klick)
-  recBtn?.addEventListener('click', () => {
-    if (!mediaRecorder || mediaRecorder.state === 'inactive') startRec();
-    else stopRec();
-  });
-  saveBtn?.addEventListener('click', uploadCurrent);
-  pingBtn?.addEventListener('click', listOne);
 });
+
+// Sanity: lista 1 fil
+pingBtn?.addEventListener('click', async () => {
+  if (!sb) return;
+  const { data, error } = await sb.storage.from(BUCKET).list(FOLDER, { limit: 1 });
+  out.textContent = JSON.stringify({ data, error }, null, 2);
+});
+
+console.log('app.js loaded');
