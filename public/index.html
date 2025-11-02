@@ -106,25 +106,51 @@
     btnStart.onclick=startRec; btnStop.onclick=stopRec; btnUpload.onclick=doUpload;
 
     // --- lista uppladdningar (direkt URL, inget share) ---
-    async function loadReviews(limit=25){
-      const holder = document.getElementById('review-list');
-      const resp = await sb.storage.from("audio").list("reviews", { limit, sortBy:{column:"created_at",order:"desc"} });
-      if(resp.error){ holder.innerHTML="<p class='muted'>Kunde inte lista filer.</p>"; console.error(resp.error); return; }
-      holder.innerHTML="";
-      for(const f of resp.data||[]){
-        const url = sb.storage.from("audio").getPublicUrl(`reviews/${f.name}`).data.publicUrl;
-        holder.insertAdjacentHTML("beforeend", `
-          <div class="item">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-              <strong>${f.name}</strong>
-              <a href="${url}" target="_blank" rel="noopener">Öppna</a>
-            </div>
-            <audio controls src="${url}" style="margin-top:6px"></audio>
-            <button class="btn" style="margin-top:6px" onclick="navigator.clipboard.writeText('${url}').then(()=>this.textContent='Kopierad!')">Kopiera länk</button>
-          </div>
-        `);
-      }
-    }
+    async function loadReviews(limit = 25) {
+  const holder = document.getElementById('review-list');
+
+  const resp = await sb.storage
+    .from("audio")
+    .list("reviews", { limit, sortBy: { column: "created_at", order: "desc" } });
+
+  if (resp.error) {
+    console.error(resp.error);
+    holder.innerHTML = "<p class='muted'>Kunde inte lista filer.</p>";
+    return;
+  }
+
+  holder.innerHTML = "";
+
+  for (const f of resp.data || []) {
+    // 1) Publik URL till filen
+    const url = sb.storage.from("audio").getPublicUrl(`reviews/${f.name}`).data.publicUrl;
+
+    // 2) Skapa share-länk (tar titeln från inputfältet om den finns)
+    const title = (document.getElementById('title')?.value || 'Review').trim();
+    const shareUrl = `${location.origin}/share.html?src=${encodeURIComponent(url)}&t=${encodeURIComponent(title)}`;
+
+    // 3) Quick-share
+    const wa = `https://wa.me/?text=${encodeURIComponent(shareUrl)}`;
+    const tg = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent('Lyssna på min review')}`;
+
+    // 4) Rendera item
+    holder.insertAdjacentHTML("beforeend", `
+      <div class="item">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <strong>${f.name}</strong>
+          <a href="${shareUrl}" target="_blank" rel="noopener">Öppna</a>
+        </div>
+        <audio controls src="${url}" style="margin-top:6px"></audio>
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+          <button class="btn" onclick="navigator.clipboard.writeText('${shareUrl}').then(()=>this.textContent='Kopierad!')">Kopiera länk</button>
+          <a class="btn" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>
+          <a class="btn" href="${tg}" target="_blank" rel="noopener">Telegram</a>
+        </div>
+      </div>
+    `);
+  }
+}
+
     document.addEventListener("DOMContentLoaded", loadReviews);
 
     // --- sanity knappen ---
