@@ -34,12 +34,31 @@
     function makePath(){ return `reviews/${Date.now()}-${Math.random().toString(36).slice(2,8)}.webm`; }
 
     // upload helper -> public URL
-    async function uploadAudioBlob(blob){
-      const path = makePath();
-      const up = await sb.storage.from("audio").upload(path, blob, { contentType:"audio/webm", upsert:false });
-      if (up.error) throw up.error;
-      const pub = sb.storage.from("audio").getPublicUrl(path);
-      return { path, publicUrl: pub.data.publicUrl };
+  async function uploadAudioBlob(blob){
+  // Om Safari/iPhone → mime blir audio/mp4 ⇒ vi sparar .m4a
+  const isMp4 = (blob.type || mime || "").includes("mp4");
+
+  // Slugga titel för snyggt filnamn
+  const ts  = Date.now();
+  const r   = Math.random().toString(36).slice(2,8);
+  const raw = (document.getElementById('title')?.value || 'review').trim().toLowerCase();
+  const slug = raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+                  .replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'review';
+
+  const ext  = isMp4 ? 'm4a' : 'webm';
+  const ctype = isMp4 ? 'audio/mp4' : 'audio/webm';
+  const path = `reviews/${ts}-${slug}-${r}.${ext}`;
+
+  const up = await sb.storage.from("audio").upload(path, blob, {
+    contentType: ctype,
+    upsert: false
+  });
+  if (up.error) throw up.error;
+
+  const pub = sb.storage.from("audio").getPublicUrl(path);
+  return { path, publicUrl: pub.data.publicUrl };
+}
+
     }
     window.uploadAudioBlob = uploadAudioBlob; // behövs av knappen
   </script>
