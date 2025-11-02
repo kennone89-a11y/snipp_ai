@@ -4,37 +4,43 @@ window.addEventListener('DOMContentLoaded', () => {
   console.log('app.js loaded');
 
   /** ====== BYT ENDAST DESSA TVÅ ====== */
-  const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co; 
-  const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';  
+  const SUPABASE_URL  = 'https://hyywzzzzgxaghkhooezk.supabase.co';   // utan slash på slutet
+  const SUPABASE_ANON = 'sb_publishable_fLQc4d675JKhsc-QXj20w_BGf1f8Z7'; // publ nyckel (börjar med sbp_ eller sb_publishable_)
   /** ================================== */
 
   const BUCKET = 'audio';
-const FOLDER = 'clips';
+  const FOLDER = 'clips';
 
-const $ = (sel) => document.querySelector(sel);
+  const $ = (sel) => document.querySelector(sel);
 
-// UI refs
-const recBtn  = $('#recBtn');
-const saveBtn = $('#saveBtn');
-const player  = $('#player');
-const timerEl = $('#timer');
-const listEl  = $('#list');
-const out     = $('#out');
-const uLabel  = $('#u');
-const kLabel  = $('#k');
-const pingBtn = $('#ping');
-const titleEl = $('#title');
+  // UI refs (måste finnas i HTML)
+  const recBtn  = $('#recBtn');
+  const saveBtn = $('#saveBtn');
+  const player  = $('#player');
+  const timerEl = $('#timer');
+  const listEl  = $('#list');
+  const out     = $('#out');
+  const uLabel  = $('#u');   // sanity: visar URL
+  const kLabel  = $('#k');   // sanity: visar key-format
+  const pingBtn = $('#ping');
+  const titleEl = $('#title');
 
-// Supabase via CDN
-let sb = null;
-if (window.supabase) {
-  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-  window.sb = sb; // för console-test
-}
+  // Init supabase via CDN (window.supabase sätts av scriptet i index.html)
+  let sb = null;
+  if (window.supabase) {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    window.sb = sb; // för konsoltest
+  } else {
+    console.error('Supabase CDN saknas – kontrollera <script> i index.html');
+  }
 
-// Sanity-etiketter
-if (uLabel) uLabel.textContent = SUPABASE_URL;
-if (kLabel) kLabel.textContent = SUPABASE_ANON.startsWith('sb') ? 'ok' : 'fel';
+  // Sanity UI (visa att konstanterna finns)
+  if (uLabel) uLabel.textContent = SUPABASE_URL;
+  if (kLabel) kLabel.textContent = SUPABASE_ANON.startsWith('sb') ? 'ok' : 'fel';
+
+  // resten av din kod kan ligga kvar nedanför detta…
+});
+;
 
 // ---- Recording state ----
 let mediaRecorder = null;
