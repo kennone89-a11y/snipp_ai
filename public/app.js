@@ -90,6 +90,17 @@ $('#saveBtn').onclick = async ()=>{
   const fileName = `${stamp}_${title || 'clip'}.webm`;
 
   const blob = new Blob(chunks, { type:'audio/webm' });
+  const player = document.getElementById('player');
+if (player) {
+  try {
+    const localUrl = URL.createObjectURL(blob);
+    player.src = localUrl;
+    player.play().catch(() => {}); // autoplay kan blockas – då trycker man Play
+  } catch (e) {
+    console.error('Preview error:', e);
+  }
+}
+
   const path = `${FOLDER}/${fileName}`;
 
   // 1) ladda upp
