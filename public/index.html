@@ -95,15 +95,29 @@
     }
     function stopRec(){ if(mediaRecorder && mediaRecorder.state!=="inactive") mediaRecorder.stop(); clearInterval(tInt); setTimer(0); btnStart.disabled=false; btnStop.disabled=true; }
 
-    async function doUpload(){
-      if(!audioBlob) return alert("Spela in först.");
-      try{
-        const { publicUrl } = await uploadAudioBlob(audioBlob);
-        await loadReviews();
-        console.log("Uppladdad:", publicUrl);
-      }catch(e){ console.error(e); alert("Upload fail – se konsolen."); }
-    }
-    btnStart.onclick=startRec; btnStop.onclick=stopRec; btnUpload.onclick=doUpload;
+   async function doUpload(){
+  if (!audioBlob) return alert("Spela in först.");
+  try {
+    // 1) Ladda upp och få public URL
+    const { publicUrl } = await uploadAudioBlob(audioBlob);
+
+    // 2) Bygg share-länk och uppdatera "Spela upp senaste"
+    const title = (document.getElementById('title').value || 'Review').trim();
+    const shareUrl = `${location.origin}/share.html?src=${encodeURIComponent(publicUrl)}&t=${encodeURIComponent(title)}`;
+    const a = document.getElementById('last-upload');
+    a.href = shareUrl;
+    a.textContent = 'Spela upp senaste';
+
+    // 3) Uppdatera listan
+    await loadReviews();
+
+    console.log("Uppladdad:", publicUrl);
+  } catch (e) {
+    console.error(e);
+    alert("Upload fail – se konsolen.");
+  }
+}
+
 
     // --- lista uppladdningar (direkt URL, inget share) ---
     async function loadReviews(limit = 25) {
