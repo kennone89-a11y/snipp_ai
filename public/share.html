@@ -7,9 +7,7 @@
   <link rel="icon" href="/favicon.ico">
   <style>
     body{font-family:system-ui,Segoe UI,Roboto,Arial;max-width:720px;margin:24px auto;padding:16px}
-    h1{margin:0 0 12px}
-    #meta{color:#667}
-    audio{width:100%}
+    h1{margin:0 0 12px} #meta{color:#667} audio{width:100%}
     .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
     .btn{background:#0b1220;color:#fff;border:1px solid #1f2937;border-radius:10px;padding:8px 12px;text-decoration:none}
   </style>
@@ -41,7 +39,6 @@
       a.src = src;
       meta.textContent = "Direktlänk: " + src;
 
-      // share-knappar
       const share = location.href;
       document.getElementById('copy').onclick = (e)=>{ e.preventDefault(); navigator.clipboard.writeText(share).then(()=>{ document.getElementById('copy').textContent='Kopierad!'; }); };
       document.getElementById('w').href = `https://wa.me/?text=${encodeURIComponent(share)}`;
