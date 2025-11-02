@@ -82,16 +82,37 @@
 
     const setTimer=ms=>{const s=Math.floor(ms/1000),m=String(Math.floor(s/60)).padStart(2,'0'),ss=String(s%60).padStart(2,'0');timer.textContent=`${m}:${ss}`};
 
-    async function startRec(){
-      try{
-        const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
-        chunks=[]; audioBlob=null;
-        mediaRecorder = new MediaRecorder(stream, { mimeType:"audio/webm" });
-        mediaRecorder.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
-        mediaRecorder.onstop = ()=>{ audioBlob=new Blob(chunks,{type:"audio/webm"}); player.src=URL.createObjectURL(audioBlob); btnUpload.disabled=false; stream.getTracks().forEach(t=>t.stop()); };
-        mediaRecorder.start(); t0=Date.now(); tInt=setInterval(()=>setTimer(Date.now()-t0),250);
-        btnStart.disabled=true; btnStop.disabled=false; btnUpload.disabled=true;
-      }catch(e){ alert("Ge mikrofontillstånd."); console.error(e); }
+   async function startRec(){
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+    chunks = []; audioBlob = null;
+
+    // Välj bästa codec som stöds
+    mime = preferred.find(t => MediaRecorder.isTypeSupported(t)) || "";
+    mediaRecorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+
+    mediaRecorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      audioBlob = new Blob(chunks, { type: mime || "audio/webm" });
+      player.src = URL.createObjectURL(audioBlob);
+      btnUpload.disabled = false;
+      stream.getTracks().forEach(t => t.stop());
+    };
+
+    mediaRecorder.start();
+    t0 = Date.now();
+    tInt = setInterval(() => setTimer(Date.now() - t0), 250);
+
+    btnStart.disabled = true;
+    btnStop.disabled  = false;
+    btnUpload.disabled = true;
+
+  } catch(e) {
+    alert("Ge mikrofontillstånd.");
+    console.error(e);
+  }
+}
+
     }
     function stopRec(){ if(mediaRecorder && mediaRecorder.state!=="inactive") mediaRecorder.stop(); clearInterval(tInt); setTimer(0); btnStart.disabled=false; btnStop.disabled=true; }
 
