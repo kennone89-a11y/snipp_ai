@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Kenai — Review</title>
-  <link rel="icon" href="/favicon.ico">
+  <link rel="icon" href="/favicon.ico" />
   <style>
     body{font-family:system-ui,Segoe UI,Roboto,Arial;max-width:720px;margin:24px auto;padding:16px}
     h1{margin:0 0 12px} #meta{color:#667} audio{width:100%}
@@ -24,23 +24,23 @@
 
   <script>
     const q = new URL(location.href).searchParams;
-    const src = q.get("src");
+    const src   = q.get("src");
     const title = q.get("t") || "Review";
 
     document.title = `Kenai — ${title}`;
     document.querySelector("h1").textContent = `🎧 ${title}`;
 
-    const a = document.getElementById("p");
-    const meta = document.getElementById("meta");
+    const audio = document.getElementById("p");
+    const meta  = document.getElementById("meta");
 
     if (!src) {
       meta.textContent = "Ingen ljudlänk angiven.";
     } else {
-      a.src = src;
+      audio.src = src;
       meta.textContent = "Direktlänk: " + src;
 
       const share = location.href;
-      document.getElementById('copy').onclick = (e)=>{ e.preventDefault(); navigator.clipboard.writeText(share).then(()=>{ document.getElementById('copy').textContent='Kopierad!'; }); };
+      document.getElementById('copy').onclick = (e)=>{ e.preventDefault(); navigator.clipboard.writeText(share).then(()=>{ e.target.textContent='Kopierad!'; }); };
       document.getElementById('w').href = `https://wa.me/?text=${encodeURIComponent(share)}`;
       document.getElementById('g').href = `https://t.me/share/url?url=${encodeURIComponent(share)}&text=${encodeURIComponent('Lyssna på min review')}`;
     }
