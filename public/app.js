@@ -40,8 +40,29 @@ window.addEventListener('DOMContentLoaded', () => {
     const out = document.getElementById('out');
     if (out) out.textContent = 'ERROR: Supabase CDN not loaded';
     console.error('Supabase CDN not loaded');
-    return;// === Kenai audio patch — BLOCK 3/6 ===
-// stopRec: stoppa inspelning, bygg Blob, ladda upp
+    return;
+    
+    }
+  });
+
+// === Kenai audio patch — BLOCK 4/6 ===
+// Laddar upp via din redan initierade klient "sb"
+
+async function uploadToSupabase(blob, filename, contentType) {
+  const path = `audio/reviews/${filename}`;
+  const { data, error } = await sb.storage
+    .from("audio")                 // byt namn om din bucket heter något annat
+    .upload(path, blob, {
+      upsert: true,
+      contentType: contentType
+    });
+
+  if (error) {
+    console.error(error);
+    throw error;
+  }
+  return data;
+}
 
 async function stopRec() {
   try {
