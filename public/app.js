@@ -4,6 +4,35 @@
 const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co;  // utan slash på slutet
 const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';                   // börjar med sbp_ eller sb_publishable_
 /* ================================== */
+// === Kenai audio patch — BLOCK 1/6 ===
+// Läggs längst NEDERST i filen, under din befintliga kod.
+
+let mediaRecorder;
+let recStream;
+let chunks = [];
+let currentFmt = { mime: "", ext: "", contentType: "" };
+
+// Välj bästa MIME per enhet (Safari kräver ofta audio/mp4 → .m4a)
+function pickAudioFormat() {
+  const prefs = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/mp4;codecs=mp4a.40.2",
+    "audio/mp4"
+  ];
+  for (const m of prefs) {
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) {
+      if (m.startsWith("audio/webm")) {
+        return { mime: m, ext: "webm", contentType: "audio/webm" };
+      }
+      if (m.startsWith("audio/mp4")) {
+        return { mime: m, ext: "m4a", contentType: "audio/mp4" };
+      }
+    }
+  }
+  // Om inget stöds → WAV-fallback
+  return { mime: "wav-fallback", ext: "wav", contentType: "audio/wav" };
+}
 
 window.addEventListener('DOMContentLoaded', () => {
   // 0) CDN måste finnas
