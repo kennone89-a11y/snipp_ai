@@ -6,8 +6,7 @@ const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
 const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
 /* ====== BYT ENDAST DESSA TVÅ om de inte redan är rätt ====== */
-const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co; // utan slash på slutet
-const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';
+const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co; 
 
 /* ====== init Supabase-klienten ====== */
 const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : null;
