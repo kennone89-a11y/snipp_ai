@@ -1,89 +1,159 @@
 'use strict';
-// iOS/Safari detektor
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+
+/* ====== iOS/Safari detektor ====== */
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
               (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
+/* ====== BYT ENDAST DESSA TVÅ om de inte redan är rätt ====== */
+const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co; // utan slash på slutet
+const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';
 
-/* ====== BYT ENDAST DESSA TVÅ ====== */
-const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co;  // utan slash på slutet
-const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';                   // börjar med sbp_ eller sb_publishable_
-/* ================================== */
-// === Kenai audio patch — BLOCK 1/6 ===
-// Läggs längst NEDERST i filen, under din befintliga kod.
+/* ====== init Supabase-klienten ====== */
+const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : null;
+window.sb = sb; // exponera globalt
 
+/* ====== Globala inspelningsvariabler ====== */
 let mediaRecorder;
 let recStream;
 let chunks = [];
-let currentFmt = { mime: "", ext: "", contentType: "" };
+let currentFmt = { mime: '', ext: '', contentType: '' };
 
-// Välj bästa MIME per enhet (Safari kräver ofta audio/mp4 → .m4a)
+/* ====== Välj bästa MIME per enhet (Safari → m4a först) ====== */
+function pickAudioFormat() {
+  const safariPrefs = [
+    "audio/mp4;codecs=mp4a.40.2",
+    "audio/mp4",
+    "audio/webm;codecs=opus",
+    "audio/webm"
+  ];
+  const defaultPrefs = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/mp4;codecs=mp4a.40.2",
+    "audio/mp4"
+  ];
+  const prefs = isSafari ? safariPrefs : defaultPrefs;
+
+  for (const m of prefs) {
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) {
+      if (m.startsWith("audio/webm")) return { mime: m, ext: "webm", contentType: "audio/webm" };
+      if (m.startsWith("audio/mp4"))  return { mime: m, ext: "m4a",  contentType: "audio/mp4"  };
+    }
+  }
+  // Fallback → WAV via WebAudio
+  return { mime: "wav-fallback", ext: "wav", contentType: "audio/wav" };
+}
+
+/* ====== Starta inspelning ====== */
 async function startRec() {
   try {
+    if (!window.supabase || !sb) {
+      console.error('Supabase CDN not loaded');
+      alert('Supabase saknas – ladda om sidan.');
+      return;
+    }
+
     currentFmt = pickAudioFormat();
 
+    // iOS: låt systemet välja kanal/rate (mindre bråk)
     const audioConstraints = isIOS
       ? { echoCancellation: true, noiseSuppression: true }
       : { echoCancellation: true, noiseSuppression: true, channelCount: 1, sampleRate: 48000 };
 
     recStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
 
-    document.getElementById("codec")?.replaceChildren(
-      document.createTextNode(`Codec: ${currentFmt.mime}`)
-    );
-    document.getElementById("codec")?.append(
-      document.createTextNode(` | iOS:${isIOS} Safari:${isSafari}`)
-    );
+    // visa codec/detektion i UI
+    const codecEl = document.getElementById('codec');
+    if (codecEl) {
+      codecEl.textContent = `Codec: ${currentFmt.mime} | iOS:${isIOS} Safari:${isSafari}`;
+    }
 
     chunks = [];
 
     if (currentFmt.mime !== "wav-fallback" && window.MediaRecorder) {
-      mediaRecorder = new MediaRecorder(recStream, { mimeType: currentFmt.mime });
+      // prova MediaRecorder med vald mime
+      let ok = true;
+      try {
+        mediaRecorder = new MediaRecorder(recStream, { mimeType: currentFmt.mime });
+      } catch (e) {
+        ok = false;
+      }
 
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) chunks.push(e.data);
-      };
-
-      mediaRecorder.onerror = (e) => {
-        console.error('MediaRecorder error', e);
-        alert('MediaRecorder error: ' + (e.name || e));
-      };
-
-      mediaRecorder.onstop = () => {
-        try { recStream.getTracks().forEach(t => t.stop()); } catch {}
-      };
-
-      mediaRecorder.start(isIOS ? 500 : 1000);
+      if (ok) {
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) chunks.push(e.data);
+        };
+        mediaRecorder.onerror = (e) => {
+          console.error('MediaRecorder error', e);
+          alert('MediaRecorder error: ' + (e.name || e));
+        };
+        mediaRecorder.onstop = () => {
+          try { recStream.getTracks().forEach(t => t.stop()); } catch {}
+        };
+        mediaRecorder.start(isIOS ? 500 : 1000); // iOS behöver kortare slice
+      } else {
+        // kunde inte skapa – kör WAV
+        currentFmt = { mime: "wav-fallback", ext: "wav", contentType: "audio/wav" };
+        await wavFallbackStart(recStream);
+      }
     } else {
+      // ingen MediaRecorder – kör WAV
       await wavFallbackStart(recStream);
     }
 
+    // UI toggles
     document.getElementById("recordBtn")?.setAttribute("disabled", "true");
     document.getElementById("stopBtn")?.removeAttribute("disabled");
   } catch (err) {
     console.error(err);
-    alert("Kunde inte starta inspelning. Kolla iOS: Inställningar → Safari → Mikrofon (Tillåt).");
-  
+    alert("Kunde inte starta inspelning. Kolla behörighet till mikrofon i webbläsaren.");
+  }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  // 0) CDN måste finnas
-  if (!window.supabase) {
-    const out = document.getElementById('out');
-    if (out) out.textContent = 'ERROR: Supabase CDN not loaded';
-    console.error('Supabase CDN not loaded');
-    return;
-    
+/* ====== Stoppa inspelning och ladda upp ====== */
+async function stopRec() {
+  try {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      await new Promise(res => {
+        mediaRecorder.onstop = () => {
+          try { recStream.getTracks().forEach(t => t.stop()); } catch {}
+          res();
+        };
+        mediaRecorder.stop();
+      });
+    } else {
+      await wavFallbackStop();
+      try { recStream.getTracks().forEach(t => t.stop()); } catch {}
     }
-  });
 
-// === Kenai audio patch — BLOCK 4/6 ===
-// Laddar upp via din redan initierade klient "sb"
+    let blob;
+    if (currentFmt.mime === "wav-fallback") {
+      blob = wavFallbackGetBlob();
+    } else {
+      blob = new Blob(chunks, { type: currentFmt.contentType });
+    }
 
+    const ts = new Date().toISOString().replace(/[:.]/g, "-");
+    const filename = `review-${ts}.${currentFmt.ext}`;
+
+    await uploadToSupabase(blob, filename, currentFmt.contentType);
+
+    document.getElementById("recordBtn")?.removeAttribute("disabled");
+    document.getElementById("stopBtn")?.setAttribute("disabled", "true");
+    chunks = [];
+    alert("Uppladdad ✅");
+  } catch (err) {
+    console.error(err);
+    alert("Kunde inte stoppa/lagra inspelningen.");
+  }
+}
+
+/* ====== Upload helper (byt bucket-namn om din heter annat) ====== */
 async function uploadToSupabase(blob, filename, contentType) {
   const path = `audio/reviews/${filename}`;
   const { data, error } = await sb.storage
-    .from("audio")                 // byt namn om din bucket heter något annat
+    .from("audio") // <-- byt om din bucket inte heter "audio"
     .upload(path, blob, {
       upsert: true,
       contentType: contentType
@@ -94,9 +164,9 @@ async function uploadToSupabase(blob, filename, contentType) {
     throw error;
   }
   return data;
-}// === Kenai audio patch — BLOCK 5/6 ===
-// Enkel WAV-fallback om MediaRecorder inte stöds
+}
 
+/* ====== WAV-fallback via WebAudio ====== */
 let wavCtx, wavSource, wavProcessor;
 let wavBuffers = [];
 let wavSampleRate = 48000;
@@ -174,8 +244,16 @@ function writeString(view, offset, string) {
   }
 }
 
-// === Kenai audio patch — BLOCK 6/6 ===
-window.startRec = startRec;
-window.stopRec = stopRec;
+/* ====== Liten sanity-check vid laddning (valfritt) ====== */
+window.addEventListener('DOMContentLoaded', () => {
+  if (!window.supabase) {
+    const out = document.getElementById('out');
+    if (out) out.textContent = 'ERROR: Supabase CDN not loaded';
+    console.error('Supabase CDN not loaded');
+    return;
+  }
+});
 
-   
+/* ====== Exponera till HTML-knappar ====== */
+window.startRec = startRec;
+window.stopRec  = stopRec;
