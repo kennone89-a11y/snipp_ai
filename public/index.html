@@ -266,16 +266,19 @@ async function micTest(){
       }catch(e){ out.textContent += "ERROR: " + e + "\n"; }
     };
   </script>
-  <!-- === Kenai mic UI === -->
+ 
 <button id="recordBtn" onclick="startRec()">Spela in</button>
 <button id="stopBtn" onclick="stopRec()" disabled>Stoppa</button>
 <small id="codec"></small>
 
-<!-- Supabase CDN (måste ligga före app.js). Lägg bara EN gång! -->
+<!-- Ladda Supabase före app.js (endast en gång) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <!-- Din app-kod -->
 <script src="./app.js" defer></script>
-
 </body>
+</html>
+
+</html>
+
 </html>
