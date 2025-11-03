@@ -18,25 +18,52 @@ let chunks = [];
 let currentFmt = { mime: "", ext: "", contentType: "" };
 
 // Välj bästa MIME per enhet (Safari kräver ofta audio/mp4 → .m4a)
-function pickAudioFormat() {
-  const prefs = [
-    "audio/webm;codecs=opus",
-    "audio/webm",
-    "audio/mp4;codecs=mp4a.40.2",
-    "audio/mp4"
-  ];
-  for (const m of prefs) {
-    if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) {
-      if (m.startsWith("audio/webm")) {
-        return { mime: m, ext: "webm", contentType: "audio/webm" };
-      }
-      if (m.startsWith("audio/mp4")) {
-        return { mime: m, ext: "m4a", contentType: "audio/mp4" };
-      }
+async function startRec() {
+  try {
+    currentFmt = pickAudioFormat();
+
+    const audioConstraints = isIOS
+      ? { echoCancellation: true, noiseSuppression: true }
+      : { echoCancellation: true, noiseSuppression: true, channelCount: 1, sampleRate: 48000 };
+
+    recStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+
+    document.getElementById("codec")?.replaceChildren(
+      document.createTextNode(`Codec: ${currentFmt.mime}`)
+    );
+    document.getElementById("codec")?.append(
+      document.createTextNode(` | iOS:${isIOS} Safari:${isSafari}`)
+    );
+
+    chunks = [];
+
+    if (currentFmt.mime !== "wav-fallback" && window.MediaRecorder) {
+      mediaRecorder = new MediaRecorder(recStream, { mimeType: currentFmt.mime });
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+
+      mediaRecorder.onerror = (e) => {
+        console.error('MediaRecorder error', e);
+        alert('MediaRecorder error: ' + (e.name || e));
+      };
+
+      mediaRecorder.onstop = () => {
+        try { recStream.getTracks().forEach(t => t.stop()); } catch {}
+      };
+
+      mediaRecorder.start(isIOS ? 500 : 1000);
+    } else {
+      await wavFallbackStart(recStream);
     }
-  }
-  // Om inget stöds → WAV-fallback
-  return { mime: "wav-fallback", ext: "wav", contentType: "audio/wav" };
+
+    document.getElementById("recordBtn")?.setAttribute("disabled", "true");
+    document.getElementById("stopBtn")?.removeAttribute("disabled");
+  } catch (err) {
+    console.error(err);
+    alert("Kunde inte starta inspelning. Kolla iOS: Inställningar → Safari → Mikrofon (Tillåt).");
+  
 }
 
 window.addEventListener('DOMContentLoaded', () => {
