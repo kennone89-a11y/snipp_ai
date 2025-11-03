@@ -40,7 +40,46 @@ window.addEventListener('DOMContentLoaded', () => {
     const out = document.getElementById('out');
     if (out) out.textContent = 'ERROR: Supabase CDN not loaded';
     console.error('Supabase CDN not loaded');
-    return;
+    return;// === Kenai audio patch — BLOCK 3/6 ===
+// stopRec: stoppa inspelning, bygg Blob, ladda upp
+
+async function stopRec() {
+  try {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      await new Promise(res => {
+        mediaRecorder.onstop = () => {
+          try { recStream.getTracks().forEach(t => t.stop()); } catch {}
+          res();
+        };
+        mediaRecorder.stop();
+      });
+    } else {
+      await wavFallbackStop();
+      try { recStream.getTracks().forEach(t => t.stop()); } catch {}
+    }
+
+    let blob;
+    if (currentFmt.mime === "wav-fallback") {
+      blob = wavFallbackGetBlob();
+    } else {
+      blob = new Blob(chunks, { type: currentFmt.contentType });
+    }
+
+    const ts = new Date().toISOString().replace(/[:.]/g, "-");
+    const filename = `review-${ts}.${currentFmt.ext}`;
+
+    await uploadToSupabase(blob, filename, currentFmt.contentType);
+
+    document.getElementById("recordBtn")?.removeAttribute("disabled");
+    document.getElementById("stopBtn")?.setAttribute("disabled", "true");
+    chunks = [];
+    alert("Uppladdad ✅");
+  } catch (err) {
+    console.error(err);
+    alert("Kunde inte stoppa/lagra inspelningen.");
+  }
+}
+
   }
 
   // 1) Skapa klient och exponera globalt
