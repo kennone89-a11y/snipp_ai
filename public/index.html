@@ -267,9 +267,10 @@ async function micTest(){
     };
   </script>
  
-<button id="recordBtn" onclick="startRec()">Spela in</button>
-<button id="stopBtn" onclick="stopRec()" disabled>Stoppa</button>
-<small id="codec"></small>
+<button id="recordBtn" class="btn btnStart" onclick="startRec()">Starta inspelning</button>
+<button id="stopBtn"  class="btn btnStop"  onclick="stopRec()"  disabled>Stoppa</button>
+<small id="codec" class="muted" style="display:block;margin-top:6px"></small>
+
 
 <!-- Ladda Supabase före app.js (endast en gång) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -279,6 +280,6 @@ async function micTest(){
 </body>
 </html>
 
-</html>
 
-</html>
+
+
