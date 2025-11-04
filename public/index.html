@@ -16,11 +16,21 @@
     .btnStop{background:#dc3545;border-color:#bb2d3b}
     .muted{color:#98a6b5}
   </style>
+
+  <!-- NUKA SERVICE WORKER/CACHE PÅ EN GÅNG -->
+  <script>
+    (async()=>{try{
+      const regs = await navigator.serviceWorker?.getRegistrations?.();
+      regs?.forEach(r=>r.unregister());
+      // rensa gamla caches om sådana finns
+      if (window.caches?.keys) {
+        const ks = await caches.keys();
+        await Promise.all(ks.map(k=>caches.delete(k)));
+      }
+    }catch(e){/* ignore */}})();
+  </script>
 </head>
 <body>
-  <!-- Avkommentera raden nedan ENBART om sidan fortfarande är “fast i cache” -->
-  <!-- <script>navigator.serviceWorker?.getRegistrations().then(rs=>rs.forEach(r=>r.unregister()))</script> -->
-
   <div class="wrap">
     <h1>snipp_ai</h1>
 
@@ -28,14 +38,14 @@
       <h3 style="margin-top:0">Inspelning</h3>
       <div class="row" style="margin-top:8px">
         <button id="recordBtn" class="btn btnStart" onclick="startRec()">Starta inspelning</button>
-        <button id="stopBtn"  class="btn btnStop"  onclick="stopRec()"  disabled>Stoppa</button>
+        <button id="stopBtn"  class="btn btnStop"  onclick="stopRec()" disabled>Stoppa</button>
       </div>
       <small id="codec" class="muted" style="display:block;margin-top:8px"></small>
     </div>
   </div>
 
-  <!-- LÄNGST NER: ENDA scripts -->
+  <!-- ENDA scripts (lägg ALL JS i app.js) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./app.js" defer></script>
+  <script src="./app.js?v=9" defer></script>
 </body>
 </html>
