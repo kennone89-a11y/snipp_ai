@@ -18,6 +18,9 @@
   </style>
 </head>
 <body>
+  <!-- Avkommentera raden nedan ENBART om sidan fortfarande är “fast i cache” -->
+  <!-- <script>navigator.serviceWorker?.getRegistrations().then(rs=>rs.forEach(r=>r.unregister()))</script> -->
+
   <div class="wrap">
     <h1>snipp_ai</h1>
 
@@ -31,7 +34,7 @@
     </div>
   </div>
 
-  <!-- LÄNGST NER: exakt dessa två script (EN gång) -->
+  <!-- LÄNGST NER: ENDA scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./app.js" defer></script>
 </body>
