@@ -7,8 +7,8 @@ const isIOS = ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod'
 const isSafari = ua.includes('safari') && !ua.includes('chrome') && !ua.includes('android');
 
 // === FYLL I DINA SUPABASE-VÄRDEN ===
-const SUPABASE_URL  = 'https://<DIN-PROJECT>.supabase.co';  // <-- BYT
-const SUPABASE_ANON = '<DIN_ANON_KEY>';                     // <-- BYT
+const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co;
+const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';                     // <-- BYT
 
 // init supabase (cdn script finns i index.html)
 const sb = (window.supabase && SUPABASE_URL && SUPABASE_ANON)
