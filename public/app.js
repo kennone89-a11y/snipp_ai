@@ -6,8 +6,8 @@ const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
 const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
 // === FYLL I DINA SUPABASE-VÄRDEN ===
-const SUPABASE_URL  = ' https://hywwzzzxgagqhlxooekz.supabase.co;;
-const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';
+const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co;
+const SUPABASE_ANON = '<sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';
 
 // Init Supabase-klient (via CDN i index.html)
 const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : null;
@@ -18,7 +18,7 @@ let mediaRecorder, recStream;
 let chunks = [];
 let currentFmt = { mime: '', ext: '', contentType: '' };
 
-// Välj bästa format per enhet (Safari → m4a först)
+// Bästa format per enhet (Safari → m4a först)
 function pickAudioFormat() {
   const safariPrefs = [
     "audio/mp4;codecs=mp4a.40.2",
@@ -46,15 +46,12 @@ function pickAudioFormat() {
 // Starta inspelning
 async function startRec() {
   try {
-    if (!window.supabase || !sb) {
-      alert('Supabase saknas – ladda om sidan.');
-      return;
-    }
+    if (!window.supabase || !sb) { alert('Supabase saknas – ladda om sidan.'); return; }
 
     currentFmt = pickAudioFormat();
 
     const audioConstraints = isIOS
-      ? { echoCancellation: true, noiseSuppression: true } // iOS väljer rate/kanaler själv
+      ? { echoCancellation: true, noiseSuppression: true } // iOS väljer rate/kanaler
       : { echoCancellation: true, noiseSuppression: true, channelCount: 1, sampleRate: 48000 };
 
     recStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
@@ -68,11 +65,12 @@ async function startRec() {
       let ok = true;
       try { mediaRecorder = new MediaRecorder(recStream, { mimeType: currentFmt.mime }); }
       catch { ok = false; }
+
       if (ok) {
         mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data); };
         mediaRecorder.onerror = (e) => alert('MediaRecorder error: ' + (e.name || e));
         mediaRecorder.onstop = () => { try { recStream.getTracks().forEach(t => t.stop()); } catch {} };
-        mediaRecorder.start(isIOS ? 500 : 1000); // iOS behöver kortare slice
+        mediaRecorder.start(isIOS ? 500 : 1000); // iOS vill ha kortare slice
       } else {
         currentFmt = { mime: "wav-fallback", ext: "wav", contentType: "audio/wav" };
         await wavFallbackStart(recStream);
