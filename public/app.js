@@ -6,9 +6,8 @@ const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
 const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
 // === FYLL I DINA SUPABASE-VÄRDEN ===
-const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co;
-;
-const SUPABASE_ANON = '<sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';
+const SUPABASE_URL  = ' https://hywwzzzxgagqhlxooekz.supabase.co;;
+const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';
 
 // Init Supabase-klient (via CDN i index.html)
 const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : null;
@@ -55,7 +54,7 @@ async function startRec() {
     currentFmt = pickAudioFormat();
 
     const audioConstraints = isIOS
-      ? { echoCancellation: true, noiseSuppression: true } // iOS får välja rate/kanaler själv
+      ? { echoCancellation: true, noiseSuppression: true } // iOS väljer rate/kanaler själv
       : { echoCancellation: true, noiseSuppression: true, channelCount: 1, sampleRate: 48000 };
 
     recStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
@@ -69,7 +68,6 @@ async function startRec() {
       let ok = true;
       try { mediaRecorder = new MediaRecorder(recStream, { mimeType: currentFmt.mime }); }
       catch { ok = false; }
-
       if (ok) {
         mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data); };
         mediaRecorder.onerror = (e) => alert('MediaRecorder error: ' + (e.name || e));
