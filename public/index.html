@@ -42,42 +42,48 @@
 <script>
 'use strict';
 
-// enkel UA
+// enkel UA<script>
+'use strict';
+
+// UA-detekt
 const ua = (navigator.userAgent || '').toLowerCase();
 const isIOS = ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod')
            || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const isSafari = ua.includes('safari') && !ua.includes('chrome') && !ua.includes('android');
 
-// === FYLL I DINA SUPABASE-VÄRDEN (BYT DESSA TVÅ) ===
+// ===== Fyll i dessa två =====
 const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co;
-// <-- BYT
-const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';                   // <-- BYT
+// BYT
+const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';                       // BYT
+// ============================
 
-// Ladda Supabase om CDN-skriptet inte redan finns (no-op om det finns)
+// Ladda supabase-js om den inte finns
 (async () => {
   if (!window.supabase) {
-    await new Promise(r => {
+    await new Promise(resolve => {
       const s = document.createElement('script');
       s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-      s.onload = r; document.head.appendChild(s);
+      s.onload = resolve;
+      document.head.appendChild(s);
     });
   }
 })();
 
-// init supabase när libben finns
+// Initiera klient
 let sb = null;
 (async () => {
   while (!window.supabase) await new Promise(r=>setTimeout(r,10));
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-  window.sb = sb; // för felsökning i konsol
+  window.sb = sb;
 })();
 
-// globala
+// Globala inspelningsprylar
 let mediaRecorder = null;
 let recStream = null;
 let chunks = [];
 let currentFmt = { mime: '', ext: '', contentType: '' };
 
+// Välj format
 function pickAudioFormat() {
   const safariFirst = [
     'audio/mp4;codecs=mp4a.40.2',
@@ -103,9 +109,10 @@ function pickAudioFormat() {
   return { mime: 'wav-fallback', ext: 'wav', contentType: 'audio/wav' };
 }
 
+// Start
 async function startRec(){
   try{
-    if (!sb) { alert('Initierar Supabase... prova igen om en sekund'); return; }
+    if (!sb) { alert('Initierar... prova igen'); return; }
 
     currentFmt = pickAudioFormat();
     const audioConstraints = isIOS
@@ -115,7 +122,7 @@ async function startRec(){
     recStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
 
     const codecEl = document.getElementById('codec');
-    if (codecEl) codecEl.textContent = 'Codec: ' + currentFmt.mime + ' | iOS:' + isIOS + ' Safari:' + isSafari;
+    if (codecEl) codecEl.textContent = 'Codec: ' + currentFmt.mime + '  iOS:' + isIOS + '  Safari:' + isSafari;
 
     chunks = [];
 
@@ -143,6 +150,7 @@ async function startRec(){
   }
 }
 
+// Stop
 async function stopRec(){
   try{
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
@@ -174,13 +182,14 @@ async function stopRec(){
   }
 }
 
+// Uppladdning
 async function uploadToSupabase(blob, filename, contentType){
   const path = `audio/reviews/${filename}`;
   const { error } = await sb.storage.from('audio').upload(path, blob, { upsert:true, contentType });
   if (error) throw error;
 }
 
-// WAV fallback
+// WAV-fallback
 let wavCtx=null, wavSource=null, wavProcessor=null;
 let wavBuffers=[];
 let wavSampleRate=48000;
@@ -240,12 +249,11 @@ function writeString(view, offset, str){
   for (let i=0;i<str.length;i++) view.setUint8(offset+i, str.charCodeAt(i));
 }
 
-// Exponera globalt till knapparna
+// Exponera till knapparna
 window.startRec = startRec;
 window.stopRec  = stopRec;
 </script>
 
-</script>
-
+</script> 
 </body>
 </html>
