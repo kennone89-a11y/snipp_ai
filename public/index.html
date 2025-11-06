@@ -3,257 +3,388 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>snipp_ai — sanity</title>
+  <title>Kenai – Universal Audio Recorder (Gold Build)</title>
   <style>
-    body{margin:0;padding:24px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#0b0f14;color:#e9eef5}
-    .wrap{max-width:920px;margin:0 auto}
-    .row{display:flex;gap:8px}
-    .btn{padding:10px 14px;border-radius:10px;border:1px solid #223246;background:#0f1520;color:#e9eef5;cursor:pointer}
+    :root { --bg:#0b0f14; --card:#111723; --muted:#8aa0b6; --text:#e6eef7; --acc:#4cc9f0; --ok:#29bf12; --warn:#ffbe0b; --err:#ff006e; }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial}
+    .wrap{max-width:860px;margin:32px auto;padding:20px}
+    .card{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:18px 18px 14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    h1{margin:0 0 8px;font-size:24px}
+    p.muted{color:var(--muted);margin:4px 0 16px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    button{appearance:none;border:0;border-radius:14px;padding:12px 16px;font-weight:600;cursor:pointer}
+    #startBtn{background:var(--ok);color:#000}
+    #stopBtn{background:var(--err)}
+    #stopBtn[disabled]{opacity:.4;cursor:not-allowed}
+    #startBtn[disabled]{opacity:.4;cursor:not-allowed}
+    small#status{display:block;margin-top:10px;color:var(--muted);white-space:pre-wrap}
+    .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;margin:10px 0 4px}
+    .kv b{color:#9ec3ff;font-weight:600}
+    .bar{height:2px;background:linear-gradient(90deg,var(--acc),transparent);opacity:.35;margin:8px 0 12px}
+    canvas{width:100%;height:96px;background:#0a0e14;border-radius:12px;border:1px solid rgba(255,255,255,.06)}
+    audio{width:100%;margin-top:12px}
+    a.download{display:inline-block;margin-top:10px;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.2);padding:8px 12px;border-radius:12px}
+    code.badge{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;background:#0a0e14;border:1px solid rgba(255,255,255,.09);padding:2px 8px;border-radius:8px}
   </style>
-
-  <!-- döda ev service worker cache -->
-  <script>
-    (async()=>{try{
-      const regs = await navigator.serviceWorker?.getRegistrations?.();
-      regs?.forEach(r=>r.unregister());
-      if (window.caches?.keys) {
-        const ks = await caches.keys();
-        await Promise.all(ks.map(k=>caches.delete(k)));
-      }
-    }catch(_){}})();
-  </script>
-
-  <!-- (behövs först i steg 2, men gör inget om den laddas redan nu) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <div class="wrap">
-    <h1>snipp_ai — sanity</h1>
-    <div class="row" style="margin-top:8px">
-      <button id="recordBtn" class="btn" onclick="startRec()">Starta inspelning</button>
-      <button id="stopBtn"   class="btn" onclick="stopRec()">Stoppa</button>
+    <div class="card">
+      <h1>Kenai – Universal Recorder <span class="bar"></span></h1>
+      <p class="muted">Automatisk codec-detektion (WebM/Opus → Chrome/Edge/Firefox, M4A (audio/mp4) → Safari), och säker WAV‑fallback på alla enheter. En tydlig state‑maskin & statusrad hjälper felsökning.</p>
+
+      <div class="row">
+        <button id="startBtn">▶︎ Starta inspelning</button>
+        <button id="stopBtn" disabled>■ Stoppa</button>
+        <span id="dot" style="margin-left:8px">● idle</span>
+      </div>
+
+      <div class="kv" id="kv">
+        <b>Tillstånd:</b><span id="state">idle</span>
+        <b>Codec:</b><span id="codec">–</span>
+        <b>MIME:</b><span id="mime">–</span>
+        <b>Filnamn:</b><span id="fname">–</span>
+        <b>Storlek:</b><span id="fsize">–</span>
+        <b>Varaktighet:</b><span id="dur">00:00</span>
+        <b>UA:</b><span id="ua"></span>
+      </div>
+
+      <small id="status">Klar. Tryck Starta för att begära mikrofonåtkomst.</small>
+
+      <canvas id="scope" width="1024" height="192"></canvas>
+
+      <audio id="player" controls></audio>
+      <a id="dl" class="download" download style="display:none">⬇︎ Ladda ner</a>
     </div>
-    <small id="codec" style="display:block;margin-top:8px;color:#98a6b5"></small>
   </div>
 
-  <!-- ny, ren fil -->
-  <script>
-'use strict';
 <script>
-'use strict';
+(function(){
+  'use strict';
 
-// enkel UA<script>
-'use strict';
+  // ---------- Elements ----------
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn  = document.getElementById('stopBtn');
+  const stateEl  = document.getElementById('state');
+  const codecEl  = document.getElementById('codec');
+  const mimeEl   = document.getElementById('mime');
+  const fnameEl  = document.getElementById('fname');
+  const fsizeEl  = document.getElementById('fsize');
+  const durEl    = document.getElementById('dur');
+  const statusEl = document.getElementById('status');
+  const uaEl     = document.getElementById('ua');
+  const player   = document.getElementById('player');
+  const dl       = document.getElementById('dl');
+  const dot      = document.getElementById('dot');
 
-// UA-detekt
-const ua = (navigator.userAgent || '').toLowerCase();
-const isIOS = ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod')
-           || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const isSafari = ua.includes('safari') && !ua.includes('chrome') && !ua.includes('android');
+  uaEl.textContent = navigator.userAgent;
 
-// ===== Fyll i dessa två =====
-const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co;
-// BYT
-const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';                       // BYT
-// ============================
+  // ---------- State machine ----------
+  const STATE = { IDLE:'idle', REC:'recording', STOPPING:'stopping', DONE:'done' };
+  let state = STATE.IDLE;
+  let startedAt = 0;
+  let ticker = null;
 
-// Ladda supabase-js om den inte finns
-(async () => {
-  if (!window.supabase) {
-    await new Promise(resolve => {
-      const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-      s.onload = resolve;
-      document.head.appendChild(s);
-    });
+  function setState(s){
+    state = s;
+    stateEl.textContent = s;
+    dot.textContent = (s===STATE.REC? '● recording' : s===STATE.STOPPING? '● stopping' : s===STATE.DONE? '● done' : '● idle');
+    dot.style.color = (s===STATE.REC? '#ff3864' : s===STATE.STOPPING? '#ffbe0b' : s===STATE.DONE? '#29bf12' : '#8aa0b6');
+    startBtn.disabled = (s===STATE.REC || s===STATE.STOPPING);
+    stopBtn.disabled  = !(s===STATE.REC);
   }
-})();
 
-// Initiera klient
-let sb = null;
-(async () => {
-  while (!window.supabase) await new Promise(r=>setTimeout(r,10));
-  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-  window.sb = sb;
-})();
+  function timeStr(ms){
+    const sec = Math.floor(ms/1000);
+    const m = String(Math.floor(sec/60)).padStart(2,'0');
+    const s = String(sec%60).padStart(2,'0');
+    return `${m}:${s}`;
+  }
 
-// Globala inspelningsprylar
-let mediaRecorder = null;
-let recStream = null;
-let chunks = [];
-let currentFmt = { mime: '', ext: '', contentType: '' };
+  function startTicker(){
+    startedAt = performance.now();
+    stopTicker();
+    ticker = setInterval(()=>{
+      durEl.textContent = timeStr(performance.now()-startedAt);
+    }, 250);
+  }
+  function stopTicker(){ if(ticker){ clearInterval(ticker); ticker=null; } }
 
-// Välj format
-function pickAudioFormat() {
-  const safariFirst = [
-    'audio/mp4;codecs=mp4a.40.2',
-    'audio/mp4',
-    'audio/webm;codecs=opus',
-    'audio/webm'
-  ];
-  const webmFirst = [
-    'audio/webm;codecs=opus',
-    'audio/webm',
-    'audio/mp4;codecs=mp4a.40.2',
-    'audio/mp4'
-  ];
-  const prefs = isSafari ? safariFirst : webmFirst;
-  if (window.MediaRecorder && MediaRecorder.isTypeSupported) {
-    for (const m of prefs) {
-      if (MediaRecorder.isTypeSupported(m)) {
-        if (m.startsWith('audio/webm')) return { mime: m, ext: 'webm', contentType: 'audio/webm' };
-        if (m.startsWith('audio/mp4'))  return { mime: m, ext: 'm4a',  contentType: 'audio/mp4'  };
+  function log(msg){ statusEl.textContent = msg; }
+
+  // ---------- Waveform ----------
+  const scope = document.getElementById('scope');
+  const g = scope.getContext('2d');
+  function drawWave(analyser){
+    const N = analyser.fftSize;
+    const buf = new Uint8Array(N);
+    function frame(){
+      if(state===STATE.REC){
+        analyser.getByteTimeDomainData(buf);
+        g.clearRect(0,0,scope.width,scope.height);
+        g.beginPath();
+        const mid = scope.height/2;
+        for(let x=0; x<scope.width; x++){
+          const i = Math.floor(x/ scope.width * N);
+          const v = (buf[i]-128)/128;
+          const y = mid + v * (scope.height/2-6);
+          if(x===0) g.moveTo(x,y); else g.lineTo(x,y);
+        }
+        g.strokeStyle = '#4cc9f0';
+        g.lineWidth = 2;
+        g.stroke();
       }
+      if(state===STATE.REC) requestAnimationFrame(frame); else g.clearRect(0,0,scope.width,scope.height);
     }
+    requestAnimationFrame(frame);
   }
-  return { mime: 'wav-fallback', ext: 'wav', contentType: 'audio/wav' };
-}
 
-// Start
-async function startRec(){
-  try{
-    if (!sb) { alert('Initierar... prova igen'); return; }
+  // ---------- Recording backends ----------
+  let mediaStream = null;
+  let mediaRecorder = null;
+  let chunks = [];
+  let chosenMime = '';
+  let chosenExt  = '';
 
-    currentFmt = pickAudioFormat();
-    const audioConstraints = isIOS
-      ? { echoCancellation: true, noiseSuppression: true }
-      : { echoCancellation: true, noiseSuppression: true, channelCount: 1, sampleRate: 48000 };
+  // WAV fallback buffers
+  let wavCtx = null, wavProc = null, wavSource = null, wavBuffers = [], wavChannels = 1, wavSampleRate = 48000;
 
-    recStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+  function pickMime(){
+    const candidates = [
+      'audio/webm;codecs=opus',      // Chrome/Edge/Firefox desktop & Android
+      'audio/mp4',                   // Safari iOS/macOS (M4A)
+      'audio/ogg;codecs=opus',       // Firefox
+    ];
+    for(const m of candidates){
+      try{ if(window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m; }catch{ /* ignore */ }
+    }
+    return '';
+  }
 
-    const codecEl = document.getElementById('codec');
-    if (codecEl) codecEl.textContent = 'Codec: ' + currentFmt.mime + '  iOS:' + isIOS + '  Safari:' + isSafari;
+  async function startMediaRecorder(){
+    chosenMime = pickMime();
+    chosenExt  = chosenMime.includes('webm')? 'webm' : chosenMime.includes('mp4')? 'm4a' : chosenMime.includes('ogg')? 'ogg' : '';
+
+    if(!window.MediaRecorder || !chosenMime){
+      log('MediaRecorder saknas eller inget MIME stöds → byter till WAV‑fallback.');
+      return false;
+    }
+
+    try{
+      mediaRecorder = new MediaRecorder(mediaStream, { mimeType: chosenMime, audioBitsPerSecond: 128000 });
+    }catch(err){
+      log('Kunde inte starta MediaRecorder: '+err.message+' → WAV‑fallback.');
+      return false;
+    }
 
     chunks = [];
+    mediaRecorder.ondataavailable = e => { if(e.data && e.data.size>0) chunks.push(e.data); };
+    mediaRecorder.onstop = finalizeMediaRecorder;
+    mediaRecorder.onerror = e => { log('MediaRecorder fel: '+e.error?.message || e.name); };
 
-    if (currentFmt.mime !== 'wav-fallback' && window.MediaRecorder) {
-      let ok = true;
-      try { mediaRecorder = new MediaRecorder(recStream, { mimeType: currentFmt.mime }); } catch { ok = false; }
-      if (ok) {
-        mediaRecorder.ondataavailable = (e)=>{ if (e.data && e.data.size>0) chunks.push(e.data); };
-        mediaRecorder.onerror = (e)=> alert('MediaRecorder error: ' + (e?.name || e));
-        mediaRecorder.onstop = ()=>{ try{ recStream?.getTracks()?.forEach(t=>t.stop()); }catch{} };
-        mediaRecorder.start(isIOS ? 500 : 1000);
-      } else {
-        currentFmt = { mime: 'wav-fallback', ext: 'wav', contentType: 'audio/wav' };
-        await wavFallbackStart(recStream);
+    mediaRecorder.start(1000); // timeslice för att spola ut data
+    return true;
+  }
+
+  function finalizeMediaRecorder(){
+    try{
+      const blob = new Blob(chunks, { type: chosenMime });
+      finish(blob, chosenExt || 'bin');
+    }catch(err){
+      log('Kunde inte bygga blob från MediaRecorder, använder WAV‑fallback.');
+      startWavFallback();
+    }
+  }
+
+  function startWavFallback(){
+    // Web Audio ScriptProcessor fallback
+    const AC = window.AudioContext || window.webkitAudioContext;
+    wavCtx = new AC({ sampleRate: 48000 });
+    wavSampleRate = wavCtx.sampleRate;
+    wavSource = wavCtx.createMediaStreamSource(mediaStream);
+    wavChannels = Math.min(2, wavSource.channelCount || 1); // ofta 1 på iPhone
+    wavProc = wavCtx.createScriptProcessor(4096, wavChannels, wavChannels);
+
+    wavBuffers = Array.from({length:wavChannels}, ()=>[]);
+
+    wavProc.onaudioprocess = e => {
+      for(let ch=0; ch<wavChannels; ch++){
+        const data = e.inputBuffer.getChannelData(ch);
+        wavBuffers[ch].push(new Float32Array(data));
       }
-    } else {
-      await wavFallbackStart(recStream);
+    };
+
+    // Visa vågform via analyser
+    const analyser = wavCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    wavSource.connect(analyser);
+    drawWave(analyser);
+
+    wavSource.connect(wavProc);
+    wavProc.connect(wavCtx.destination);
+
+    chosenMime = 'audio/wav';
+    chosenExt  = 'wav';
+    log('WAV‑fallback aktiv. Spelar in via Web Audio.');
+  }
+
+  function stopWavFallback(){
+    if(!wavCtx) return;
+    try{ wavProc && wavProc.disconnect(); }catch{}
+    try{ wavSource && wavSource.disconnect(); }catch{}
+    try{ wavCtx && wavCtx.close(); }catch{}
+
+    // Packa WAV
+    const len = wavBuffers[0].reduce((a,b)=>a+b.length,0);
+    const interleaved = new Float32Array(len * wavChannels);
+    let offset = 0;
+    const chCount = wavChannels;
+    // interleave
+    for(let i=0;i<wavBuffers[0].length;i++){
+      const frameLen = wavBuffers[0][i].length;
+      for(let s=0;s<frameLen;s++){
+        for(let ch=0; ch<chCount; ch++){
+          const sample = wavBuffers[ch][i][s];
+          interleaved[(offset+s)*chCount + ch] = sample;
+        }
+      }
+      offset += frameLen;
+    }
+    // encode PCM16 WAV
+    const bytesPerSample = 2;
+    const blockAlign = chCount * bytesPerSample;
+    const buffer = new ArrayBuffer(44 + interleaved.length * bytesPerSample);
+    const view = new DataView(buffer);
+
+    // RIFF header
+    writeStr(view, 0, 'RIFF');
+    view.setUint32(4, 36 + interleaved.length * bytesPerSample, true);
+    writeStr(view, 8, 'WAVE');
+    writeStr(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);                 // PCM chunk size
+    view.setUint16(20, 1, true);                  // PCM format
+    view.setUint16(22, chCount, true);            // channels
+    view.setUint32(24, wavSampleRate, true);      // sample rate
+    view.setUint32(28, wavSampleRate * blockAlign, true); // byte rate
+    view.setUint16(32, blockAlign, true);         // block align
+    view.setUint16(34, 16, true);                 // bits per sample
+    writeStr(view, 36, 'data');
+    view.setUint32(40, interleaved.length * bytesPerSample, true);
+
+    // PCM samples
+    let idx = 44;
+    for(let i=0;i<interleaved.length;i++){
+      const s = Math.max(-1, Math.min(1, interleaved[i]));
+      view.setInt16(idx, s<0 ? s*0x8000 : s*0x7FFF, true);
+      idx += 2;
     }
 
-    document.getElementById('recordBtn')?.setAttribute('disabled','true');
-    document.getElementById('stopBtn')?.removeAttribute('disabled');
-  }catch(err){
-    console.error(err);
-    alert('Kunde inte starta inspelning. Kolla mic-tillstånd.');
-  }
-}
+    const blob = new Blob([view], { type: 'audio/wav' });
+    finish(blob, 'wav');
 
-// Stop
-async function stopRec(){
-  try{
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      await new Promise(res=>{
-        mediaRecorder.onstop = ()=>{ try{ recStream?.getTracks()?.forEach(t=>t.stop()); }catch{}; res(); };
+    // helpers
+    function writeStr(v, o, s){ for(let i=0;i<s.length;i++) v.setUint8(o+i, s.charCodeAt(i)); }
+  }
+
+  // ---------- Orchestration ----------
+  async function startRec(){
+    try{
+      setState(STATE.REC);
+      log('Begär mikrofonåtkomst…');
+      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      startTicker();
+
+      // setup analyser for MediaRecorder path as well
+      const AC = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AC();
+      const src = ctx.createMediaStreamSource(mediaStream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 2048; src.connect(analyser); drawWave(analyser);
+
+      const ok = await startMediaRecorder();
+      if(!ok){
+        // MediaRecorder unavailable → WAV fallback
+        startWavFallback();
+      }
+
+      codecEl.textContent = ok ? 'MediaRecorder' : 'WAV-fallback';
+      mimeEl.textContent  = chosenMime || '–';
+      fnameEl.textContent = '–';
+      fsizeEl.textContent = '–';
+      dl.style.display = 'none'; dl.removeAttribute('href');
+      player.src = '';
+
+    }catch(err){
+      setState(STATE.IDLE);
+      stopTicker();
+      log('Mikrofon nekad eller fel: '+err.message);
+    }
+  }
+
+  async function stopRec(){
+    if(state!==STATE.REC) return;
+    setState(STATE.STOPPING);
+    stopTicker();
+
+    try{
+      if(mediaRecorder && mediaRecorder.state !== 'inactive'){
         mediaRecorder.stop();
-      });
-    } else {
-      await wavFallbackStop();
-      try { recStream?.getTracks()?.forEach(t=>t.stop()); } catch {}
-    }
+      }else{
+        stopWavFallback();
+      }
+    }catch{ /* ignore */ }
 
-    const blob = (currentFmt.mime === 'wav-fallback')
-      ? wavFallbackGetBlob()
-      : new Blob(chunks, { type: currentFmt.contentType });
-
-    const ts = new Date().toISOString().replace(/[:.]/g,'-');
-    const filename = `review-${ts}.${currentFmt.ext}`;
-
-    await uploadToSupabase(blob, filename, currentFmt.contentType);
-
-    document.getElementById('recordBtn')?.removeAttribute('disabled');
-    document.getElementById('stopBtn')?.setAttribute('disabled','true');
-    chunks = [];
-    alert('Uppladdad ✅');
-  }catch(err){
-    console.error(err);
-    alert('Kunde inte stoppa/lagra inspelningen.');
+    // Stäng stream spår
+    try{ mediaStream?.getTracks().forEach(t=>t.stop()); }catch{}
   }
-}
 
-// Uppladdning
-async function uploadToSupabase(blob, filename, contentType){
-  const path = `audio/reviews/${filename}`;
-  const { error } = await sb.storage.from('audio').upload(path, blob, { upsert:true, contentType });
-  if (error) throw error;
-}
+  function finish(blob, ext){
+    setState(STATE.DONE);
+    const url = URL.createObjectURL(blob);
+    player.src = url;
 
-// WAV-fallback
-let wavCtx=null, wavSource=null, wavProcessor=null;
-let wavBuffers=[];
-let wavSampleRate=48000;
-
-async function wavFallbackStart(stream){
-  const Ctx = window.AudioContext || window.webkitAudioContext;
-  wavCtx = new Ctx({ sampleRate: wavSampleRate });
-  wavSource = wavCtx.createMediaStreamSource(stream);
-  wavProcessor = wavCtx.createScriptProcessor(4096, 1, 1);
-  wavBuffers = [];
-  wavProcessor.onaudioprocess = (e)=>{
-    const input = e.inputBuffer.getChannelData(0);
-    wavBuffers.push(new Float32Array(input));
-  };
-  wavSource.connect(wavProcessor);
-  wavProcessor.connect(wavCtx.destination);
-}
-async function wavFallbackStop(){
-  if (!wavCtx) return;
-  try{ wavProcessor.disconnect(); wavSource.disconnect(); }catch{}
-  await wavCtx.close();
-}
-function wavFallbackGetBlob(){
-  const length = wavBuffers.reduce((a,c)=>a+c.length,0);
-  const pcm = new Float32Array(length);
-  let off=0; for (const b of wavBuffers){ pcm.set(b, off); off+=b.length; }
-  const buf = encodeWAV(pcm, wavSampleRate);
-  return new Blob([buf], { type:'audio/wav' });
-}
-function encodeWAV(samples, sampleRate){
-  const bytesPerSample=2, blockAlign=1*bytesPerSample;
-  const buffer = new ArrayBuffer(44 + samples.length*bytesPerSample);
-  const view = new DataView(buffer);
-  writeString(view,0,'RIFF');
-  view.setUint32(4,36+samples.length*bytesPerSample,true);
-  writeString(view,8,'WAVE');
-  writeString(view,12,'fmt ');
-  view.setUint32(16,16,true);
-  view.setUint16(20,1,true);
-  view.setUint16(22,1,true);
-  view.setUint32(24,sampleRate,true);
-  view.setUint32(28,sampleRate*blockAlign,true);
-  view.setUint16(32,blockAlign,true);
-  view.setUint16(34,16,true);
-  writeString(view,36,'data');
-  view.setUint32(40,samples.length*bytesPerSample,true);
-  floatTo16BitPCM(view,44,samples);
-  return view;
-}
-function floatTo16BitPCM(view, offset, input){
-  for (let i=0;i<input.length;i++,offset+=2){
-    const s = Math.max(-1, Math.min(1, input[i]));
-    view.setInt16(offset, s<0 ? s*0x8000 : s*0x7FFF, true);
+    const name = `kenai-${ts()}.${ext}`;
+    dl.download = name; dl.href = url; dl.style.display='inline-block';
+    fnameEl.textContent = name;
+    fsizeEl.textContent = human(blob.size);
+    mimeEl.textContent  = blob.type || mimeEl.textContent;
+    codecEl.textContent = codecEl.textContent || (ext==='wav'?'WAV-fallback':'MediaRecorder');
+    log('Klar. Spela upp eller ladda ner filen.');
   }
-}
-function writeString(view, offset, str){
-  for (let i=0;i<str.length;i++) view.setUint8(offset+i, str.charCodeAt(i));
-}
 
-// Exponera till knapparna
-window.startRec = startRec;
-window.stopRec  = stopRec;
+  function ts(){
+    const d = new Date();
+    const Y=d.getFullYear(), M=String(d.getMonth()+1).padStart(2,'0'), D=String(d.getDate()).padStart(2,'0');
+    const h=String(d.getHours()).padStart(2,'0'), m=String(d.getMinutes()).padStart(2,'0'), s=String(d.getSeconds()).padStart(2,'0');
+    return `${Y}${M}${D}-${h}${m}${s}`;
+  }
+
+  function human(n){
+    if(n<1024) return n+' B';
+    if(n<1024*1024) return (n/1024).toFixed(1)+' KB';
+    return (n/1024/1024).toFixed(2)+' MB';
+  }
+
+  // ---------- Buttons & iOS resume ----------
+  startBtn.addEventListener('click', ()=>{
+    startRec();
+  });
+  stopBtn.addEventListener('click', ()=>{
+    stopRec();
+  });
+
+  // Touch to resume AudioContext on iOS if needed
+  window.addEventListener('touchstart', ()=>{
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AC();
+      if(ctx.state === 'suspended') ctx.resume();
+      setTimeout(()=>ctx.close(), 500);
+    }catch{}
+  }, { once:true });
+
+})();
 </script>
-
-</script> 
 </body>
 </html>
