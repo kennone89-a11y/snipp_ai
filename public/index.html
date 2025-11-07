@@ -114,6 +114,11 @@
     stopBtn.disabled  = !(s===STATE.REC);
   }
 
+  // Failsafe: se till att knapparna är klickbara vid start
+  setState(STATE.IDLE);
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+
   function timeStr(ms){
     const sec = Math.floor(ms/1000);
     const m = String(Math.floor(sec/60)).padStart(2,'0');
@@ -516,6 +521,12 @@
       setTimeout(()=>ctx.close(), 500);
     }catch{}
   }, { once:true });
+
+  // Global felhanterare – om något kraschar, visa i status och lås upp knappar
+  window.addEventListener('error', (e)=>{
+    try{ log('JS-fel: ' + e.message); }catch{}
+    try{ setState(STATE.IDLE); startBtn.disabled=false; stopBtn.disabled=true; }catch{}
+  });
 
   // Om sidan blir bakgrund på iOS kan timers pausas – kontrollera deadline vid återkomst
   document.addEventListener('visibilitychange', ()=>{
