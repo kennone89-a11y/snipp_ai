@@ -63,6 +63,10 @@
 (function(){
   'use strict';
 
+// Auto-stop efter 2:00
+const MAX_MS = 120000; // 2 minuter
+
+
   // ---------- Elements ----------
   const startBtn = document.getElementById('startBtn');
   const stopBtn  = document.getElementById('stopBtn');
@@ -77,6 +81,12 @@
   const player   = document.getElementById('player');
   const dl       = document.getElementById('dl');
   const dot      = document.getElementById('dot');
+
+  // --- Supabase config (byt till dina värden) ---
+  const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co;
+  const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';
+  const SUPABASE_BUCKET = 'audio';
+  const SUPABASE_PATH   = 'reviews'; // mapp i bucket
 
   uaEl.textContent = navigator.userAgent;
 
@@ -106,8 +116,14 @@
     startedAt = performance.now();
     stopTicker();
     ticker = setInterval(()=>{
-      durEl.textContent = timeStr(performance.now()-startedAt);
+      const elapsed = performance.now() - startedAt;
+      durEl.textContent = timeStr(elapsed);
+      if(elapsed >= MAX_MS){
+        log('Auto-stop efter 2:00');
+        stopRec();
+      }
     }, 250);
+  }, 250);
   }
   function stopTicker(){ if(ticker){ clearInterval(ticker); ticker=null; } }
 
@@ -287,6 +303,33 @@
     function writeStr(v, o, s){ for(let i=0;i<s.length;i++) v.setUint8(o+i, s.charCodeAt(i)); }
   }
 
+  // Upload till Supabase
+  async function uploadSupabase(blob, name){
+    try{
+      if(!SUPABASE_URL.startsWith('https') || SUPABASE_ANON.length < 20){
+        log('Supabase ej konfigurerad – hoppar över upload.');
+        return;
+      }
+      const endpoint = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${SUPABASE_PATH}/${encodeURIComponent(name)}`;
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + SUPABASE_ANON,
+          'Content-Type': blob.type || 'application/octet-stream',
+          'x-upsert': 'true'
+        },
+        body: blob
+      });
+      if(!res.ok){
+        const txt = await res.text();
+        throw new Error(`Upload misslyckades: ${res.status} ${txt}`);
+      }
+      log('Uppladdning klar till Supabase ✔︎');
+    }catch(err){
+      log('Supabase-fel: ' + err.message);
+    }
+  }
+
   // ---------- Orchestration ----------
   async function startRec(){
     try{
@@ -351,6 +394,9 @@
     mimeEl.textContent  = blob.type || mimeEl.textContent;
     codecEl.textContent = codecEl.textContent || (ext==='wav'?'WAV-fallback':'MediaRecorder');
     log('Klar. Spela upp eller ladda ner filen.');
+
+    // Ladda upp till Supabase (om konfigurerad)
+    uploadSupabase(blob, name);
   }
 
   function ts(){
