@@ -2,10 +2,9 @@
 (function(){
   'use strict';
 
-  // --- Settings ---
-  var MAX_MS = 120000; // 2 minuter
+  // ===== Super-minimal WAV-only recorder (2:00 auto-stop) =====
+  var MAX_MS = 120000; // 2 min
 
-  // --- Elms ---
   var startBtn = document.getElementById('startBtn');
   var stopBtn  = document.getElementById('stopBtn');
   var stateEl  = document.getElementById('state');
@@ -15,272 +14,106 @@
   var fsizeEl  = document.getElementById('fsize');
   var durEl    = document.getElementById('dur');
   var statusEl = document.getElementById('status');
-  var uaEl     = document.getElementById('ua');
   var player   = document.getElementById('player');
   var dl       = document.getElementById('dl');
-  var dot      = document.getElementById('dot');
+  function log(m){ statusEl.textContent = m; }
 
-  uaEl.textContent = navigator.userAgent;
-
-  // --- State ---
-  var STATE = { IDLE:'idle', REC:'recording', STOPPING:'stopping', DONE:'done' };
-  var state = STATE.IDLE;
-  var startedAt = 0;
-  var ticker = null;
-
+  var STATE={IDLE:'idle',REC:'recording',STOP:'stopping',DONE:'done'};
   function setState(s){
-    state = s;
-    stateEl.textContent = s;
-    dot.textContent = (s===STATE.REC? '● recording' : s===STATE.STOPPING? '● stopping' : s===STATE.DONE? '● done' : '● idle');
-    dot.style.color = (s===STATE.REC? '#ff3864' : s===STATE.STOPPING? '#ffbe0b' : s===STATE.DONE? '#29bf12' : '#8aa0b6');
-    startBtn.disabled = (s===STATE.REC || s===STATE.STOPPING);
-    stopBtn.disabled  = !(s===STATE.REC);
+    stateEl.textContent=s;
+    startBtn.disabled = (s!==STATE.IDLE);
+    stopBtn.disabled  = (s!==STATE.REC);
   }
   setState(STATE.IDLE);
 
-  function timeStr(ms){
-    var sec = Math.floor(ms/1000);
-    var m = String(Math.floor(sec/60)).padStart(2,'0');
-    var s = String(sec%60).padStart(2,'0');
-    return m + ':' + s;
+  var startedAt=0, tick=null, hard=null;
+  function tstr(ms){ var s=(ms/1000|0), m=('0'+(s/60|0)).slice(-2); return m+':'+('0'+(s%60)).slice(-2); }
+  function startTick(){
+    startedAt=performance.now();
+    stopTick();
+    tick=setInterval(function(){
+      var e=performance.now()-startedAt;
+      durEl.textContent=tstr(e);
+      if(e>=MAX_MS){ log('Auto-stop 2:00'); stopRec(); }
+    },250);
   }
-  function startTicker(){
-    startedAt = performance.now();
-    stopTicker();
-    ticker = setInterval(function(){
-      var elapsed = performance.now() - startedAt;
-      durEl.textContent = timeStr(elapsed);
-      if(elapsed >= MAX_MS){ log('Auto-stop 2:00'); stopRec(); }
-    }, 250);
-  }
-  function stopTicker(){ if(ticker){ clearInterval(ticker); ticker=null; } }
-  function log(msg){ statusEl.textContent = msg; }
+  function stopTick(){ if(tick){clearInterval(tick); tick=null;} }
 
-  // --- UA detect: force WAV on iOS/Safari ---
-  var UA = navigator.userAgent.toLowerCase();
-  var isIOS = /iphone|ipad|ipod/.test(UA);
-  var isSafari = (UA.indexOf('safari')>-1) && (UA.indexOf('chrome')===-1) && (UA.indexOf('crios')===-1) && (UA.indexOf('fxios')===-1);
-  var FORCE_WAV = isIOS || isSafari;
-
-  // --- Recording backends ---
-  var mediaStream = null;
-  var mediaRecorder = null;
-  var chunks = [];
-  var chosenMime = '';
-  var chosenExt  = '';
-
-  // WAV fallback buffers
-  var wavCtx = null, wavProc = null, wavSource = null, wavBuffers = [], wavChannels = 1, wavSampleRate = 48000;
-
-  function pickMime(){
-    var candidates = ['audio/webm;codecs=opus','audio/mp4','audio/ogg;codecs=opus'];
-    for(var i=0;i<candidates.length;i++){
-      var m = candidates[i];
-      try{ if(window.MediaRecorder && window.MediaRecorder.isTypeSupported(m)) return m; }catch(e){}
-    }
-    return '';
-  }
-
-  function startMediaRecorder(){
-    return new Promise(function(resolve){
-      try{
-        chosenMime = pickMime();
-        chosenExt  = chosenMime.indexOf('webm')>-1? 'webm' : chosenMime.indexOf('mp4')>-1? 'm4a' : chosenMime.indexOf('ogg')>-1? 'ogg' : '';
-        if(!window.MediaRecorder || !chosenMime){ return resolve(false); }
-        mediaRecorder = new MediaRecorder(mediaStream, { mimeType: chosenMime, audioBitsPerSecond: 128000 });
-        chunks = [];
-        mediaRecorder.ondataavailable = function(e){
-          if(e.data && e.data.size>0) chunks.push(e.data);
-          if(performance.now() - startedAt >= MAX_MS){
-            try{ if(mediaRecorder && mediaRecorder.state!=='inactive') mediaRecorder.stop(); }catch(e){}
-          }
-        };
-        mediaRecorder.onstop = finalizeMediaRecorder;
-        mediaRecorder.onerror = function(e){ log('MediaRecorder fel: ' + (e.error && e.error.message ? e.error.message : e.name)); };
-        mediaRecorder.start(1000);
-        resolve(true);
-      }catch(err){
-        resolve(false);
-      }
-    });
-  }
-
-  function finalizeMediaRecorder(){
-    try{
-      var blob = new Blob(chunks, { type: chosenMime });
-      finish(blob, chosenExt || 'bin');
-    }catch(err){
-      log('Blob-fel, växlar till WAV.');
-      startWavFallback();
-    }
-  }
-
-  function startWavFallback(){
-    var AC = window.AudioContext || window.webkitAudioContext;
-    wavCtx = new AC({ sampleRate: 48000 });
-    wavSampleRate = wavCtx.sampleRate;
-    wavSource = wavCtx.createMediaStreamSource(mediaStream);
-    wavChannels = Math.min(2, wavSource.channelCount || 1);
-    wavProc = wavCtx.createScriptProcessor(4096, wavChannels, wavChannels);
-    wavBuffers = [];
-    for(var c=0;c<wavChannels;c++) wavBuffers[c] = [];
-    wavProc.onaudioprocess = function(e){
-      for(var ch=0; ch<wavChannels; ch++){
-        var data = e.inputBuffer.getChannelData(ch);
-        wavBuffers[ch].push(new Float32Array(data));
-      }
-    };
-    wavSource.connect(wavProc);
-    wavProc.connect(wavCtx.destination);
-    chosenMime = 'audio/wav';
-    chosenExt  = 'wav';
-    codecEl.textContent = 'WAV-fallback';
-    log('WAV-fallback aktiv.');
-  }
-
-  function stopWavFallback(){
-    if(!wavCtx) return;
-    try{ wavProc && wavProc.disconnect(); }catch(e){}
-    try{ wavSource && wavSource.disconnect(); }catch(e){}
-    try{ wavCtx && wavCtx.close(); }catch(e){}
-
-    var len = 0, i, j;
-    for(i=0;i<wavBuffers[0].length;i++) len += wavBuffers[0][i].length;
-    var chCount = wavChannels;
-    var interleaved = new Float32Array(len * chCount);
-    var offset = 0;
-
-    for(i=0;i<wavBuffers[0].length;i++){
-      var frameLen = wavBuffers[0][i].length;
-      for(var s=0;s<frameLen;s++){
-        for(var ch=0; ch<chCount; ch++){
-          interleaved[(offset+s)*chCount + ch] = wavBuffers[ch][i][s];
-        }
-      }
-      offset += frameLen;
-    }
-
-    var bytesPerSample = 2;
-    var blockAlign = chCount * bytesPerSample;
-    var buffer = new ArrayBuffer(44 + interleaved.length * bytesPerSample);
-    var view = new DataView(buffer);
-
-    writeStr(view, 0, 'RIFF');
-    view.setUint32(4, 36 + interleaved.length * bytesPerSample, true);
-    writeStr(view, 8, 'WAVE');
-    writeStr(view,12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, chCount, true);
-    view.setUint32(24, wavSampleRate, true);
-    view.setUint32(28, wavSampleRate * blockAlign, true);
-    view.setUint16(32, blockAlign, true);
-    view.setUint16(34, 16, true);
-    writeStr(view,36, 'data');
-    view.setUint32(40, interleaved.length * bytesPerSample, true);
-
-    var idx = 44;
-    for(i=0;i<interleaved.length;i++){
-      var s = Math.max(-1, Math.min(1, interleaved[i]));
-      view.setInt16(idx, s<0 ? s*0x8000 : s*0x7FFF, true);
-      idx += 2;
-    }
-
-    var blob = new Blob([view], { type: 'audio/wav' });
-    finish(blob, 'wav');
-
-    function writeStr(v, o, s){ for(j=0;j<s.length;j++) v.setUint8(o+j, s.charCodeAt(j)); }
-  }
-
-  // --- Orchestration ---
-  var mediaStreamKeep = null;
-  var hardTimer = null;
+  // WAV buffers
+  var stream=null, ac=null, src=null, proc=null;
+  var bufs=[], chs=1, rate=48000;
 
   async function startRec(){
     try{
       setState(STATE.REC);
       log('Begär mikrofonåtkomst…');
-      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStreamKeep = mediaStream;
-      startTicker();
+      stream = await navigator.mediaDevices.getUserMedia({audio:true});
+      startTick();
 
-      var useMR = !FORCE_WAV;
-      var ok = false;
-      if(useMR) ok = await startMediaRecorder();
-      if(!ok){ startWavFallback(); }
+      var AC=window.AudioContext||window.webkitAudioContext;
+      ac=new AC({sampleRate:48000});
+      rate=ac.sampleRate;
+      src=ac.createMediaStreamSource(stream);
+      chs=Math.min(2,src.channelCount||1);
+      proc=ac.createScriptProcessor(4096,chs,chs);
+      bufs=[]; for(var c=0;c<chs;c++) bufs[c]=[];
+      proc.onaudioprocess=function(e){
+        for(var c=0;c<chs;c++) bufs[c].push(new Float32Array(e.inputBuffer.getChannelData(c)));
+      };
+      src.connect(proc); proc.connect(ac.destination);
 
-      // Hård timeout
-      if(hardTimer) clearTimeout(hardTimer);
-      hardTimer = setTimeout(function(){ log('Auto-stop (hard timeout)'); stopRec(); }, MAX_MS + 800);
-
-      codecEl.textContent = (ok && !FORCE_WAV) ? 'MediaRecorder' : 'WAV-fallback';
-      mimeEl.textContent  = chosenMime || '–';
-      fnameEl.textContent = '–';
-      fsizeEl.textContent = '–';
-      dl.style.display = 'none'; dl.removeAttribute('href');
-      player.src = '';
-
-    }catch(err){
-      setState(STATE.IDLE);
-      stopTicker();
-      log('Mikrofon nekad eller fel: ' + err.message);
+      codecEl.textContent='WAV-fallback';
+      mimeEl.textContent='audio/wav';
+      fnameEl.textContent='–'; fsizeEl.textContent='–'; dl.style.display='none'; player.src='';
+      if(hard) clearTimeout(hard);
+      hard=setTimeout(function(){ log('Auto-stop (hard)'); stopRec(); }, MAX_MS+500);
+    }catch(e){
+      setState(STATE.IDLE); stopTick();
+      log('Fel: '+e.message);
     }
   }
 
-  async function stopRec(){
-    if(state!==STATE.REC && state!==STATE.STOPPING) return;
-    setState(STATE.STOPPING);
-    stopTicker();
-    if(hardTimer){ clearTimeout(hardTimer); hardTimer=null; }
+  function stopRec(){
+    if(stateEl.textContent!==STATE.REC && stateEl.textContent!==STATE.STOP) return;
+    setState(STATE.STOP); stopTick(); if(hard){clearTimeout(hard); hard=null;}
+    try{ proc&&proc.disconnect(); src&&src.disconnect(); }catch(_){}
+    try{ ac&&ac.close(); }catch(_){}
+    try{ stream&&stream.getTracks().forEach(t=>t.stop()); }catch(_){}
+    // packa WAV
+    var len=0; for(var i=0;i<bufs[0].length;i++) len+=bufs[0][i].length;
+    var inter=new Float32Array(len*chs), off=0;
+    for(var b=0;b<bufs[0].length;b++){
+      var L=bufs[0][b].length;
+      for(var s=0;s<L;s++){ for(var c=0;c<chs;c++){ inter[(off+s)*chs+c]=bufs[c][b][s]; } }
+      off+=L;
+    }
+    var bytesPerSample=2, blockAlign=chs*bytesPerSample;
+    var buf=new ArrayBuffer(44+inter.length*bytesPerSample), v=new DataView(buf);
+    w('RIFF'); v.setUint32(4,36+inter.length*bytesPerSample,true);
+    w('WAVE'); w('fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true);
+    v.setUint16(22,chs,true); v.setUint32(24,rate,true);
+    v.setUint32(28,rate*blockAlign,true); v.setUint16(32,blockAlign,true); v.setUint16(34,16,true);
+    w('data'); v.setUint32(40,inter.length*bytesPerSample,true);
+    var idx=44;
+    for(var k=0;k<inter.length;k++){ var s=Math.max(-1,Math.min(1,inter[k])); v.setInt16(idx, s<0?s*0x8000:s*0x7FFF, true); idx+=2; }
+    var blob=new Blob([v],{type:'audio/wav'});
+    finish(blob,'wav');
 
-    try{
-      if(mediaRecorder && mediaRecorder.state !== 'inactive'){
-        mediaRecorder.stop();
-      }else{
-        stopWavFallback();
-      }
-    }catch(e){}
-
-    try{
-      if(mediaStreamKeep) mediaStreamKeep.getTracks().forEach(function(t){ t.stop(); });
-    }catch(e){}
+    function w(s){ for(var i=0;i<s.length;i++) v.setUint8((arguments.callee.pos||0)+i, s.charCodeAt(i)); arguments.callee.pos=(arguments.callee.pos||0)+s.length; }
   }
 
-  function finish(blob, ext){
+  function finish(blob,ext){
     setState(STATE.DONE);
-    var url = URL.createObjectURL(blob);
-    player.src = url;
-
-    var name = 'kenai-' + ts() + '.' + ext;
-    dl.download = name; dl.href = url; dl.style.display='inline-block';
-    fnameEl.textContent = name;
-    fsizeEl.textContent = human(blob.size);
-    mimeEl.textContent  = blob.type || mimeEl.textContent;
-    if(codecEl.textContent==='') codecEl.textContent = (ext==='wav'?'WAV-fallback':'MediaRecorder');
+    var url=URL.createObjectURL(blob); player.src=url;
+    var name='kenai-'+ts()+'.'+ext; dl.download=name; dl.href=url; dl.style.display='inline-block';
+    fnameEl.textContent=name; fsizeEl.textContent=(blob.size/1024/1024).toFixed(2)+' MB';
     log('Klar. Spela upp eller ladda ner filen.');
   }
+  function ts(){ var d=new Date(),p=n=>('0'+n).slice(-2); return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds()); }
 
-  function ts(){
-    var d = new Date();
-    var Y=d.getFullYear(), M=('0'+(d.getMonth()+1)).slice(-2), D=('0'+d.getDate()).slice(-2);
-    var h=('0'+d.getHours()).slice(-2), m=('0'+d.getMinutes()).slice(-2), s=('0'+d.getSeconds()).slice(-2);
-    return ''+Y+M+D+'-'+h+m+s;
-  }
-  function human(n){
-    if(n<1024) return n+' B';
-    if(n<1024*1024) return (n/1024).toFixed(1)+' KB';
-    return (n/1024/1024).toFixed(2)+' MB';
-  }
+  startBtn.onclick=startRec;
+  stopBtn.onclick=stopRec;
 
-  // Buttons
-  startBtn.addEventListener('click', function(){ startRec(); });
-  stopBtn.addEventListener('click',  function(){ stopRec();  });
-
-  // Global error → lås upp knappar
-  window.addEventListener('error', function(e){
-    try{ log('JS-fel: ' + e.message); }catch(_){}
-    try{ setState(STATE.IDLE); startBtn.disabled=false; stopBtn.disabled=true; }catch(_){}
-  });
-
+  window.addEventListener('error', function(e){ setState(STATE.IDLE); log('JS-fel: '+e.message); });
 })();
 </script>
