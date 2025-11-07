@@ -65,6 +65,8 @@
 
 // Auto-stop efter 2:00
 const MAX_MS = 120000; // 2 minuter
+let autoTimer = null;
+let hardDeadline = 0;
 
 
   // ---------- Elements ----------
@@ -195,7 +197,12 @@ const MAX_MS = 120000; // 2 minuter
     }
 
     chunks = [];
-    mediaRecorder.ondataavailable = e => { if(e.data && e.data.size>0) chunks.push(e.data); };
+    mediaRecorder.ondataavailable = e => { if(e.data && e.data.size>0) chunks.push(e.data);
+      // Robust auto-stop även om setInterval stryps på iOS
+      if(performance.now() - startedAt >= MAX_MS){
+        try{ if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); }catch{}
+      }
+    };
     mediaRecorder.onstop = finalizeMediaRecorder;
     mediaRecorder.onerror = e => { log('MediaRecorder fel: '+e.error?.message || e.name); };
 
@@ -351,6 +358,18 @@ const MAX_MS = 120000; // 2 minuter
         startWavFallback();
       }
 
+      // Starta hård auto‑stop timer (fallback för iOS när timers pausas)
+      hardDeadline = Date.now() + MAX_MS;
+      if(autoTimer) clearTimeout(autoTimer);
+      autoTimer = setTimeout(()=>{ log('Auto-stop (hard timeout)'); stopRec(); }, MAX_MS + 500);
+
+      codecEl.textContent = ok ? 'MediaRecorder' : 'WAV-fallback';
+      mimeEl.textContent  = chosenMime || '–';
+      fnameEl.textContent = '–';
+      fsizeEl.textContent = '–';
+      dl.style.display = 'none'; dl.removeAttribute('href');
+      player.src = '';
+
       codecEl.textContent = ok ? 'MediaRecorder' : 'WAV-fallback';
       mimeEl.textContent  = chosenMime || '–';
       fnameEl.textContent = '–';
@@ -365,15 +384,23 @@ const MAX_MS = 120000; // 2 minuter
     }
   }
 
-  async function stopRec(){
-    if(state!==STATE.REC) return;
+  async async function stopRec(){
+    if(state!==STATE.REC && state!==STATE.STOPPING) return;
     setState(STATE.STOPPING);
     stopTicker();
+    if(autoTimer){ clearTimeout(autoTimer); autoTimer=null; }
 
     try{
       if(mediaRecorder && mediaRecorder.state !== 'inactive'){
         mediaRecorder.stop();
       }else{
+        stopWavFallback();
+      }
+    }catch{ /* ignore */ }
+
+    // Stäng stream spår
+    try{ mediaStream?.getTracks().forEach(t=>t.stop()); }catch{}
+  }else{
         stopWavFallback();
       }
     }catch{ /* ignore */ }
@@ -425,6 +452,20 @@ const MAX_MS = 120000; // 2 minuter
     try{
       const AC = window.AudioContext || window.webkitAudioContext;
       const ctx = new AC();
+      if(ctx.state === 'suspended') ctx.resume();
+      setTimeout(()=>ctx.close(), 500);
+    }catch{}
+  }, { once:true });
+
+  // Om sidan blir bakgrund på iOS kan timers pausas – kontrollera deadline vid återkomst
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible' && state===STATE.REC){
+      if(Date.now() > hardDeadline){
+        log('Auto-stop (visibility check)');
+        stopRec();
+      }
+    }
+  });
       if(ctx.state === 'suspended') ctx.resume();
       setTimeout(()=>ctx.close(), 500);
     }catch{}
