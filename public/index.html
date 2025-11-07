@@ -1,8 +1,62 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kenai – Universal Recorder (Safe Mode)</title>
+  <style>
+    :root { --bg:#0b0f14; --card:#111723; --muted:#8aa0b6; --text:#e6eef7; --acc:#4cc9f0; --ok:#29bf12; --warn:#ffbe0b; --err:#ff006e; }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,"Helvetica Neue",Arial}
+    .wrap{max-width:860px;margin:32px auto;padding:20px}
+    .card{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:18px 18px 14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    h1{margin:0 0 8px;font-size:24px}
+    p.muted{color:var(--muted);margin:4px 0 16px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    button{appearance:none;border:0;border-radius:14px;padding:12px 16px;font-weight:600;cursor:pointer}
+    #startBtn{background:var(--ok);color:#000}
+    #stopBtn{background:var(--err);color:#fff}
+    #stopBtn[disabled], #startBtn[disabled]{opacity:.4;cursor:not-allowed}
+    small#status{display:block;margin-top:10px;color:var(--muted);white-space:pre-wrap}
+    .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;margin:10px 0 4px}
+    .kv b{color:#9ec3ff;font-weight:600}
+    audio{width:100%;margin-top:12px}
+    a.download{display:inline-block;margin-top:10px;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.2);padding:8px 12px;border-radius:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Kenai – Universal Recorder</h1>
+      <p class="muted">Safe Mode: WAV-only (fungerar på iPhone/Safari & desktop). Auto-stop vid 2:00.</p>
+
+      <div class="row">
+        <button id="startBtn">▶︎ Starta inspelning</button>
+        <button id="stopBtn" disabled>■ Stoppa</button>
+        <span id="dot" style="margin-left:8px">● idle</span>
+      </div>
+
+      <div class="kv">
+        <b>Tillstånd:</b><span id="state">idle</span>
+        <b>Codec:</b><span id="codec">–</span>
+        <b>MIME:</b><span id="mime">–</span>
+        <b>Filnamn:</b><span id="fname">–</span>
+        <b>Storlek:</b><span id="fsize">–</span>
+        <b>Varaktighet:</b><span id="dur">00:00</span>
+        <b>UA:</b><span id="ua"></span>
+      </div>
+
+      <small id="status">Klar. Tryck Starta för att begära mikrofonåtkomst.</small>
+      <audio id="player" controls></audio>
+      <a id="dl" class="download" download style="display:none">⬇︎ Ladda ner</a>
+    </div>
+  </div>
+
 <script>
 (function(){
   'use strict';
 
-  // ===== Super-minimal WAV-only recorder (2:00 auto-stop) =====
+  // ===== WAV-only baseline (2:00 auto-stop) =====
   var MAX_MS = 120000; // 2 min
 
   var startBtn = document.getElementById('startBtn');
@@ -16,11 +70,15 @@
   var statusEl = document.getElementById('status');
   var player   = document.getElementById('player');
   var dl       = document.getElementById('dl');
-  function log(m){ statusEl.textContent = m; }
+  var dot      = document.getElementById('dot');
+  var uaEl     = document.getElementById('ua'); uaEl.textContent = navigator.userAgent;
 
+  function log(m){ statusEl.textContent = m; }
   var STATE={IDLE:'idle',REC:'recording',STOP:'stopping',DONE:'done'};
   function setState(s){
     stateEl.textContent=s;
+    dot.textContent = (s===STATE.REC? '● recording' : s===STATE.STOP? '● stopping' : s===STATE.DONE? '● done' : '● idle');
+    dot.style.color = (s===STATE.REC? '#ff3864' : s===STATE.STOP? '#ffbe0b' : s===STATE.DONE? '#29bf12' : '#8aa0b6');
     startBtn.disabled = (s!==STATE.IDLE);
     stopBtn.disabled  = (s!==STATE.REC);
   }
@@ -39,7 +97,7 @@
   }
   function stopTick(){ if(tick){clearInterval(tick); tick=null;} }
 
-  // WAV buffers
+  // WAV buffers & nodes
   var stream=null, ac=null, src=null, proc=null;
   var bufs=[], chs=1, rate=48000;
 
@@ -64,9 +122,11 @@
 
       codecEl.textContent='WAV-fallback';
       mimeEl.textContent='audio/wav';
-      fnameEl.textContent='–'; fsizeEl.textContent='–'; dl.style.display='none'; player.src='';
+      fnameEl.textContent='–'; fsizeEl.textContent='–';
+      dl.style.display='none'; player.src='';
+
       if(hard) clearTimeout(hard);
-      hard=setTimeout(function(){ log('Auto-stop (hard)'); stopRec(); }, MAX_MS+500);
+      hard=setTimeout(function(){ log('Auto-stop (hard)'); stopRec(); }, MAX_MS+600);
     }catch(e){
       setState(STATE.IDLE); stopTick();
       log('Fel: '+e.message);
@@ -78,8 +138,9 @@
     setState(STATE.STOP); stopTick(); if(hard){clearTimeout(hard); hard=null;}
     try{ proc&&proc.disconnect(); src&&src.disconnect(); }catch(_){}
     try{ ac&&ac.close(); }catch(_){}
-    try{ stream&&stream.getTracks().forEach(t=>t.stop()); }catch(_){}
-    // packa WAV
+    try{ stream&&stream.getTracks().forEach(function(t){ t.stop(); }); }catch(_){}
+
+    // Packa WAV
     var len=0; for(var i=0;i<bufs[0].length;i++) len+=bufs[0][i].length;
     var inter=new Float32Array(len*chs), off=0;
     for(var b=0;b<bufs[0].length;b++){
@@ -87,19 +148,19 @@
       for(var s=0;s<L;s++){ for(var c=0;c<chs;c++){ inter[(off+s)*chs+c]=bufs[c][b][s]; } }
       off+=L;
     }
-    var bytesPerSample=2, blockAlign=chs*bytesPerSample;
-    var buf=new ArrayBuffer(44+inter.length*bytesPerSample), v=new DataView(buf);
-    w('RIFF'); v.setUint32(4,36+inter.length*bytesPerSample,true);
-    w('WAVE'); w('fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true);
-    v.setUint16(22,chs,true); v.setUint32(24,rate,true);
-    v.setUint32(28,rate*blockAlign,true); v.setUint16(32,blockAlign,true); v.setUint16(34,16,true);
-    w('data'); v.setUint32(40,inter.length*bytesPerSample,true);
+    var bytes=2, align=chs*bytes;
+    var ab=new ArrayBuffer(44+inter.length*bytes), dv=new DataView(ab), p=0;
+    function W(str){ for(var k=0;k<str.length;k++) dv.setUint8(p++, str.charCodeAt(k)); }
+    W('RIFF'); dv.setUint32(4,36+inter.length*bytes,true);
+    W('WAVE'); W('fmt '); dv.setUint32(16,16,true); dv.setUint16(20,1,true);
+    dv.setUint16(22,chs,true); dv.setUint32(24,rate,true);
+    dv.setUint32(28,rate*align,true); dv.setUint16(32,align,true); dv.setUint16(34,16,true);
+    W('data'); dv.setUint32(40,inter.length*bytes,true);
     var idx=44;
-    for(var k=0;k<inter.length;k++){ var s=Math.max(-1,Math.min(1,inter[k])); v.setInt16(idx, s<0?s*0x8000:s*0x7FFF, true); idx+=2; }
-    var blob=new Blob([v],{type:'audio/wav'});
-    finish(blob,'wav');
+    for(var n=0;n<inter.length;n++){ var s=Math.max(-1,Math.min(1,inter[n])); dv.setInt16(idx, s<0?s*0x8000:s*0x7FFF, true); idx+=2; }
 
-    function w(s){ for(var i=0;i<s.length;i++) v.setUint8((arguments.callee.pos||0)+i, s.charCodeAt(i)); arguments.callee.pos=(arguments.callee.pos||0)+s.length; }
+    var blob=new Blob([dv],{type:'audio/wav'});
+    finish(blob,'wav');
   }
 
   function finish(blob,ext){
@@ -109,11 +170,15 @@
     fnameEl.textContent=name; fsizeEl.textContent=(blob.size/1024/1024).toFixed(2)+' MB';
     log('Klar. Spela upp eller ladda ner filen.');
   }
-  function ts(){ var d=new Date(),p=n=>('0'+n).slice(-2); return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds()); }
 
-  startBtn.onclick=startRec;
-  stopBtn.onclick=stopRec;
+  function ts(){ var d=new Date(),pad=function(n){return ('0'+n).slice(-2)}; return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'-'+pad(d.getHours())+pad(d.getMinutes())+pad(d.getSeconds()); }
 
+  startBtn.addEventListener('click', startRec);
+  stopBtn .addEventListener('click', stopRec);
+
+  // Visar JS-fel istället för vit sida
   window.addEventListener('error', function(e){ setState(STATE.IDLE); log('JS-fel: '+e.message); });
 })();
 </script>
+</body>
+</html>
