@@ -63,11 +63,11 @@
 (function(){
   'use strict';
 
-// Auto-stop efter 2:00
-const MAX_MS = 120000; // 2 minuter
-let autoTimer = null;
-let hardDeadline = 0;
-
+  // ---- Auto-stop & timers ----
+  const MAX_MS = 120000; // 2 minuter
+  let autoTimer = null;
+  let hardDeadline = 0;
+  let pingHandle = null;
 
   // ---------- Elements ----------
   const startBtn = document.getElementById('startBtn');
@@ -86,6 +86,7 @@ let hardDeadline = 0;
 
   // --- Supabase config (byt till dina värden) ---
   const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co;
+
   const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';
   const SUPABASE_BUCKET = 'audio';
   const SUPABASE_PATH   = 'reviews'; // mapp i bucket
@@ -125,7 +126,6 @@ let hardDeadline = 0;
         stopRec();
       }
     }, 250);
-  }, 250);
   }
   function stopTicker(){ if(ticker){ clearInterval(ticker); ticker=null; } }
 
@@ -139,6 +139,8 @@ let hardDeadline = 0;
     const buf = new Uint8Array(N);
     function frame(){
       if(state===STATE.REC){
+        // Sista-säkring via RAF
+        if(performance.now() - startedAt >= MAX_MS){ stopRec(); return; }
         analyser.getByteTimeDomainData(buf);
         g.clearRect(0,0,scope.width,scope.height);
         g.beginPath();
@@ -197,14 +199,15 @@ let hardDeadline = 0;
     }
 
     chunks = [];
-    mediaRecorder.ondataavailable = e => { if(e.data && e.data.size>0) chunks.push(e.data);
+    mediaRecorder.ondataavailable = e => {
+      if(e.data && e.data.size>0) chunks.push(e.data);
       // Robust auto-stop även om setInterval stryps på iOS
       if(performance.now() - startedAt >= MAX_MS){
         try{ if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); }catch{}
       }
     };
     mediaRecorder.onstop = finalizeMediaRecorder;
-    mediaRecorder.onerror = e => { log('MediaRecorder fel: '+e.error?.message || e.name); };
+    mediaRecorder.onerror = e => { log('MediaRecorder fel: '+(e.error?.message || e.name)); };
 
     mediaRecorder.start(1000); // timeslice för att spola ut data
     return true;
@@ -358,17 +361,25 @@ let hardDeadline = 0;
         startWavFallback();
       }
 
-      // Starta hård auto‑stop timer (fallback för iOS när timers pausas)
+      // Starta hård auto‑stop timer (fallback om timers pausas)
       hardDeadline = Date.now() + MAX_MS;
       if(autoTimer) clearTimeout(autoTimer);
-      autoTimer = setTimeout(()=>{ log('Auto-stop (hard timeout)'); stopRec(); }, MAX_MS + 500);
+      autoTimer = setTimeout(()=>{ log('Auto-stop (hard timeout)'); stopRec(); }, MAX_MS + 800);
 
-      codecEl.textContent = ok ? 'MediaRecorder' : 'WAV-fallback';
-      mimeEl.textContent  = chosenMime || '–';
-      fnameEl.textContent = '–';
-      fsizeEl.textContent = '–';
-      dl.style.display = 'none'; dl.removeAttribute('href');
-      player.src = '';
+      // Håll MediaRecorder vaken (Safari kan annars buffra till stop)
+      if(pingHandle) clearInterval(pingHandle);
+      pingHandle = setInterval(()=>{
+        try{ if(mediaRecorder && mediaRecorder.state==='recording') mediaRecorder.requestData(); }catch{}
+      }, 1000);
+
+      // Safari-specifik direkt stop-säkring
+      const ua = navigator.userAgent.toLowerCase();
+      const isSafari = ua.includes('safari') && !ua.includes('chrome');
+      if(isSafari){
+        setTimeout(()=>{
+          try{ if(mediaRecorder && mediaRecorder.state==='recording'){ log('Auto-stop (Safari direct)'); mediaRecorder.stop(); } }catch{}
+        }, MAX_MS);
+      }
 
       codecEl.textContent = ok ? 'MediaRecorder' : 'WAV-fallback';
       mimeEl.textContent  = chosenMime || '–';
@@ -384,23 +395,17 @@ let hardDeadline = 0;
     }
   }
 
-  async async function stopRec(){
+  async function stopRec(){
     if(state!==STATE.REC && state!==STATE.STOPPING) return;
     setState(STATE.STOPPING);
     stopTicker();
     if(autoTimer){ clearTimeout(autoTimer); autoTimer=null; }
+    if(pingHandle){ clearInterval(pingHandle); pingHandle=null; }
 
     try{
       if(mediaRecorder && mediaRecorder.state !== 'inactive'){
         mediaRecorder.stop();
       }else{
-        stopWavFallback();
-      }
-    }catch{ /* ignore */ }
-
-    // Stäng stream spår
-    try{ mediaStream?.getTracks().forEach(t=>t.stop()); }catch{}
-  }else{
         stopWavFallback();
       }
     }catch{ /* ignore */ }
@@ -440,12 +445,8 @@ let hardDeadline = 0;
   }
 
   // ---------- Buttons & iOS resume ----------
-  startBtn.addEventListener('click', ()=>{
-    startRec();
-  });
-  stopBtn.addEventListener('click', ()=>{
-    stopRec();
-  });
+  startBtn.addEventListener('click', ()=>{ startRec(); });
+  stopBtn.addEventListener('click',  ()=>{ stopRec();  });
 
   // Touch to resume AudioContext on iOS if needed
   window.addEventListener('touchstart', ()=>{
@@ -466,10 +467,6 @@ let hardDeadline = 0;
       }
     }
   });
-      if(ctx.state === 'suspended') ctx.resume();
-      setTimeout(()=>ctx.close(), 500);
-    }catch{}
-  }, { once:true });
 
 })();
 </script>
