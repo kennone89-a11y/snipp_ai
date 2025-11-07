@@ -68,6 +68,7 @@
   let autoTimer = null;
   let hardDeadline = 0;
   let pingHandle = null;
+  let watchdog = null;
 
   // ---------- Elements ----------
   const startBtn = document.getElementById('startBtn');
@@ -84,9 +85,14 @@
   const dl       = document.getElementById('dl');
   const dot      = document.getElementById('dot');
 
+  // UA-detektion (tvinga WAV på iOS/Safari)
+  const UA = navigator.userAgent.toLowerCase();
+  const isIOS = /iphone|ipad|ipod/.test(UA);
+  const isSafari = UA.includes('safari') && !UA.includes('chrome') && !UA.includes('crios') && !UA.includes('fxios');
+  const forceWav = isIOS || isSafari;
+
   // --- Supabase config (byt till dina värden) ---
   const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co;
-
   const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';
   const SUPABASE_BUCKET = 'audio';
   const SUPABASE_PATH   = 'reviews'; // mapp i bucket
@@ -356,8 +362,8 @@
       analyser.fftSize = 2048; src.connect(analyser); drawWave(analyser);
 
       const ok = await startMediaRecorder();
-      if(!ok){
-        // MediaRecorder unavailable → WAV fallback
+      if(!ok || forceWav){
+        // MediaRecorder otillgänglig eller iOS/Safari → använd WAV fallback för exakt tidskontroll
         startWavFallback();
       }
 
@@ -366,22 +372,24 @@
       if(autoTimer) clearTimeout(autoTimer);
       autoTimer = setTimeout(()=>{ log('Auto-stop (hard timeout)'); stopRec(); }, MAX_MS + 800);
 
-      // Håll MediaRecorder vaken (Safari kan annars buffra till stop)
-      if(pingHandle) clearInterval(pingHandle);
-      pingHandle = setInterval(()=>{
-        try{ if(mediaRecorder && mediaRecorder.state==='recording') mediaRecorder.requestData(); }catch{}
-      }, 1000);
-
-      // Safari-specifik direkt stop-säkring
-      const ua = navigator.userAgent.toLowerCase();
-      const isSafari = ua.includes('safari') && !ua.includes('chrome');
-      if(isSafari){
-        setTimeout(()=>{
-          try{ if(mediaRecorder && mediaRecorder.state==='recording'){ log('Auto-stop (Safari direct)'); mediaRecorder.stop(); } }catch{}
-        }, MAX_MS);
+      // Håll MediaRecorder vaken (endast om vi faktiskt kör MediaRecorder)
+      if(!forceWav){
+        if(pingHandle) clearInterval(pingHandle);
+        pingHandle = setInterval(()=>{
+          try{ if(mediaRecorder && mediaRecorder.state==='recording') mediaRecorder.requestData(); }catch{}
+        }, 1000);
       }
 
-      codecEl.textContent = ok ? 'MediaRecorder' : 'WAV-fallback';
+      // Watchdog som kollar deadline oberoende av pausade timers
+      if(watchdog) clearInterval(watchdog);
+      watchdog = setInterval(()=>{
+        if(state===STATE.REC && Date.now() > hardDeadline){
+          log('Auto-stop (watchdog)');
+          stopRec();
+        }
+      }, 500);
+
+      codecEl.textContent = (!forceWav && ok) ? 'MediaRecorder' : 'WAV-fallback';
       mimeEl.textContent  = chosenMime || '–';
       fnameEl.textContent = '–';
       fsizeEl.textContent = '–';
@@ -400,6 +408,20 @@
     setState(STATE.STOPPING);
     stopTicker();
     if(autoTimer){ clearTimeout(autoTimer); autoTimer=null; }
+    if(pingHandle){ clearInterval(pingHandle); pingHandle=null; }
+    if(watchdog){ clearInterval(watchdog); watchdog=null; }
+
+    try{
+      if(mediaRecorder && mediaRecorder.state !== 'inactive'){
+        mediaRecorder.stop();
+      }else{
+        stopWavFallback();
+      }
+    }catch{ /* ignore */ }
+
+    // Stäng stream spår
+    try{ mediaStream?.getTracks().forEach(t=>t.stop()); }catch{}
+  }
     if(pingHandle){ clearInterval(pingHandle); pingHandle=null; }
 
     try{
