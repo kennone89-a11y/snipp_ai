@@ -93,7 +93,7 @@
 
   // --- Supabase config (byt till dina värden) ---
   const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co;
-  const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';
+  const SUPABASE_ANON = 'SB- sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';
   const SUPABASE_BUCKET = 'audio';
   const SUPABASE_PATH   = 'reviews'; // mapp i bucket
 
@@ -354,12 +354,49 @@
       mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       startTicker();
 
-      // setup analyser for MediaRecorder path as well
+      // setup analyser for waveform
       const AC = window.AudioContext || window.webkitAudioContext;
       const ctx = new AC();
       const src = ctx.createMediaStreamSource(mediaStream);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 2048; src.connect(analyser); drawWave(analyser);
+
+      // ==== iOS/Safari: kör alltid WAV-fallback, skippa MediaRecorder helt ====
+      let ok = false;
+      if(!forceWav){
+        ok = await startMediaRecorder();
+      }
+      if(!ok){
+        startWavFallback();
+      }
+
+      // Starta hård auto‑stop timer (fallback om timers pausas)
+      hardDeadline = Date.now() + MAX_MS;
+      if(autoTimer) clearTimeout(autoTimer);
+      autoTimer = setTimeout(()=>{ log('Auto-stop (hard timeout)'); stopRec(); }, MAX_MS + 800);
+
+      // Håll MediaRecorder vaken (endast om vi faktiskt kör MediaRecorder)
+      if(!forceWav && ok){
+        if(pingHandle) clearInterval(pingHandle);
+        pingHandle = setInterval(()=>{
+          try{ if(mediaRecorder && mediaRecorder.state==='recording') mediaRecorder.requestData(); }catch{}
+        }, 1000);
+      }
+
+      codecEl.textContent = (!forceWav && ok) ? 'MediaRecorder' : 'WAV-fallback';
+      mimeEl.textContent  = chosenMime || '–';
+      fnameEl.textContent = '–';
+      fsizeEl.textContent = '–';
+      dl.style.display = 'none'; dl.removeAttribute('href');
+      player.src = '';
+
+    }catch(err){
+      setState(STATE.IDLE);
+      stopTicker();
+      log('Mikrofon nekad eller fel: '+err.message);
+    }
+  }
+
 
       const ok = await startMediaRecorder();
       if(!ok || forceWav){
