@@ -1,1 +1,2 @@
+(()=>{'use strict';console.log('app2.js ok');document.getElementById('startBtn').onclick=()=>alert('JS OK');})();
 
