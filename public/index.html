@@ -4,7 +4,6 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Kenai - Recorder</title>
-  <!-- Enkel CSS, inga externa beroenden -->
   <style>
     :root { --bg:#0b0f14; --card:#111723; --muted:#8aa0b6; --text:#e6eef7; --ok:#29bf12; --err:#ff006e; }
     *{box-sizing:border-box}
@@ -17,7 +16,7 @@
     button{appearance:none;border:0;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}
     #startBtn{background:var(--ok);color:#000}
     #stopBtn{background:var(--err);color:#fff}
-    #stopBtn[disabled], #startBtn[disabled]{opacity:.45;cursor:not-allowed}
+    #stopBtn[disabled],#startBtn[disabled]{opacity:.45;cursor:not-allowed}
     .controls{display:flex;gap:10px;align-items:center;margin:8px 0 4px}
     select{background:#0a0e14;color:#e6eef7;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:8px}
     .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;margin:10px 0 4px}
@@ -34,9 +33,9 @@
       <p class="muted">WAV-only, 44.1 kHz mono, Auto-stop, extern JS, Supabase-upload.</p>
 
       <div class="row">
-       <button id="startBtn" onclick="window.__start && __start()">Starta inspelning</button>
+        <!-- inline-fallback + extern JS (dubbel-säkring) -->
+        <button id="startBtn" onclick="window.__start && __start()">Starta inspelning</button>
         <button id="stopBtn"  onclick="window.__stop  && __stop()" disabled>Stoppa</button>
-
         <span id="dot" style="margin-left:8px">status: idle</span>
       </div>
 
@@ -71,7 +70,6 @@
     </div>
   </div>
 
-  <!-- Ladda extern JS (kontrollera exakt filnamn och sökväg) -->
   <script src="app3.js" defer></script>
 </body>
 </html>
