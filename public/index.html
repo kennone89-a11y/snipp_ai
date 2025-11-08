@@ -3,33 +3,36 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kenai – Recorder (Single-File Safe)</title>
+  <title>Kenai – Recorder (Single-File)</title>
   <style>
     :root{--bg:#0b0f14;--card:#111723;--muted:#8aa0b6;--text:#e6eef7;--ok:#29bf12;--err:#ff006e}
-    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto}
     .wrap{max-width:860px;margin:32px auto;padding:20px}
     .card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    h1{margin:0 0 8px} p.muted{color:var(--muted);margin:4px 0 16px}
+    h1{margin:0 0 8px}
+    p.muted{color:var(--muted);margin:4px 0 16px}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     button{appearance:none;border:0;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}
-    #startBtn{background:var(--ok);color:#000} #stopBtn{background:var(--err);color:#fff}
+    #startBtn{background:var(--ok);color:#000}
+    #stopBtn{background:var(--err);color:#fff}
     #stopBtn[disabled],#startBtn[disabled]{opacity:.45;cursor:not-allowed}
     .controls{display:flex;gap:10px;align-items:center;margin:8px 0 4px}
     select{background:#0a0e14;color:#e6eef7;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:8px}
     .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;margin:10px 0 4px}
     .kv b{color:#9ec3ff}
     small#status{display:block;white-space:pre-wrap;background:#0a0e14;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;margin-top:10px;min-height:54px;color:var(--muted)}
-    audio{width:100%;margin-top:12px} a.action{display:inline-block;margin-top:10px;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.2);padding:8px 12px;border-radius:12px}
+    audio{width:100%;margin-top:12px}
+    a.action{display:inline-block;margin-top:10px;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.2);padding:8px 12px;border-radius:12px}
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
       <h1>Kenai – Recorder</h1>
-      <p class="muted">WAV-only, 44.1 kHz mono, auto-stop. <b>Allt i denna filen</b> för maximal stabilitet.</p>
+      <p class="muted">WAV-only, 44.1 kHz mono, auto-stop. Allt i denna filen för maximal stabilitet.</p>
 
       <div class="row">
-        <!-- inline onclick som backup -->
         <button id="startBtn" onclick="window.__start && __start()">Starta inspelning</button>
         <button id="stopBtn"  onclick="window.__stop  && __stop()" disabled>Stoppa</button>
         <span id="dot" style="margin-left:8px">status: idle</span>
@@ -60,15 +63,23 @@
       <audio id="player" controls></audio>
       <div>
         <a id="dl" class="action" download style="display:none">Ladda ner</a>
+        <a id="share" class="action" target="_blank" rel="noopener" style="display:none">Öppna fil</a>
+        <a id="copy" class="action" href="javascript:void(0)" style="display:none">Kopiera länk</a>
       </div>
     </div>
   </div>
 
-  <!-- All JS inline: -->
   <script>
   (function(){
     'use strict';
-    // refs
+
+    // ===== Supabase (BYT VÄRDENA) =====
+    var SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co;
+    var SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';
+    var SUPABASE_BUCKET = 'audio';
+    var SUPABASE_PATH   = 'reviews';
+
+    // ===== refs =====
     var startBtn=document.getElementById('startBtn');
     var stopBtn =document.getElementById('stopBtn');
     var maxSel  =document.getElementById('maxlen');
@@ -81,10 +92,12 @@
     var statusEl=document.getElementById('status');
     var player  =document.getElementById('player');
     var dl      =document.getElementById('dl');
+    var share   =document.getElementById('share');
+    var copyBtn =document.getElementById('copy');
     var dot     =document.getElementById('dot');
     var uaEl    =document.getElementById('ua'); uaEl.textContent=navigator.userAgent;
 
-    // state
+    // ===== state =====
     var STATE={IDLE:'idle',REC:'recording',STOP:'stopping',DONE:'done'};
     var startedAt=0,tick=null,hard=null,MAX_MS=+maxSel.value;
     var stream=null,ac=null,src=null,proc=null,bufs=[],chs=1,rate=44100;
@@ -146,6 +159,36 @@
       try{ stream&&stream.getTracks().forEach(function(t){ t.stop(); }); }catch(_){}
     }
 
+    async function uploadSupabase(blob, name){
+      try{
+        if(!SUPABASE_URL.startsWith('https') || SUPABASE_ANON.length < 20){
+          log('Supabase ej konfigurerad – hoppar över upload.');
+          return null;
+        }
+        var endpoint = SUPABASE_URL.replace(/\/$/,'') + '/storage/v1/object/' +
+                       encodeURIComponent(SUPABASE_BUCKET) + '/' + SUPABASE_PATH + '/' + encodeURIComponent(name);
+        var res = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + SUPABASE_ANON,
+            'Content-Type': 'audio/wav',
+            'x-upsert': 'true'
+          },
+          body: blob
+        });
+        if(!res.ok){
+          var txt=await res.text();
+          throw new Error('Upload misslyckades: ' + res.status + ' ' + txt);
+        }
+        log('Uppladdning klar till Supabase.');
+        return SUPABASE_URL.replace(/\/$/,'') + '/storage/v1/object/public/' +
+               SUPABASE_BUCKET + '/' + SUPABASE_PATH + '/' + name;
+      }catch(err){
+        log('Supabase-fel: ' + err.message);
+        return null;
+      }
+    }
+
     function finish(blob,ext){
       setState(STATE.DONE);
       var url=URL.createObjectURL(blob);
@@ -153,15 +196,26 @@
       var name='kenai-'+ts()+'.'+ext;
       dl.download=name; dl.href=url; dl.style.display='inline-block';
       fnameEl.textContent=name; fsizeEl.textContent=(blob.size/1024/1024).toFixed(2)+' MB';
-      log('Klar – tryck Play om den inte startar själv.');
+
+      uploadSupabase(blob, name).then(function(publicUrl){
+        if(publicUrl){
+          share.href=publicUrl; share.style.display='inline-block';
+          copyBtn.style.display='inline-block';
+          copyBtn.onclick = async function(){
+            try{ await navigator.clipboard.writeText(publicUrl); log('Länk kopierad.'); }
+            catch(e){ log('Kunde inte kopiera: ' + e.message); }
+          };
+        }
+        log('Klar – tryck Play om den inte startar själv.');
+      });
     }
 
     function ts(){ var d=new Date(),p=function(n){return ('0'+n).slice(-2)}; return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds()); }
 
     // bind + globala fallbacks
+    window.__start=startRec; window.__stop=stopRec;
     startBtn.addEventListener('click',startRec);
     stopBtn .addEventListener('click',stopRec);
-    window.__start=startRec; window.__stop=stopRec;
 
     // init
     console.log('single-file recorder loaded');
