@@ -3,41 +3,36 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kenai - Recorder</title>
+  <title>Kenai – Recorder (Single-File Safe)</title>
   <style>
-    :root { --bg:#0b0f14; --card:#111723; --muted:#8aa0b6; --text:#e6eef7; --ok:#29bf12; --err:#ff006e; }
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto}
+    :root{--bg:#0b0f14;--card:#111723;--muted:#8aa0b6;--text:#e6eef7;--ok:#29bf12;--err:#ff006e}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto}
     .wrap{max-width:860px;margin:32px auto;padding:20px}
     .card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    h1{margin:0 0 8px}
-    p.muted{color:var(--muted);margin:4px 0 16px}
+    h1{margin:0 0 8px} p.muted{color:var(--muted);margin:4px 0 16px}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     button{appearance:none;border:0;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}
-    #startBtn{background:var(--ok);color:#000}
-    #stopBtn{background:var(--err);color:#fff}
+    #startBtn{background:var(--ok);color:#000} #stopBtn{background:var(--err);color:#fff}
     #stopBtn[disabled],#startBtn[disabled]{opacity:.45;cursor:not-allowed}
     .controls{display:flex;gap:10px;align-items:center;margin:8px 0 4px}
     select{background:#0a0e14;color:#e6eef7;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:8px}
     .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;margin:10px 0 4px}
     .kv b{color:#9ec3ff}
     small#status{display:block;white-space:pre-wrap;background:#0a0e14;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;margin-top:10px;min-height:54px;color:var(--muted)}
-    audio{width:100%;margin-top:12px}
-    a.action{display:inline-block;margin-top:10px;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.2);padding:8px 12px;border-radius:12px}
+    audio{width:100%;margin-top:12px} a.action{display:inline-block;margin-top:10px;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.2);padding:8px 12px;border-radius:12px}
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>Kenai - Recorder</h1>
-      <p class="muted">WAV-only, 44.1 kHz mono, Auto-stop, extern JS, Supabase-upload.</p>
+      <h1>Kenai – Recorder</h1>
+      <p class="muted">WAV-only, 44.1 kHz mono, auto-stop. <b>Allt i denna filen</b> för maximal stabilitet.</p>
 
       <div class="row">
-        <!-- inline-fallback + extern JS (dubbel-säkring) -->
+        <!-- inline onclick som backup -->
         <button id="startBtn" onclick="window.__start && __start()">Starta inspelning</button>
-<button id="stopBtn"  onclick="window.__stop  && __stop()" disabled>Stoppa</button>
-<script src="app3.min.js" defer></script>
-
+        <button id="stopBtn"  onclick="window.__stop  && __stop()" disabled>Stoppa</button>
+        <span id="dot" style="margin-left:8px">status: idle</span>
       </div>
 
       <div class="controls">
@@ -61,16 +56,52 @@
         <b>UA:</b><span id="ua"></span>
       </div>
 
-      <small id="status">Klar. Tryck Starta for att begara mikrofonatkomst.</small>
+      <small id="status">Klar. Tryck Starta för att begära mikrofonåtkomst.</small>
       <audio id="player" controls></audio>
       <div>
         <a id="dl" class="action" download style="display:none">Ladda ner</a>
-        <a id="share" class="action" target="_blank" rel="noopener" style="display:none">Oppna fil</a>
-        <a id="copy" class="action" href="javascript:void(0)" style="display:none">Kopiera lank</a>
       </div>
     </div>
   </div>
 
-  <script src="app3.min.js" defer></script>
-</body>
-</html>
+  <!-- All JS inline: -->
+  <script>
+  (function(){
+    'use strict';
+    // refs
+    var startBtn=document.getElementById('startBtn');
+    var stopBtn =document.getElementById('stopBtn');
+    var maxSel  =document.getElementById('maxlen');
+    var stateEl =document.getElementById('state');
+    var codecEl =document.getElementById('codec');
+    var mimeEl  =document.getElementById('mime');
+    var fnameEl =document.getElementById('fname');
+    var fsizeEl =document.getElementById('fsize');
+    var durEl   =document.getElementById('dur');
+    var statusEl=document.getElementById('status');
+    var player  =document.getElementById('player');
+    var dl      =document.getElementById('dl');
+    var dot     =document.getElementById('dot');
+    var uaEl    =document.getElementById('ua'); uaEl.textContent=navigator.userAgent;
+
+    // state
+    var STATE={IDLE:'idle',REC:'recording',STOP:'stopping',DONE:'done'};
+    var startedAt=0,tick=null,hard=null,MAX_MS=+maxSel.value;
+    var stream=null,ac=null,src=null,proc=null,bufs=[],chs=1,rate=44100;
+
+    function log(m){ statusEl.textContent=(statusEl.textContent?statusEl.textContent+'\\n':'')+m; }
+    function setState(s){ stateEl.textContent=s; dot.textContent='status: '+s; startBtn.disabled=(s!==STATE.IDLE); stopBtn.disabled=(s!==STATE.REC); }
+    function tstr(ms){ var s=(ms/1000|0),m=('0'+(s/60|0)).slice(-2); return m+':'+('0'+(s%60)).slice(-2); }
+    function startTick(){ startedAt=performance.now(); stopTick(); tick=setInterval(function(){ var e=performance.now()-startedAt; durEl.textContent=tstr(e); if(e>=MAX_MS){ log('Auto-stop'); stopRec(); } },250); }
+    function stopTick(){ if(tick){ clearInterval(tick); tick=null; } }
+    maxSel.onchange=function(){ MAX_MS=+maxSel.value; };
+
+    async function startRec(){
+      try{
+        setState(STATE.REC);
+        statusEl.textContent='1) Begär mikrofon...';
+        stream=await navigator.mediaDevices.getUserMedia({audio:true});
+        log('Mikrofon OK'); startTick();
+
+        var AC=window.AudioContext||window.webkitAudioContext;
+        ac=new AC({sampleRate:44100}); log('2) A
