@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kenai - Recorder (External JS)</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; media-src 'self' blob:; connect-src *; style-src 'self' 'unsafe-inline'; script-src 'self';">
+  <title>Kenai - Recorder</title>
+  <!-- Enkel CSS, inga externa beroenden -->
   <style>
     :root { --bg:#0b0f14; --card:#111723; --muted:#8aa0b6; --text:#e6eef7; --ok:#29bf12; --err:#ff006e; }
     *{box-sizing:border-box}
@@ -60,17 +60,17 @@
         <b>UA:</b><span id="ua"></span>
       </div>
 
-      <small id="status">Klar. Tryck Starta för att begära mikrofonåtkomst.</small>
+      <small id="status">Klar. Tryck Starta for att begara mikrofonatkomst.</small>
       <audio id="player" controls></audio>
       <div>
         <a id="dl" class="action" download style="display:none">Ladda ner</a>
-        <a id="share" class="action" target="_blank" rel="noopener" style="display:none">Öppna fil</a>
-        <a id="copy" class="action" href="javascript:void(0)" style="display:none">Kopiera länk</a>
+        <a id="share" class="action" target="_blank" rel="noopener" style="display:none">Oppna fil</a>
+        <a id="copy" class="action" href="javascript:void(0)" style="display:none">Kopiera lank</a>
       </div>
     </div>
   </div>
 
-  <!-- Viktigt: extern JS-fil med defer -->
-  <script src="app2.js" defer></script>
+  <!-- Ladda extern JS (kontrollera exakt filnamn och sökväg) -->
+  <script src="./app2.js" defer></script>
 </body>
 </html>
