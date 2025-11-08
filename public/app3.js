@@ -2,8 +2,8 @@
   'use strict';
 
   // ===== Supabase (BYT DESSA) =====
-  var SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co; // byt
-  var SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';                    // byt
+  var SUPABASE_URL  = ' https://hywwzzzxgagqhlxooekz.supabase.co; // byt till ditt projekt
+  var SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';                    // byt till anon key
   var SUPABASE_BUCKET = 'audio';
   var SUPABASE_PATH   = 'reviews';
 
@@ -25,6 +25,9 @@
   var dot      = document.getElementById('dot');
   var uaEl     = document.getElementById('ua');
   uaEl.textContent = navigator.userAgent;
+
+  console.log('recorder loaded');
+  statusEl.textContent = 'Klar. (Recorder laddad)';
 
   // ===== state =====
   var STATE = { IDLE:'idle', REC:'recording', STOP:'stopping', DONE:'done' };
@@ -188,9 +191,15 @@
     return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds());
   }
 
+  // listeners
   startBtn.addEventListener('click', startRec);
   stopBtn .addEventListener('click', stopRec);
 
+  // Globala fallbacks för inline onclick (dubbel-säkring)
+  window.__start = startRec;
+  window.__stop  = stopRec;
+
+  // global fel-säkring
   window.addEventListener('error', function(e){
     setState(STATE.IDLE); log('JS-fel: '+e.message);
     startBtn.disabled=false; stopBtn.disabled=true;
