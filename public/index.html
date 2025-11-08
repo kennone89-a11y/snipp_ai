@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Kenai – Recorder (Emergency Unstick)</title>
+<title>Kenai – Recorder (SuperSafe v2)</title>
 <style>
   :root { --bg:#0b0f14; --card:#111723; --muted:#8aa0b6; --text:#e6eef7; --ok:#29bf12; --err:#ff006e; }
   *{box-sizing:border-box}
@@ -24,18 +24,19 @@
   small#status{display:block;white-space:pre-wrap;background:#0a0e14;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;margin-top:10px;min-height:54px;color:var(--muted)}
   audio{width:100%;margin-top:12px}
   a.download{display:inline-block;margin-top:10px;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.2);padding:8px 12px;border-radius:12px}
+  .version{font-size:12px;color:#9ec3ff;margin-left:8px}
 </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>Kenai – Recorder (Emergency Unstick)</h1>
-      <p class="muted">WAV-only • 44.1 kHz mono • Auto-stop • Inga externa uploads i denna version.</p>
+      <h1>Kenai – Recorder <span class="version">SuperSafe v2</span></h1>
+      <p class="muted">WAV-only • 44.1 kHz mono • Auto-stop • Inline onclick (klick kan inte låsas).</p>
 
       <div class="row">
-        <!-- INLINE onclick = klick funkar alltid -->
-        <button id="startBtn" onclick="window.__start && window.__start()">▶︎ Starta inspelning</button>
-        <button id="stopBtn"  onclick="window.__stop && window.__stop()" disabled>■ Stoppa</button>
+        <!-- INLINE onclick: om __start/__stop saknas visas alert, så vi ser att klick funkar -->
+        <button id="startBtn" onclick="window.__start ? __start() : alert('JS laddades inte (start)')">▶︎ Starta inspelning</button>
+        <button id="stopBtn"  onclick="window.__stop  ? __stop()  : alert('JS laddades inte (stop)')" disabled>■ Stoppa</button>
         <span id="dot" style="margin-left:8px">● idle</span>
       </div>
 
@@ -67,46 +68,10 @@
   </div>
 
 <script>
-(function(){// ===== Supabase config (BYT DESSA) =====
-var SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co;   // <-- BYT
-var SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';                      // <-- BYT
-var SUPABASE_BUCKET = 'audio';
-var SUPABASE_PATH   = 'reviews';
-
-// ===== Upload helper =====
-async function uploadSupabase(blob, name){
-  try{
-    if(!SUPABASE_URL.startsWith('https') || SUPABASE_ANON.length < 20){
-      log('Supabase ej konfigurerad – hoppar över upload.');
-      return;
-    }
-    var endpoint = SUPABASE_URL + '/storage/v1/object/' +
-      encodeURIComponent(SUPABASE_BUCKET) + '/' +
-      SUPABASE_PATH + '/' + encodeURIComponent(name);
-
-    var res = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + SUPABASE_ANON,
-        'Content-Type': blob.type || 'application/octet-stream',
-        'x-upsert': 'true'
-      },
-      body: blob
-    });
-
-    if(!res.ok){
-      var txt = await res.text();
-      throw new Error('Upload misslyckades: ' + res.status + ' ' + txt);
-    }
-    log('Uppladdning klar till Supabase ✔︎');
-  }catch(err){
-    log('Supabase-fel: ' + err.message);
-  }
-}
-
+/* SuperSafe v2 – inga externa beroenden, global API, hårda failsafes */
+(function(){
   'use strict';
-
-  // ===== refs =====
+  // ---- refs
   var startBtn = document.getElementById('startBtn');
   var stopBtn  = document.getElementById('stopBtn');
   var maxSel   = document.getElementById('maxlen');
@@ -122,7 +87,7 @@ async function uploadSupabase(blob, name){
   var dot      = document.getElementById('dot');
   var uaEl     = document.getElementById('ua'); uaEl.textContent = navigator.userAgent;
 
-  // ===== state =====
+  // ---- state
   var STATE={IDLE:'idle',REC:'recording',STOP:'stopping',DONE:'done'};
   var startedAt=0, tick=null, hard=null, MAX_MS=+maxSel.value;
 
@@ -131,12 +96,10 @@ async function uploadSupabase(blob, name){
     stateEl.textContent=s;
     dot.textContent = (s===STATE.REC? '● recording' : s===STATE.STOP? '● stopping' : s===STATE.DONE? '● done' : '● idle');
     dot.style.color = (s===STATE.REC? '#ff3864' : s===STATE.STOP? '#ffbe0b' : s===STATE.DONE? '#29bf12' : '#8aa0b6');
-    // Failsafe: tvinga knapplägen
-    startBtn.disabled = (s!==STATE.IDLE) ? true : false;
-    stopBtn.disabled  = (s!==STATE.REC)  ? true : false;
+    startBtn.disabled = (s!==STATE.IDLE);
+    stopBtn.disabled  = (s!==STATE.REC);
   }
-  setState(STATE.IDLE); // lås upp vid start
-
+  setState(STATE.IDLE);
   maxSel.onchange = function(){ MAX_MS = +maxSel.value; };
 
   function tstr(ms){ var s=(ms/1000|0), m=('0'+(s/60|0)).slice(-2); return m+':'+('0'+(s%60)).slice(-2); }
@@ -151,28 +114,27 @@ async function uploadSupabase(blob, name){
   }
   function stopTick(){ if(tick){clearInterval(tick); tick=null;} }
 
-  // ===== WAV engine (44.1 kHz mono) =====
+  // ---- WAV engine (44.1 kHz mono)
   var stream=null, ac=null, src=null, proc=null;
   var bufs=[], chs=1, rate=44100;
 
   async function startRec(){
     try{
       setState(STATE.REC);
-      statusEl.textContent = '1) Begär mikrofon…';
-      // HTTPS krävs för mic; se till att sidan är https://
+      statusEl.textContent='1) Begär mikrofon…';
       stream = await navigator.mediaDevices.getUserMedia({audio:true});
       log('✔︎ Mikrofon OK');
       startTick();
 
-      var AC=window.AudioContext||window.webkitAudioContext;
-      ac=new AC({sampleRate:44100});
+      var AC = window.AudioContext || window.webkitAudioContext;
+      ac = new AC({ sampleRate: 44100 });
       log('2) AudioContext @ ' + ac.sampleRate + ' Hz');
-      rate=ac.sampleRate;
-      src=ac.createMediaStreamSource(stream);
-      chs=1;
-      proc=ac.createScriptProcessor(4096,chs,chs);
+      rate = ac.sampleRate;
+      src = ac.createMediaStreamSource(stream);
+      chs = 1;
+      proc = ac.createScriptProcessor(4096, chs, chs);
       bufs=[]; for(var c=0;c<chs;c++) bufs[c]=[];
-      proc.onaudioprocess=function(e){
+      proc.onaudioprocess = function(e){
         for(var c=0;c<chs;c++) bufs[c].push(new Float32Array(e.inputBuffer.getChannelData(c)));
       };
       src.connect(proc); proc.connect(ac.destination);
@@ -184,7 +146,7 @@ async function uploadSupabase(blob, name){
       dl.style.display='none'; player.src='';
 
       if(hard) clearTimeout(hard);
-      hard=setTimeout(function(){ log('Auto-stop (hard)'); stopRec(); }, MAX_MS+600);
+      hard = setTimeout(function(){ log('Auto-stop (hard)'); stopRec(); }, MAX_MS+600);
     }catch(e){
       setState(STATE.IDLE); stopTick();
       log('✖︎ Fel: '+e.message);
@@ -193,82 +155,72 @@ async function uploadSupabase(blob, name){
 
   function stopRec(){
     if(stateEl.textContent!==STATE.REC && stateEl.textContent!==STATE.STOP) return;
-    setState(STATE.STOP); stopTick(); if(hard){clearTimeout(hard); hard=null;}
+    setState(STATE.STOP); stopTick(); if(hard){ clearTimeout(hard); hard=null; }
     log('4) Stoppar inspelning…');
     try{ proc&&proc.disconnect(); src&&src.disconnect(); }catch(_){}
 
     try{
       log('5) Bygger WAV…');
-      var len = 0; for (var i=0;i<bufs[0].length;i++) len += bufs[0][i].length;
-      var inter = new Float32Array(len * chs), off = 0;
-      for (var b=0;b<bufs[0].length;b++){
-        var L = bufs[0][b].length;
-        for (var s=0;s<L;s++){
-          for (var c=0;c<chs;c++){
-            inter[(off+s)*chs + c] = bufs[c][b][s];
-          }
+      var len=0; for(var i=0;i<bufs[0].length;i++) len+=bufs[0][i].length;
+      var inter=new Float32Array(len*chs), off=0;
+      for(var b=0;b<bufs[0].length;b++){
+        var L=bufs[0][b].length;
+        for(var s=0;s<L;s++){
+          for(var c=0;c<chs;c++){ inter[(off+s)*chs+c]=bufs[c][b][s]; }
         }
-        off += L;
+        off+=L;
       }
-      var bytesPerSample = 2;
-      var blockAlign = chs * bytesPerSample;
-      var ab = new ArrayBuffer(44 + inter.length * bytesPerSample);
-      var view = new DataView(ab);
-      function W(v,o,s){ for (var i=0;i<s.length;i++) v.setUint8(o+i, s.charCodeAt(i)); }
-      W(view, 0, 'RIFF');
-      view.setUint32(4, 36 + inter.length * bytesPerSample, true);
-      W(view, 8, 'WAVE'); W(view, 12, 'fmt ');
-      view.setUint32(16, 16, true); view.setUint16(20, 1, true);
-      view.setUint16(22, chs, true); view.setUint32(24, rate, true);
-      view.setUint32(28, rate * blockAlign, true);
-      view.setUint16(32, blockAlign, true); view.setUint16(34, 16, true);
-      W(view, 36, 'data'); view.setUint32(40, inter.length * bytesPerSample, true);
-      var idx = 44;
-      for (var k=0;k<inter.length;k++){
-        var s = Math.max(-1, Math.min(1, inter[k]));
-        view.setInt16(idx, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-        idx += 2;
+      var bytesPerSample=2, blockAlign=chs*bytesPerSample;
+      var ab=new ArrayBuffer(44 + inter.length*bytesPerSample), view=new DataView(ab);
+      function W(v,o,str){ for(var i=0;i<str.length;i++) v.setUint8(o+i, str.charCodeAt(i)); }
+      W(view,0,'RIFF'); view.setUint32(4,36+inter.length*bytesPerSample,true);
+      W(view,8,'WAVE'); W(view,12,'fmt ');
+      view.setUint32(16,16,true); view.setUint16(20,1,true);
+      view.setUint16(22,chs,true); view.setUint32(24,rate,true);
+      view.setUint32(28,rate*blockAlign,true); view.setUint16(32,blockAlign,true);
+      view.setUint16(34,16,true); W(view,36,'data');
+      view.setUint32(40,inter.length*bytesPerSample,true);
+      var idx=44;
+      for(var k=0;k<inter.length;k++){
+        var s=Math.max(-1,Math.min(1,inter[k]));
+        view.setInt16(idx, s<0?s*0x8000:s*0x7FFF, true); idx+=2;
       }
-      var blob = new Blob([view], { type: 'audio/wav' });
+      var blob=new Blob([view],{type:'audio/wav'});
       log('✔︎ WAV klar: ' + (blob.size/1024/1024).toFixed(2) + ' MB');
-
-      finish(blob, 'wav');
+      finish(blob,'wav');
     }catch(err){
-      log('✖︎ Packningsfel: ' + err.message);
+      log('✖︎ Packningsfel: '+err.message);
     }
 
-    // stäng efter att blob är klar
     try{ ac&&ac.close(); }catch(_){}
     try{ stream&&stream.getTracks().forEach(function(t){ t.stop(); }); }catch(_){}
   }
 
   function finish(blob,ext){
     setState(STATE.DONE);
-    var url=URL.createObjectURL(blob);
-    player.src=url; try{ player.load(); }catch(_){}
-    var name='kenai-'+ts()+'.'+ext;
-    dl.download=name; dl.href=url; dl.style.display='inline-block';
-    fnameEl.textContent=name; fsizeEl.textContent=(blob.size/1024/1024).toFixed(2)+' MB';
+    var url = URL.createObjectURL(blob);
+    player.src = url; try{ player.load(); }catch(_){}
+    var name = 'kenai-'+ts()+'.'+ext;
+    dl.download = name; dl.href = url; dl.style.display='inline-block';
+    fnameEl.textContent = name; fsizeEl.textContent = (blob.size/1024/1024).toFixed(2)+' MB';
     log('6) Klar – tryck play om den inte startar själv.');
   }
 
-  function ts(){ var d=new Date(),p=n=>('0'+n).slice(-2); return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds()); }
+  function ts(){ var d=new Date(),p=function(n){return ('0'+n).slice(-2)}; return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds()); }
 
-  // Exponera start/stop globalt så inline onclick alltid fungerar
+  // Exponera globalt för inline onclick
   window.__start = startRec;
   window.__stop  = stopRec;
 
-  // Felsäkring: om något JS-fel händer, lås upp knapparna
+  // Global fel-säkring: lås upp knapparna igen
   window.addEventListener('error', function(e){
     setState(STATE.IDLE);
-    log('✖︎ JS-fel: ' + e.message);
+    log('✖︎ JS-fel: '+e.message);
+    startBtn.disabled=false; stopBtn.disabled=true;
   });
 
-  // Ytterligare failsafe vid sidladdning
-  setTimeout(function(){
-    startBtn.disabled = false;
-    stopBtn.disabled  = true;
-  }, 0);
+  // Force unlock direkt efter load (ifall något CSS/HTML felar)
+  setTimeout(function(){ startBtn.disabled=false; stopBtn.disabled=true; }, 0);
 })();
 </script>
 </body>
