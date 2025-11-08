@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Kenai – Recorder (SuperSafe v2)</title>
+<title>Kenai – Recorder (SuperSafe v2 + Supabase)</title>
 <style>
   :root { --bg:#0b0f14; --card:#111723; --muted:#8aa0b6; --text:#e6eef7; --ok:#29bf12; --err:#ff006e; }
   *{box-sizing:border-box}
@@ -23,18 +23,17 @@
   .kv b{color:#9ec3ff}
   small#status{display:block;white-space:pre-wrap;background:#0a0e14;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;margin-top:10px;min-height:54px;color:var(--muted)}
   audio{width:100%;margin-top:12px}
-  a.download{display:inline-block;margin-top:10px;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.2);padding:8px 12px;border-radius:12px}
-  .version{font-size:12px;color:#9ec3ff;margin-left:8px}
+  a.action{display:inline-block;margin-top:10px;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.2);padding:8px 12px;border-radius:12px}
 </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>Kenai – Recorder <span class="version">SuperSafe v2</span></h1>
-      <p class="muted">WAV-only • 44.1 kHz mono • Auto-stop • Inline onclick (klick kan inte låsas).</p>
+      <h1>Kenai – Recorder <span style="font-size:12px;color:#9ec3ff;margin-left:8px">SuperSafe v2</span></h1>
+      <p class="muted">WAV-only • 44.1 kHz mono • Auto-stop • Inline onclick (klick kan inte låsas) • Supabase-upload + delbar länk.</p>
 
       <div class="row">
-        <!-- INLINE onclick: om __start/__stop saknas visas alert, så vi ser att klick funkar -->
+        <!-- INLINE onclick: funkar alltid -->
         <button id="startBtn" onclick="window.__start ? __start() : alert('JS laddades inte (start)')">▶︎ Starta inspelning</button>
         <button id="stopBtn"  onclick="window.__stop  ? __stop()  : alert('JS laddades inte (stop)')" disabled>■ Stoppa</button>
         <span id="dot" style="margin-left:8px">● idle</span>
@@ -63,14 +62,61 @@
 
       <small id="status">Klar. Tryck Starta för att begära mikrofonåtkomst.</small>
       <audio id="player" controls></audio>
-      <a id="dl" class="download" download style="display:none">⬇︎ Ladda ner</a>
+      <div>
+        <a id="dl" class="action" download style="display:none">⬇︎ Ladda ner</a>
+        <a id="share" class="action" target="_blank" rel="noopener" style="display:none">🔗 Öppna fil</a>
+        <a id="copy" class="action" href="javascript:void(0)" style="display:none">📋 Kopiera länk</a>
+      </div>
     </div>
   </div>
 
 <script>
-/* SuperSafe v2 – inga externa beroenden, global API, hårda failsafes */
+/* SuperSafe v2 + Supabase – inline onclick, global API, robust statuslogg */
 (function(){
   'use strict';
+
+  // ===== Supabase config (BYT DESSA) =====
+  var SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co;  // <-- BYT
+  var SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';                      // <-- BYT
+  var SUPABASE_BUCKET = 'audio';
+  var SUPABASE_PATH   = 'reviews';
+
+  async function uploadSupabase(blob, name){
+    try{
+      if(!SUPABASE_URL.startsWith('https') || SUPABASE_ANON.length < 20){
+        log('Supabase ej konfigurerad – hoppar över upload.');
+        return null;
+      }
+      var endpoint = SUPABASE_URL.replace(/\/$/, '') + '/storage/v1/object/' +
+        encodeURIComponent(SUPABASE_BUCKET) + '/' +
+        SUPABASE_PATH + '/' + encodeURIComponent(name);
+
+      var res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + SUPABASE_ANON,
+          'Content-Type': 'audio/wav',
+          'x-upsert': 'true'
+        },
+        body: blob
+      });
+
+      if(!res.ok){
+        var txt = await res.text();
+        throw new Error('Upload misslyckades: ' + res.status + ' ' + txt);
+      }
+      log('Uppladdning klar till Supabase ✔︎');
+
+      // Om bucketen är Public kan vi bygga en direktlänk
+      var publicUrl = SUPABASE_URL.replace(/\/$/, '') + '/storage/v1/object/public/' +
+                      SUPABASE_BUCKET + '/' + SUPABASE_PATH + '/' + name;
+      return publicUrl;
+    }catch(err){
+      log('Supabase-fel: ' + err.message);
+      return null;
+    }
+  }
+
   // ---- refs
   var startBtn = document.getElementById('startBtn');
   var stopBtn  = document.getElementById('stopBtn');
@@ -84,6 +130,8 @@
   var statusEl = document.getElementById('status');
   var player   = document.getElementById('player');
   var dl       = document.getElementById('dl');
+  var share    = document.getElementById('share');
+  var copyBtn  = document.getElementById('copy');
   var dot      = document.getElementById('dot');
   var uaEl     = document.getElementById('ua'); uaEl.textContent = navigator.userAgent;
 
@@ -143,7 +191,7 @@
       codecEl.textContent='WAV-fallback';
       mimeEl.textContent='audio/wav';
       fnameEl.textContent='–'; fsizeEl.textContent='–';
-      dl.style.display='none'; player.src='';
+      dl.style.display='none'; player.src=''; share.style.display='none'; copyBtn.style.display='none';
 
       if(hard) clearTimeout(hard);
       hard = setTimeout(function(){ log('Auto-stop (hard)'); stopRec(); }, MAX_MS+600);
@@ -196,13 +244,24 @@
     try{ stream&&stream.getTracks().forEach(function(t){ t.stop(); }); }catch(_){}
   }
 
-  function finish(blob,ext){
+  async function finish(blob,ext){
     setState(STATE.DONE);
     var url = URL.createObjectURL(blob);
     player.src = url; try{ player.load(); }catch(_){}
     var name = 'kenai-'+ts()+'.'+ext;
     dl.download = name; dl.href = url; dl.style.display='inline-block';
     fnameEl.textContent = name; fsizeEl.textContent = (blob.size/1024/1024).toFixed(2)+' MB';
+
+    // Supabase upload + delbar länk (om bucket = Public)
+    var publicUrl = await uploadSupabase(blob, name);
+    if(publicUrl){
+      share.href = publicUrl; share.style.display='inline-block';
+      copyBtn.style.display='inline-block';
+      copyBtn.onclick = async function(){
+        try{ await navigator.clipboard.writeText(publicUrl); log('Länk kopierad ✔︎'); }
+        catch(e){ log('Kunde inte kopiera: ' + e.message); }
+      };
+    }
     log('6) Klar – tryck play om den inte startar själv.');
   }
 
@@ -219,7 +278,7 @@
     startBtn.disabled=false; stopBtn.disabled=true;
   });
 
-  // Force unlock direkt efter load (ifall något CSS/HTML felar)
+  // Force unlock direkt efter load
   setTimeout(function(){ startBtn.disabled=false; stopBtn.disabled=true; }, 0);
 })();
 </script>
