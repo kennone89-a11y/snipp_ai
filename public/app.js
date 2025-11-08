@@ -1,201 +1,157 @@
-'use strict';
+(function(){
+  'use strict';
 
-// ---- Stabil userAgent-detektion (utan regex) ----
-const ua = (navigator.userAgent || '').toLowerCase();
-const isIOS = ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod') ||
-              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const isSafari = ua.includes('safari') && !ua.includes('chrome') && !ua.includes('android');
+  // ----- Supabase (BYT DESSA) -----
+  var SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co;
+  var SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';
+  var SUPABASE_BUCKET = 'audio';
+  var SUPABASE_PATH   = 'reviews';
 
-// === FYLL I DINA SUPABASE-VÄRDEN ===
-const SUPABASE_URL  = 'https://hywwzzzxgagqhlxooekz.supabase.co;
-const SUPABASE_ANON = 'sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';
+  // ----- refs -----
+  var startBtn = document.getElementById('startBtn');
+  var stopBtn  = document.getElementById('stopBtn');
+  var maxSel   = document.getElementById('maxlen');
+  var stateEl  = document.getElementById('state');
+  var codecEl  = document.getElementById('codec');
+  var mimeEl   = document.getElementById('mime');
+  var fnameEl  = document.getElementById('fname');
+  var fsizeEl  = document.getElementById('fsize');
+  var durEl    = document.getElementById('dur');
+  var statusEl = document.getElementById('status');
+  var player   = document.getElementById('player');
+  var dl       = document.getElementById('dl');
+  var share    = document.getElementById('share');
+  var copyBtn  = document.getElementById('copy');
+  var dot      = document.getElementById('dot');
+  var uaEl     = document.getElementById('ua');
+  uaEl.textContent = navigator.userAgent;
 
-// Init Supabase (via CDN i index.html)
-const sb = (window.supabase && SUPABASE_URL && SUPABASE_ANON)
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON)
-  : null;
-window.sb = sb;
+  // ----- state -----
+  var STATE = { IDLE:'idle', REC:'recording', STOP:'stopping', DONE:'done' };
+  var startedAt=0, tick=null, hard=null, MAX_MS=+maxSel.value;
+  function log(m){ statusEl.textContent = (statusEl.textContent ? statusEl.textContent+'\n' : '') + m; }
+  function setState(s){
+    stateEl.textContent = s;
+    dot.textContent = 'status: ' + s;
+    startBtn.disabled = (s!==STATE.IDLE);
+    stopBtn.disabled  = (s!==STATE.REC);
+  }
+  setState(STATE.IDLE);
+  maxSel.onchange = function(){ MAX_MS = +maxSel.value; };
+  function tstr(ms){ var s=(ms/1000|0), m=('0'+(s/60|0)).slice(-2); return m+':'+('0'+(s%60)).slice(-2); }
+  function startTick(){ startedAt=performance.now(); stopTick(); tick=setInterval(function(){ var e=performance.now()-startedAt; durEl.textContent=tstr(e); if(e>=MAX_MS){ log('Auto-stop'); stopRec(); } },250); }
+  function stopTick(){ if(tick){ clearInterval(tick); tick=null; } }
 
-// Globala inspelningsvariabler
-let mediaRecorder = null;
-let recStream = null;
-let chunks = [];
-let currentFmt = { mime: '', ext: '', contentType: '' };
+  // ----- WAV engine (44.1 kHz mono) -----
+  var stream=null, ac=null, src=null, proc=null;
+  var bufs=[], chs=1, rate=44100;
 
-// Välj bästa format per enhet (prioritera m4a på Safari/iOS)
-function pickAudioFormat() {
-  const safariFirst = [
-    'audio/mp4;codecs=mp4a.40.2',
-    'audio/mp4',
-    'audio/webm;codecs=opus',
-    'audio/webm',
-  ];
-  const webmFirst = [
-    'audio/webm;codecs=opus',
-    'audio/webm',
-    'audio/mp4;codecs=mp4a.40.2',
-    'audio/mp4',
-  ];
-  const prefs = isSafari ? safariFirst : webmFirst;
+  async function startRec(){
+    try{
+      setState(STATE.REC);
+      statusEl.textContent = '1) Begär mikrofon...';
+      stream = await navigator.mediaDevices.getUserMedia({audio:true});
+      log('Mikrofon OK'); startTick();
 
-  if (window.MediaRecorder && MediaRecorder.isTypeSupported) {
-    for (const m of prefs) {
-      if (MediaRecorder.isTypeSupported(m)) {
-        if (m.startsWith('audio/webm')) return { mime: m, ext: 'webm', contentType: 'audio/webm' };
-        if (m.startsWith('audio/mp4'))  return { mime: m, ext: 'm4a',  contentType: 'audio/mp4'  };
-      }
+      var AC = window.AudioContext || window.webkitAudioContext;
+      ac = new AC({ sampleRate: 44100 });
+      log('2) AudioContext ' + ac.sampleRate + ' Hz');
+      rate = ac.sampleRate;
+      src = ac.createMediaStreamSource(stream);
+      chs = 1;
+      proc = ac.createScriptProcessor(4096, chs, chs);
+      bufs=[]; for(var c=0;c<chs;c++) bufs[c]=[];
+      proc.onaudioprocess = function(e){ for(var c=0;c<chs;c++){ bufs[c].push(new Float32Array(e.inputBuffer.getChannelData(c))); } };
+      src.connect(proc); proc.connect(ac.destination);
+      log('3) Spelar in ...');
+
+      codecEl.textContent='WAV-fallback';
+      mimeEl.textContent='audio/wav';
+      fnameEl.textContent='-'; fsizeEl.textContent='-';
+      dl.style.display='none'; player.src=''; share.style.display='none'; copyBtn.style.display='none';
+
+      if(hard) clearTimeout(hard);
+      hard = setTimeout(function(){ log('Auto-stop (hard)'); stopRec(); }, MAX_MS+600);
+    }catch(e){
+      setState(STATE.IDLE); stopTick(); log('Fel: '+e.message);
     }
   }
-  return { mime: 'wav-fallback', ext: 'wav', contentType: 'audio/wav' };
-}
 
-// Starta inspelning
-async function startRec() {
-  try {
-    if (!sb) { alert('Supabase saknas – ladda om sidan.'); return; }
-
-    currentFmt = pickAudioFormat();
-
-    const audioConstraints = isIOS
-      ? { echoCancellation: true, noiseSuppression: true }
-      : { echoCancellation: true, noiseSuppression: true, channelCount: 1, sampleRate: 48000 };
-
-    recStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
-
-    const codecEl = document.getElementById('codec');
-    if (codecEl) codecEl.textContent = `Codec: ${currentFmt.mime} | iOS:${isIOS} Safari:${isSafari}`;
-
-    chunks = [];
-
-    if (currentFmt.mime !== 'wav-fallback' && window.MediaRecorder) {
-      let ok = true;
-      try { mediaRecorder = new MediaRecorder(recStream, { mimeType: currentFmt.mime }); }
-      catch { ok = false; }
-
-      if (ok) {
-        mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data); };
-        mediaRecorder.onerror = (e) => alert('MediaRecorder error: ' + (e?.name || e));
-        mediaRecorder.onstop = () => { try { recStream?.getTracks()?.forEach(t => t.stop()); } catch {} };
-        mediaRecorder.start(isIOS ? 500 : 1000);
-      } else {
-        currentFmt = { mime: 'wav-fallback', ext: 'wav', contentType: 'audio/wav' };
-        await wavFallbackStart(recStream);
-      }
-    } else {
-      await wavFallbackStart(recStream);
-    }
-
-    document.getElementById('recordBtn')?.setAttribute('disabled', 'true');
-    document.getElementById('stopBtn')?.removeAttribute('disabled');
-  } catch (err) {
-    console.error(err);
-    alert('Kunde inte starta inspelning. Kolla mikrofon-behörighet.');
+  function stopRec(){
+    if(stateEl.textContent!==STATE.REC && stateEl.textContent!==STATE.STOP) return;
+    setState(STATE.STOP); stopTick(); if(hard){ clearTimeout(hard); hard=null; }
+    log('4) Stoppar inspelning...'); try{ proc&&proc.disconnect(); src&&src.disconnect(); }catch(_){}
+    try{
+      log('5) Bygger WAV...');
+      var len=0; for(var i=0;i<bufs[0].length;i++) len+=bufs[0][i].length;
+      var inter=new Float32Array(len*chs), off=0;
+      for(var b=0;b<bufs[0].length;b++){ var L=bufs[0][b].length; for(var s=0;s<L;s++){ for(var c=0;c<chs;c++){ inter[(off+s)*chs+c]=bufs[c][b][s]; } } off+=L; }
+      var bytesPerSample=2, blockAlign=chs*bytesPerSample;
+      var ab=new ArrayBuffer(44 + inter.length*bytesPerSample), view=new DataView(ab);
+      function W(v,o,str){ for(var i=0;i<str.length;i++) v.setUint8(o+i, str.charCodeAt(i)); }
+      W(view,0,'RIFF'); view.setUint32(4,36+inter.length*bytesPerSample,true);
+      W(view,8,'WAVE'); W(view,12,'fmt ');
+      view.setUint32(16,16,true); view.setUint16(20,1,true);
+      view.setUint16(22,chs,true); view.setUint32(24,rate,true);
+      view.setUint32(28,rate*blockAlign,true); view.setUint16(32,blockAlign,true);
+      view.setUint16(34,16,true); W(view,36,'data');
+      view.setUint32(40,inter.length*bytesPerSample,true);
+      var idx=44; for(var k=0;k<inter.length;k++){ var s=Math.max(-1,Math.min(1,inter[k])); view.setInt16(idx, s<0?s*0x8000:s*0x7FFF, true); idx+=2; }
+      var blob=new Blob([view],{type:'audio/wav'});
+      log('WAV klar: ' + (blob.size/1024/1024).toFixed(2) + ' MB');
+      finish(blob,'wav');
+    }catch(err){ log('Packningsfel: '+err.message); }
+    try{ ac&&ac.close(); }catch(_){}
+    try{ stream&&stream.getTracks().forEach(function(t){ t.stop(); }); }catch(_){}
   }
-}
 
-// Stoppa & ladda upp
-async function stopRec() {
-  try {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      await new Promise(res => {
-        mediaRecorder.onstop = () => { try { recStream?.getTracks()?.forEach(t => t.stop()); } catch {} ; res(); };
-        mediaRecorder.stop();
+  async function finish(blob,ext){
+    setState(STATE.DONE);
+    var url = URL.createObjectURL(blob);
+    player.src = url; try{ player.load(); }catch(_){}
+    var name = 'kenai-'+ts()+'.'+ext;
+    dl.download = name; dl.href = url; dl.style.display='inline-block';
+    fnameEl.textContent = name; fsizeEl.textContent = (blob.size/1024/1024).toFixed(2)+' MB';
+
+    var publicUrl = await uploadSupabase(blob, name);
+    if(publicUrl){
+      share.href = publicUrl; share.style.display='inline-block';
+      copyBtn.style.display='inline-block';
+      copyBtn.onclick = async function(){
+        try{ await navigator.clipboard.writeText(publicUrl); log('Länk kopierad'); }
+        catch(e){ log('Kunde inte kopiera: ' + e.message); }
+      };
+    }
+    log('Klar - tryck Play om den inte startar själv.');
+  }
+
+  async function uploadSupabase(blob, name){
+    try{
+      if(!SUPABASE_URL.startsWith('https') || SUPABASE_ANON.length < 20){
+        log('Supabase ej konfigurerad - hoppar över upload.'); return null;
+      }
+      var endpoint = SUPABASE_URL.replace(/\/$/, '') + '/storage/v1/object/' +
+        encodeURIComponent(SUPABASE_BUCKET) + '/' + SUPABASE_PATH + '/' + encodeURIComponent(name);
+      var res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Authorization':'Bearer '+SUPABASE_ANON, 'Content-Type':'audio/wav', 'x-upsert':'true' },
+        body: blob
       });
-    } else {
-      await wavFallbackStop();
-      try { recStream?.getTracks()?.forEach(t => t.stop()); } catch {}
-    }
-
-    const blob = (currentFmt.mime === 'wav-fallback')
-      ? wavFallbackGetBlob()
-      : new Blob(chunks, { type: currentFmt.contentType });
-
-    const ts = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `review-${ts}.${currentFmt.ext}`;
-
-    await uploadToSupabase(blob, filename, currentFmt.contentType);
-
-    document.getElementById('recordBtn')?.removeAttribute('disabled');
-    document.getElementById('stopBtn')?.setAttribute('disabled', 'true');
-    chunks = [];
-    alert('Uppladdad ✅');
-  } catch (err) {
-    console.error(err);
-    alert('Kunde inte stoppa/lagra inspelningen.');
+      if(!res.ok){ var txt=await res.text(); throw new Error('Upload misslyckades: '+res.status+' '+txt); }
+      log('Uppladdning klar till Supabase');
+      return SUPABASE_URL.replace(/\/$/, '') + '/storage/v1/object/public/' + SUPABASE_BUCKET + '/' + SUPABASE_PATH + '/' + name;
+    }catch(err){ log('Supabase-fel: '+err.message); return null; }
   }
-}
 
-// Ladda upp till Supabase (bucket: audio, path: audio/reviews/)
-async function uploadToSupabase(blob, filename, contentType) {
-  const path = `audio/reviews/${filename}`;
-  const { error } = await sb.storage.from('audio').upload(path, blob, { upsert: true, contentType });
-  if (error) throw error;
-}
+  function ts(){ var d=new Date(),p=function(n){return ('0'+n).slice(-2)}; return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds()); }
 
-// ------ WAV fallback (WebAudio) ------
-let wavCtx = null, wavSource = null, wavProcessor = null;
-let wavBuffers = [];
-let wavSampleRate = 48000;
+  // listeners (extern fil => inga inline handlers behövs)
+  startBtn.addEventListener('click', startRec);
+  stopBtn .addEventListener('click', stopRec);
 
-async function wavFallbackStart(stream) {
-  const Ctx = window.AudioContext || window.webkitAudioContext;
-  wavCtx = new Ctx({ sampleRate: wavSampleRate });
-  wavSource = wavCtx.createMediaStreamSource(stream);
-  wavProcessor = wavCtx.createScriptProcessor(4096, 1, 1);
-  wavBuffers = [];
-  wavProcessor.onaudioprocess = (e) => {
-    const input = e.inputBuffer.getChannelData(0);
-    wavBuffers.push(new Float32Array(input));
-  };
-  wavSource.connect(wavProcessor);
-  wavProcessor.connect(wavCtx.destination);
-}
-
-async function wavFallbackStop() {
-  if (!wavCtx) return;
-  try { wavProcessor.disconnect(); wavSource.disconnect(); } catch {}
-  await wavCtx.close();
-}
-
-function wavFallbackGetBlob() {
-  const length = wavBuffers.reduce((a, c) => a + c.length, 0);
-  const pcm = new Float32Array(length);
-  let off = 0; for (const b of wavBuffers) { pcm.set(b, off); off += b.length; }
-  const buf = encodeWAV(pcm, wavSampleRate);
-  return new Blob([buf], { type: 'audio/wav' });
-}
-
-function encodeWAV(samples, sampleRate) {
-  const bytesPerSample = 2, blockAlign = 1 * bytesPerSample;
-  const buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
-  const view = new DataView(buffer);
-  writeString(view, 0, 'RIFF');
-  view.setUint32(4, 36 + samples.length * bytesPerSample, true);
-  writeString(view, 8, 'WAVE');
-  writeString(view, 12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * blockAlign, true);
-  view.setUint16(32, blockAlign, true);
-  view.setUint16(34, 16, true);
-  writeString(view, 36, 'data');
-  view.setUint32(40, samples.length * bytesPerSample, true);
-  floatTo16BitPCM(view, 44, samples);
-  return view;
-}
-
-function floatTo16BitPCM(view, offset, input) {
-  for (let i = 0; i < input.length; i++, offset += 2) {
-    const s = Math.max(-1, Math.min(1, input[i]));
-    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-  }
-}
-function writeString(view, offset, str) {
-  for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-}
-
-// Exponera till HTML-knapparna
-window.startRec = startRec;
-window.stopRec  = stopRec;
+  // global fel -> lås upp knapparna
+  window.addEventListener('error', function(e){
+    setState(STATE.IDLE); log('JS-fel: '+e.message);
+    startBtn.disabled=false; stopBtn.disabled=true;
+  });
+})();
