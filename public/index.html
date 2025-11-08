@@ -104,4 +104,70 @@
         log('Mikrofon OK'); startTick();
 
         var AC=window.AudioContext||window.webkitAudioContext;
-        ac=new AC({sampleRate:44100}); log('2) A
+        ac=new AC({sampleRate:44100}); log('2) AudioContext '+ac.sampleRate+' Hz');
+        rate=ac.sampleRate; src=ac.createMediaStreamSource(stream);
+        chs=1; proc=ac.createScriptProcessor(4096,chs,chs);
+        bufs=[]; for(var c=0;c<chs;c++) bufs[c]=[];
+        proc.onaudioprocess=function(e){ for(var c=0;c<chs;c++){ bufs[c].push(new Float32Array(e.inputBuffer.getChannelData(c))); } };
+        src.connect(proc); proc.connect(ac.destination);
+        log('3) Spelar in ...');
+        codecEl.textContent='WAV-fallback'; mimeEl.textContent='audio/wav';
+        fnameEl.textContent='-'; fsizeEl.textContent='-'; dl.style.display='none'; player.src='';
+        if(hard) clearTimeout(hard); hard=setTimeout(function(){ log('Auto-stop (hard)'); stopRec(); }, MAX_MS+600);
+      }catch(e){ setState(STATE.IDLE); stopTick(); log('Fel: '+e.message); }
+    }
+
+    function stopRec(){
+      if(stateEl.textContent!==STATE.REC && stateEl.textContent!==STATE.STOP) return;
+      setState(STATE.STOP); stopTick(); if(hard){ clearTimeout(hard); hard=null; }
+      log('4) Stoppar inspelning...');
+      try{ proc&&proc.disconnect(); src&&src.disconnect(); }catch(_){}
+      try{
+        log('5) Bygger WAV...');
+        var len=0; for(var i=0;i<bufs[0].length;i++) len+=bufs[0][i].length;
+        var inter=new Float32Array(len*chs), off=0;
+        for(var b=0;b<bufs[0].length;b++){ var L=bufs[0][b].length;
+          for(var s=0;s<L;s++){ for(var c=0;c<chs;c++){ inter[(off+s)*chs+c]=bufs[c][b][s]; } }
+          off+=L;
+        }
+        var bytesPerSample=2, blockAlign=chs*bytesPerSample;
+        var ab=new ArrayBuffer(44+inter.length*bytesPerSample), view=new DataView(ab);
+        function W(v,o,str){ for(var i=0;i<str.length;i++) v.setUint8(o+i,str.charCodeAt(i)); }
+        W(view,0,'RIFF'); view.setUint32(4,36+inter.length*bytesPerSample,true);
+        W(view,8,'WAVE'); W(view,12,'fmt '); view.setUint32(16,16,true); view.setUint16(20,1,true);
+        view.setUint16(22,chs,true); view.setUint32(24,rate,true);
+        view.setUint32(28,rate*blockAlign,true); view.setUint16(32,blockAlign,true);
+        view.setUint16(34,16,true); W(view,36,'data'); view.setUint32(40,inter.length*bytesPerSample,true);
+        var idx=44; for(var k=0;k<inter.length;k++){ var sVal=Math.max(-1,Math.min(1,inter[k])); view.setInt16(idx, sVal<0?sVal*0x8000:sVal*0x7FFF, true); idx+=2; }
+        var blob=new Blob([view],{type:'audio/wav'});
+        log('WAV klar: '+(blob.size/1024/1024).toFixed(2)+' MB'); finish(blob,'wav');
+      }catch(err){ log('Packningsfel: '+err.message); }
+      try{ ac&&ac.close(); }catch(_){}
+      try{ stream&&stream.getTracks().forEach(function(t){ t.stop(); }); }catch(_){}
+    }
+
+    function finish(blob,ext){
+      setState(STATE.DONE);
+      var url=URL.createObjectURL(blob);
+      player.src=url; try{ player.load(); }catch(_){}
+      var name='kenai-'+ts()+'.'+ext;
+      dl.download=name; dl.href=url; dl.style.display='inline-block';
+      fnameEl.textContent=name; fsizeEl.textContent=(blob.size/1024/1024).toFixed(2)+' MB';
+      log('Klar – tryck Play om den inte startar själv.');
+    }
+
+    function ts(){ var d=new Date(),p=function(n){return ('0'+n).slice(-2)}; return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds()); }
+
+    // bind + globala fallbacks
+    startBtn.addEventListener('click',startRec);
+    stopBtn .addEventListener('click',stopRec);
+    window.__start=startRec; window.__stop=stopRec;
+
+    // init
+    console.log('single-file recorder loaded');
+    statusEl.textContent='Klar. (Single-file laddad)';
+    setState(STATE.IDLE);
+  })();
+  </script>
+</body>
+</html>
