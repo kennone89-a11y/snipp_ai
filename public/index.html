@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Kenai – Recorder (Single-File + Supabase)</title>
 
-  <!-- Fyll i dina riktiga värden här -->
-  <meta name="supabase-url"  content=" https://hywwzzzxgagqhlxooekz.supabase.co;>
-  <meta name="sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';>
+  <!-- BYT TILL DINA RIKTIGA SUPABASE-VÄRDEN -->
+  <meta name="supabase-url"  content="https://hywwzzzxgagqhlxooekz.supabase.co;>
+  <meta name="supabase-anon" content="sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';>
 </head>
 <body>
   <div class="wrap">
@@ -149,7 +149,7 @@ a.action{display:inline-block;margin-top:10px;color:#fff;text-decoration:none;bo
       }
     }
 
-    // ===== Test-knapp: ladda upp ping.txt =====
+    // ===== Testknapp: ladda upp ping.txt =====
     async function testSupabase(){
       log('Testar Supabase-upload...');
       var blob = new Blob([ 'ping ' + new Date().toISOString() ], { type:'text/plain' });
@@ -157,7 +157,7 @@ a.action{display:inline-block;margin-top:10px;color:#fff;text-decoration:none;bo
       var url  = await uploadSupabase(blob, name);
       if(url){
         share.href = url; share.style.display='inline-block';
-        copyBtn.style.display='inline-block';
+        copyBtn.style.display = 'inline-block';
         copyBtn.onclick = async function(){
           try{ await navigator.clipboard.writeText(url); log('Länk kopierad.'); }
           catch(e){ log('Kunde inte kopiera: ' + e.message); }
