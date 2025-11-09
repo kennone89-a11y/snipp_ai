@@ -1,28 +1,47 @@
 <!doctype html>
 <html lang="sv">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kenai – Recorder (Single-File + Supabase)</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kenai – Recorder (WAV + Supabase)</title>
 
-  <!-- BYT TILL DINA RIKTIGA SUPABASE-VÄRDEN -->
-  <meta name="supabase-url"  content="https://hywwzzzxgagqhlxooekz.supabase.co;>
+  <!-- FYLL I DINA TVÅ VÄRDEN -->
+  <meta name="supabase-url" content="https://hywwzzzxgagqhlxooekz.supabase.co;>
   <meta name="supabase-anon" content="sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';>
+
+  <style>
+    :root{--bg:#0b0f14;--card:#111723;--muted:#8aa0b6;--text:#e6eef7;--ok:#29bf12;--err:#ff006e}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto}
+    .wrap{max-width:880px;margin:32px auto;padding:20px}
+    .card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    h1{margin:0 0 8px}
+    p.muted{color:var(--muted);margin:4px 0 16px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    button{appearance:none;border:none;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}
+    #startBtn{background:#22ff7f;color:#001}
+    #stopBtn{background:#ff2f6e;color:#fff}
+    #shareBtn{background:#4aa8ff;color:#001}
+    #stopBtn[disabled],#startBtn[disabled],#shareBtn[disabled]{opacity:.45;cursor:not-allowed}
+    select{background:#0a0e14;color:#e6eef7;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:8px}
+    .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;margin:10px 0 4px}
+    #codec,#mime,#name,#size,#dur{color:#9ec3ff}
+    small#status{display:block;white-space:pre-wrap;background:#0a0e14;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;margin-top:10px}
+    audio{width:100%;margin-top:12px}
+    a.action{display:inline-block;margin-top:10px;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.2);padding:8px 12px;border-radius:12px}
+  </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
       <h1>Kenai – Recorder</h1>
-      <p class="muted">WAV-only, 44.1 kHz mono, auto-stop. Allt i denna filen för maximal stabilitet.</p>
+      <p class="muted">WAV-only, 44.1 kHz mono, auto-stop. Supabase-upload → delbar länk.</p>
 
       <div class="row">
-        <button id="startBtn" onclick="window.__start && __start()">Starta inspelning</button>
-        <button id="stopBtn"  onclick="window.__stop  && __stop()" disabled>Stoppa</button>
-        <button id="testBtn"  style="background:#2a7fff;color:#fff">Testa Supabase</button>
-        <span id="dot" style="margin-left:8px">status: idle</span>
-      </div>
+        <button id="startBtn">Starta inspelning</button>
+        <button id="stopBtn" disabled>Stoppa</button>
+        <button id="shareBtn" disabled>Dela (upload)</button>
 
-      <div class="controls">
         <label for="maxlen">Maxlängd:</label>
         <select id="maxlen">
           <option value="30000">00:30</option>
@@ -35,19 +54,20 @@
 
       <div class="kv">
         <b>Tillstånd:</b><span id="state">idle</span>
-        <b>Codec:</b><span id="codec">-</span>
-        <b>MIME:</b><span id="mime">-</span>
-        <b>Filnamn:</b><span id="fname">-</span>
-        <b>Storlek:</b><span id="fsize">-</span>
+        <b>Codec:</b><span id="codec">WAV-fallback</span>
+        <b>MIME:</b><span id="mime">audio/wav</span>
+        <b>Filnamn:</b><span id="name">–</span>
+        <b>Storlek:</b><span id="size">–</span>
         <b>Varaktighet:</b><span id="dur">00:00</span>
         <b>UA:</b><span id="ua"></span>
       </div>
 
-      <small id="status">Klar. Tryck Starta för att begära mikrofonåtkomst.</small>
+      <small id="status">Klar. Tryck Starta för att begära mikrofontillstånd.</small>
       <audio id="player" controls></audio>
-      <div>
+
+      <div id="dlbox" style="margin-top:8px">
         <a id="dl" class="action" download style="display:none">Ladda ner</a>
-        <a id="share" class="action" target="_blank" rel="noopener" style="display:none">Öppna fil</a>
+        <a id="open" class="action" target="_blank" rel="noopener" style="display:none">Öppna fil</a>
         <a id="copy" class="action" href="javascript:void(0)" style="display:none">Kopiera länk</a>
       </div>
     </div>
@@ -57,201 +77,198 @@
   (function(){
     'use strict';
 
-    // ===== Inject CSS via JS (garanterar stil) =====
-    var __css = `
-:root{--bg:#0b0f14;--card:#111723;--muted:#8aa0b6;--text:#e6eef7;--ok:#29bf12;--err:#ff006e}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto}
-.wrap{max-width:860px;margin:32px auto;padding:20px}
-.card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-h1{margin:0 0 8px}
-p.muted{color:var(--muted);margin:4px 0 16px}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-button{appearance:none;border:0;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}
-#startBtn{background:var(--ok);color:#000}
-#stopBtn{background:var(--err);color:#fff}
-#stopBtn[disabled],#startBtn[disabled]{opacity:.45;cursor:not-allowed}
-.controls{display:flex;gap:10px;align-items:center;margin:8px 0 4px}
-select{background:#0a0e14;color:#e6eef7;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:8px}
-.kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;margin:10px 0 4px}
-.kv b{color:#9ec3ff}
-small#status{display:block;white-space:pre-wrap;background:#0a0e14;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;margin-top:10px;min-height:54px;color:var(--muted)}
-audio{width:100%;margin-top:12px}
-a.action{display:inline-block;margin-top:10px;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.2);padding:8px 12px;border-radius:12px}
-    `;
-    var __s = document.createElement('style'); __s.textContent = __css; document.head.appendChild(__s);
+    // ====== Supabase config (läser från <meta>) ======
+    const SUPABASE_URL  = document.querySelector('meta[name="supabase-url"]')?.content?.trim() || '';
+    const SUPABASE_ANON = document.querySelector('meta[name="supabase-anon"]')?.content?.trim() || '';
+    const SUPABASE_BUCKET = 'audio';
+    const SUPABASE_PATH   = 'reviews';
 
-    // ===== Supabase (från <meta>) =====
-    var SUPABASE_URL  = (document.querySelector('meta[name="supabase-url"]')  || {}).content || '';
-    var SUPABASE_ANON = (document.querySelector('meta[name="supabase-anon"]') || {}).content || '';
-    var SUPABASE_BUCKET = 'audio';
-    var SUPABASE_PATH   = 'reviews';
+    // ====== refs ======
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn  = document.getElementById('stopBtn');
+    const shareBtn = document.getElementById('shareBtn');
+    const maxSel   = document.getElementById('maxlen');
+    const stateEl  = document.getElementById('state');
+    const codecEl  = document.getElementById('codec');
+    const mimeEl   = document.getElementById('mime');
+    const nameEl   = document.getElementById('name');
+    const sizeEl   = document.getElementById('size');
+    const durEl    = document.getElementById('dur');
+    const statusEl = document.getElementById('status');
+    const player   = document.getElementById('player');
+    const dl       = document.getElementById('dl');
+    const openA    = document.getElementById('open');
+    const copyA    = document.getElementById('copy');
+    document.getElementById('ua').textContent = navigator.userAgent;
 
-    // ===== refs =====
-    var startBtn=document.getElementById('startBtn');
-    var stopBtn =document.getElementById('stopBtn');
-    var testBtn =document.getElementById('testBtn');
-    var maxSel  =document.getElementById('maxlen');
-    var stateEl =document.getElementById('state');
-    var codecEl =document.getElementById('codec');
-    var mimeEl  =document.getElementById('mime');
-    var fnameEl =document.getElementById('fname');
-    var fsizeEl =document.getElementById('fsize');
-    var durEl   =document.getElementById('dur');
-    var statusEl=document.getElementById('status');
-    var player  =document.getElementById('player');
-    var dl      =document.getElementById('dl');
-    var share   =document.getElementById('share');
-    var copyBtn =document.getElementById('copy');
-    var dot     =document.getElementById('dot');
-    var uaEl    =document.getElementById('ua'); uaEl.textContent=navigator.userAgent;
+    // ====== state ======
+    const S = { IDLE:'idle', REC:'recording', STOP:'stopping', DONE:'done' };
+    let STATE=S.IDLE, startedAt=0, tick=null, maxMs=+maxSel.value;
+    let ac=null, stream=null, proc=null, bufs=[], chs=1, rate=44100;
+    let lastBlob=null, lastName='';
 
-    // ===== state =====
-    var STATE={IDLE:'idle',REC:'recording',STOP:'stopping',DONE:'done'};
-    var startedAt=0,tick=null,hard=null,MAX_MS=+maxSel.value;
-    var stream=null,ac=null,src=null,proc=null,bufs=[],chs=1,rate=44100;
+    function setState(s){
+      STATE=s; stateEl.textContent=s;
+      stopBtn.disabled = (s!==S.REC);
+      startBtn.disabled= (s!==S.IDLE);
+      shareBtn.disabled= !(s===S.DONE);
+    }
+    function log(t){ statusEl.textContent += (statusEl.textContent?'\n':'') + t; statusEl.scrollTop = statusEl.scrollHeight; }
+    function ts(ms){ const s=Math.floor(ms/1000), m=('0'+Math.floor(s/60)).slice(-2), ss=('0'+(s%60)).slice(-2); return m+':'+ss; }
 
-    function log(m){ statusEl.textContent=(statusEl.textContent?statusEl.textContent+'\n':'')+m; }
-    function setState(s){ stateEl.textContent=s; dot.textContent='status: '+s; startBtn.disabled=(s!==STATE.IDLE); stopBtn.disabled=(s!==STATE.REC); }
-    function tstr(ms){ var s=(ms/1000|0),m=('0'+(s/60|0)).slice(-2); return m+':'+('0'+(s%60)).slice(-2); }
-    function startTick(){ startedAt=performance.now(); stopTick(); tick=setInterval(function(){ var e=performance.now()-startedAt; durEl.textContent=tstr(e); if(e>=MAX_MS){ log('Auto-stop'); stopRec(); } },250); }
-    function stopTick(){ if(tick){ clearInterval(tick); tick=null; } }
-    maxSel.onchange=function(){ MAX_MS=+maxSel.value; };
-
-    // ===== Supabase helper =====
-    async function uploadSupabase(blob, name){
-      try{
-        if(!SUPABASE_URL.startsWith('https') || SUPABASE_ANON.length < 20){
-          log('Supabase ej konfigurerad – hoppar över upload.');
-          return null;
-        }
-        var endpoint = SUPABASE_URL.replace(/\/$/,'') + '/storage/v1/object/' +
-                       encodeURIComponent(SUPABASE_BUCKET) + '/' + SUPABASE_PATH + '/' + encodeURIComponent(name);
-        var res = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer ' + SUPABASE_ANON,
-            'Content-Type': 'application/octet-stream',
-            'x-upsert': 'true'
-          },
-          body: blob
-        });
-        if(!res.ok){
-          var txt=await res.text();
-          throw new Error('Upload misslyckades: ' + res.status + ' ' + txt);
-        }
-        log('Uppladdning klar till Supabase.');
-        return SUPABASE_URL.replace(/\/$/,'') + '/storage/v1/object/public/' +
-               SUPABASE_BUCKET + '/' + SUPABASE_PATH + '/' + name;
-      }catch(err){
-        log('Supabase-fel: ' + err.message);
-        return null;
+    // ====== WAV utils ======
+    function interleave(buffers, len){
+      const out = new Float32Array(len);
+      let off=0; for(const b of buffers){ out.set(b, off); off+=b.length; }
+      return out;
+    }
+    function floatTo16BitPCM(input){
+      const out = new DataView(new ArrayBuffer(input.length*2));
+      let offset=0;
+      for(let i=0;i<input.length;i++){
+        let s = Math.max(-1, Math.min(1, input[i]));
+        out.setInt16(offset, s<0 ? s*0x8000 : s*0x7FFF, true);
+        offset+=2;
       }
+      return out;
+    }
+    function writeWav(samples, sampleRate){
+      const numFrames=samples.length, blockAlign=chs*2, byteRate=sampleRate*blockAlign;
+      const buffer = new ArrayBuffer(44 + numFrames*2);
+      const view   = new DataView(buffer);
+      function wStr(o,s){ for(let i=0;i<s.length;i++) view.setUint8(o+i, s.charCodeAt(i)); }
+      let o=0;
+      wStr(o,'RIFF'); o+=4;
+      view.setUint32(o, 36 + numFrames*2, true); o+=4;
+      wStr(o,'WAVE'); o+=4;
+      wStr(o,'fmt '); o+=4;
+      view.setUint32(o, 16, true); o+=4;           // PCM chunk length
+      view.setUint16(o, 1, true); o+=2;            // PCM
+      view.setUint16(o, chs, true); o+=2;
+      view.setUint32(o, sampleRate, true); o+=4;
+      view.setUint32(o, byteRate, true); o+=4;
+      view.setUint16(o, blockAlign, true); o+=2;
+      view.setUint16(o, 16, true); o+=2;           // bits/sample
+      wStr(o,'data'); o+=4;
+      view.setUint32(o, numFrames*2, true); o+=4;
+      const pcm = floatTo16BitPCM(samples);
+      // copy PCM after header
+      new Uint8Array(buffer, 44).set(new Uint8Array(pcm.buffer));
+      return new Blob([buffer], {type:'audio/wav'});
     }
 
-    // ===== Testknapp: ladda upp ping.txt =====
-    async function testSupabase(){
-      log('Testar Supabase-upload...');
-      var blob = new Blob([ 'ping ' + new Date().toISOString() ], { type:'text/plain' });
-      var name = 'test-' + Date.now() + '.txt';
-      var url  = await uploadSupabase(blob, name);
-      if(url){
-        share.href = url; share.style.display='inline-block';
-        copyBtn.style.display = 'inline-block';
-        copyBtn.onclick = async function(){
-          try{ await navigator.clipboard.writeText(url); log('Länk kopierad.'); }
-          catch(e){ log('Kunde inte kopiera: ' + e.message); }
-        };
-        log('TEST OK – filen är publik.');
-      }else{
-        log('TEST FAIL – se felraden ovan.');
-      }
-    }
-
-    // ===== Recorder (WAV 44.1 kHz mono) =====
+    // ====== recorder ======
     async function startRec(){
       try{
-        setState(STATE.REC);
-        statusEl.textContent='1) Begär mikrofon...';
-        stream=await navigator.mediaDevices.getUserMedia({audio:true});
-        log('Mikrofon OK'); startTick();
-
-        var AC=window.AudioContext||window.webkitAudioContext;
-        ac=new AC({sampleRate:44100}); log('2) AudioContext '+ac.sampleRate+' Hz');
-        rate=ac.sampleRate; src=ac.createMediaStreamSource(stream);
-        chs=1; proc=ac.createScriptProcessor(4096,chs,chs);
-        bufs=[]; for(var c=0;c<chs;c++) bufs[c]=[];
-        proc.onaudioprocess=function(e){ for(var c=0;c<chs;c++){ bufs[c].push(new Float32Array(e.inputBuffer.getChannelData(c))); } };
+        statusEl.textContent = 'Begär mikrofon...';
+        stream = await navigator.mediaDevices.getUserMedia({audio:true});
+        statusEl.textContent = 'Mikrofon OK\nSkapar AudioContext...';
+        ac = new (window.AudioContext || window.webkitAudioContext)({sampleRate:44100});
+        rate = ac.sampleRate; // iOS → 44100
+        const src = ac.createMediaStreamSource(stream);
+        proc = ac.createScriptProcessor(4096, chs, chs);
+        proc.onaudioprocess = (e)=>{
+          const ch0 = e.inputBuffer.getChannelData(0);
+          bufs.push(new Float32Array(ch0));
+        };
         src.connect(proc); proc.connect(ac.destination);
-        log('3) Spelar in ...');
-        codecEl.textContent='WAV-fallback'; mimeEl.textContent='audio/wav';
-        fnameEl.textContent='-'; fsizeEl.textContent='-'; dl.style.display='none'; player.src='';
-        if(hard) clearTimeout(hard); hard=setTimeout(function(){ log('Auto-stop (hard)'); stopRec(); }, MAX_MS+600);
-      }catch(e){ setState(STATE.IDLE); stopTick(); log('Fel: '+e.message); }
+        bufs = []; startedAt = performance.now();
+        setState(S.REC);
+        statusEl.textContent = 'Spelar in...';
+        tick = setInterval(()=>{
+          durEl.textContent = ts(performance.now()-startedAt);
+          if(performance.now()-startedAt >= maxMs){ stopRec(); }
+        }, 200);
+      }catch(err){
+        log('Fel: ' + err.message);
+        setState(S.IDLE);
+      }
     }
 
-    function stopRec(){
-      if(stateEl.textContent!==STATE.REC && stateEl.textContent!==STATE.STOP) return;
-      setState(STATE.STOP); stopTick(); if(hard){ clearTimeout(hard); hard=null; }
-      log('4) Stoppar inspelning...');
-      try{ proc&&proc.disconnect(); src&&src.disconnect(); }catch(_){}
+    async function stopRec(){
+      if(STATE!==S.REC) return;
+      setState(S.STOP);
+      clearInterval(tick);
+      statusEl.textContent = 'Stoppar inspelning...';
+
       try{
-        log('5) Bygger WAV...');
-        var len=0; for(var i=0;i<bufs[0].length;i++) len+=bufs[0][i].length;
-        var inter=new Float32Array(len*chs), off=0;
-        for(var b=0;b<bufs[0].length;b++){ var L=bufs[0][b].length;
-          for(var s=0;s<L;s++){ for(var c=0;c<chs;c++){ inter[(off+s)*chs+c]=bufs[c][b][s]; } }
-          off+=L;
-        }
-        var bytesPerSample=2, blockAlign=chs*bytesPerSample;
-        var ab=new ArrayBuffer(44+inter.length*bytesPerSample), view=new DataView(ab);
-        function W(v,o,str){ for(var i=0;i<str.length;i++) v.setUint8(o+i,str.charCodeAt(i)); }
-        W(view,0,'RIFF'); view.setUint32(4,36+inter.length*bytesPerSample,true);
-        W(view,8,'WAVE'); W(view,12,'fmt '); view.setUint32(16,16,true); view.setUint16(20,1,true);
-        view.setUint16(22,chs,true); view.setUint32(24,rate,true);
-        view.setUint32(28,rate*blockAlign,true); view.setUint16(32,blockAlign,true);
-        view.setUint16(34,16,true); W(view,36,'data'); view.setUint32(40,inter.length*bytesPerSample,true);
-        var idx=44; for(var k=0;k<inter.length;k++){ var sVal=Math.max(-1,Math.min(1,inter[k])); view.setInt16(idx, sVal<0?sVal*0x8000:sVal*0x7FFF, true); idx+=2; }
-        var blob=new Blob([view],{type:'audio/wav'});
-        log('WAV klar: '+(blob.size/1024/1024).toFixed(2)+' MB'); finish(blob,'wav');
-      }catch(err){ log('Packningsfel: '+err.message); }
-      try{ ac&&ac.close(); }catch(_){}
-      try{ stream&&stream.getTracks().forEach(function(t){ t.stop(); }); }catch(_){}
+        proc && proc.disconnect(); proc=null;
+        ac   && ac.close(); ac=null;
+        stream && stream.getTracks().forEach(t=>t.stop());
+
+        const samples = interleave(bufs, bufs.reduce((a,b)=>a+b.length,0));
+        const wav = writeWav(samples, 44100);
+        lastBlob = wav;
+
+        const name = 'kenai-'+new Date().toISOString().replace(/[-:T.Z]/g,'').slice(0,14)+'.wav';
+        lastName = name;
+
+        player.src = URL.createObjectURL(wav);
+        player.load(); player.play().catch(()=>{});
+        dl.download = name; dl.href = player.src; dl.style.display='inline-block';
+
+        nameEl.textContent = name;
+        sizeEl.textContent = (wav.size/1024/1024).toFixed(2) + ' MB';
+        durEl.textContent  = ts(performance.now()-startedAt);
+        setState(S.DONE);
+        log('WAV klar. Tryck “Dela” för att ladda upp.');
+      }catch(err){
+        log('Stop-fel: '+err.message);
+        setState(S.IDLE);
+      }
     }
 
-    function finish(blob,ext){
-      setState(STATE.DONE);
-      var url=URL.createObjectURL(blob);
-      player.src=url; try{ player.load(); }catch(_){}
-      var name='kenai-'+ts()+'.'+ext;
-      dl.download=name; dl.href=url; dl.style.display='inline-block';
-      fnameEl.textContent=name; fsizeEl.textContent=(blob.size/1024/1024).toFixed(2)+' MB';
-
-      uploadSupabase(blob, name).then(function(publicUrl){
-        if(publicUrl){
-          share.href=publicUrl; share.style.display='inline-block';
-          copyBtn.style.display='inline-block';
-          copyBtn.onclick = async function(){
-            try{ await navigator.clipboard.writeText(publicUrl); log('Länk kopierad.'); }
-            catch(e){ log('Kunde inte kopiera: ' + e.message); }
-          };
-        }
-        log('Klar – tryck Play om den inte startar själv.');
+    // ====== Supabase upload ======
+    async function uploadSupabase(blob, name){
+      if(!SUPABASE_URL || SUPABASE_URL.indexOf('https://')!==0) throw new Error('Supabase URL saknas/fel.');
+      if(!SUPABASE_ANON || SUPABASE_ANON.length<20)           throw new Error('Supabase anon-key saknas/fel.');
+      const path = encodeURIComponent(SUPABASE_BUCKET) + '/' + encodeURIComponent(SUPABASE_PATH) + '/' + encodeURIComponent(name);
+      const endpoint = `${SUPABASE_URL}/storage/v1/object/${path}`;
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + SUPABASE_ANON,
+          'Content-Type': blob.type || 'application/octet-stream',
+          'x-upsert': 'true'
+        },
+        body: blob
       });
+      if(!res.ok){
+        const t = await res.text().catch(()=>String(res.status));
+        throw new Error('Upload misslyckades: '+res.status+' '+t);
+      }
+      // Public URL
+      return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${SUPABASE_PATH}/${name}`;
     }
 
-    function ts(){ var d=new Date(),p=function(n){return ('0'+n).slice(-2)}; return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds()); }
+    async function share(){
+      if(STATE!==S.DONE || !lastBlob){ log('Ingen fil att ladda upp.'); return; }
+      shareBtn.disabled = true;
+      log('Laddar upp till Supabase...');
+      try{
+        const url = await uploadSupabase(lastBlob, lastName);
+        openA.href = url;  openA.style.display='inline-block';
+        copyA.style.display='inline-block';
+        copyA.onclick = async ()=>{
+          try{ await navigator.clipboard.writeText(url); copyA.textContent='Länk kopierad!'; setTimeout(()=>copyA.textContent='Kopiera länk',1500);}catch(e){ alert(url); }
+        };
+        log('Upload klar ✅\n'+url);
+      }catch(err){
+        log('Supabase-fel: ' + err.message);
+      }finally{
+        shareBtn.disabled = false;
+      }
+    }
 
-    // bind + fallbacks
-    window.__start=startRec; window.__stop=stopRec;
-    startBtn.addEventListener('click',startRec);
-    stopBtn .addEventListener('click',stopRec);
-    testBtn .addEventListener('click',testSupabase);
+    // ====== wire up ======
+    startBtn.onclick = startRec;
+    stopBtn.onclick  = stopRec;
+    shareBtn.onclick = share;
+    maxSel.onchange  = e => { maxMs = +e.target.value; };
 
     // init
-    console.log('single-file recorder + meta-supabase loaded');
-    statusEl.textContent='Klar. (Single-file + meta-Supabase laddad)';
-    setState(STATE.IDLE);
+    document.getElementById('mime').textContent = 'audio/wav';
+    log('JS laddades (start)');
   })();
   </script>
 </body>
