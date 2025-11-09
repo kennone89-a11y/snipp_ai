@@ -3,33 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kenai – Recorder (Single-File + Supabase Test)</title>
+  <title>Kenai – Recorder (Single-File + Supabase)</title>
 
-  <!-- FYLL I DINA RIKTIGA VÄRDEN HÄR -->
+  <!-- Fyll i dina riktiga värden här -->
   <meta name="supabase-url"  content="https://hywwzzzxgagqhlxooekz.supabase.co;>
-  <meta name="supabase-anon" content="sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';>
-
-  <style>
-    :root{--bg:#0b0f14;--card:#111723;--muted:#8aa0b6;--text:#e6eef7;--ok:#29bf12;--err:#ff006e}
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto}
-    .wrap{max-width:860px;margin:32px auto;padding:20px}
-    .card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    h1{margin:0 0 8px}
-    p.muted{color:var(--muted);margin:4px 0 16px}
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    button{appearance:none;border:0;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}
-    #startBtn{background:var(--ok);color:#000}
-    #stopBtn{background:var(--err);color:#fff}
-    #stopBtn[disabled],#startBtn[disabled]{opacity:.45;cursor:not-allowed}
-    .controls{display:flex;gap:10px;align-items:center;margin:8px 0 4px}
-    select{background:#0a0e14;color:#e6eef7;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:8px}
-    .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;margin:10px 0 4px}
-    .kv b{color:#9ec3ff}
-    small#status{display:block;white-space:pre-wrap;background:#0a0e14;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;margin-top:10px;min-height:54px;color:var(--muted)}
-    audio{width:100%;margin-top:12px}
-    a.action{display:inline-block;margin-top:10px;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.2);padding:8px 12px;border-radius:12px}
-  </style>
+  <meta name="supabase-anon" content=" sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';>
 </head>
 <body>
   <div class="wrap">
@@ -79,7 +57,31 @@
   (function(){
     'use strict';
 
-    // ===== Supabase (säkert via <meta>) =====
+    // ===== Inject CSS via JS (garanterar stil) =====
+    var __css = `
+:root{--bg:#0b0f14;--card:#111723;--muted:#8aa0b6;--text:#e6eef7;--ok:#29bf12;--err:#ff006e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto}
+.wrap{max-width:860px;margin:32px auto;padding:20px}
+.card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+h1{margin:0 0 8px}
+p.muted{color:var(--muted);margin:4px 0 16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+button{appearance:none;border:0;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}
+#startBtn{background:var(--ok);color:#000}
+#stopBtn{background:var(--err);color:#fff}
+#stopBtn[disabled],#startBtn[disabled]{opacity:.45;cursor:not-allowed}
+.controls{display:flex;gap:10px;align-items:center;margin:8px 0 4px}
+select{background:#0a0e14;color:#e6eef7;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:8px}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;margin:10px 0 4px}
+.kv b{color:#9ec3ff}
+small#status{display:block;white-space:pre-wrap;background:#0a0e14;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;margin-top:10px;min-height:54px;color:var(--muted)}
+audio{width:100%;margin-top:12px}
+a.action{display:inline-block;margin-top:10px;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.2);padding:8px 12px;border-radius:12px}
+    `;
+    var __s = document.createElement('style'); __s.textContent = __css; document.head.appendChild(__s);
+
+    // ===== Supabase (från <meta>) =====
     var SUPABASE_URL  = (document.querySelector('meta[name="supabase-url"]')  || {}).content || '';
     var SUPABASE_ANON = (document.querySelector('meta[name="supabase-anon"]') || {}).content || '';
     var SUPABASE_BUCKET = 'audio';
@@ -225,7 +227,6 @@
       dl.download=name; dl.href=url; dl.style.display='inline-block';
       fnameEl.textContent=name; fsizeEl.textContent=(blob.size/1024/1024).toFixed(2)+' MB';
 
-      // Ladda upp inspelningen efter stop
       uploadSupabase(blob, name).then(function(publicUrl){
         if(publicUrl){
           share.href=publicUrl; share.style.display='inline-block';
