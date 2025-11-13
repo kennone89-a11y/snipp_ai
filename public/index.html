@@ -64,8 +64,18 @@
 
   <script>
   // ---- Supabase-konfig från <meta> ----
-  const SB_URL  = document.querySelector('meta[name="supabase-url"]').content.trim();
-  const SB_ANON = document.querySelector('meta[name="supabase-anon"]').content.trim();
+
+function getMeta(name){
+  const el = document.querySelector(`meta[name="${name}"]`);
+  return el ? el.content.trim() : "";
+}
+const SB_URL  = getMeta("supabase-url");
+const SB_ANON = getMeta("supabase-anon");
+if (!SB_URL || !SB_ANON) {
+  alert("Saknar Supabase-meta-taggar – öppna app.kenai.technology och hårdladda (Ctrl+F5).");
+  console.error("Missing meta tags:", { SB_URL, SB_ANON });
+}
+
   const BUCKET = "audio";
   const BASE_PATH = "reviews";
   const MAKE_PUBLIC = true; // false = signed URL istället
