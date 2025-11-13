@@ -3,8 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Kenai Recorder – SuperSafe v2</title>
-
+  <title>Kenai Recorder — SuperSafe v2</title>
   <style>
     :root { --bg:#0b0b0f; --card:#15151d; --text:#eef2ff; --muted:#aab; --ok:#4ade80; --warn:#fbbf24; --err:#fb7185; }
     body { margin:0; font-family:system-ui, Segoe UI, Roboto, sans-serif; background:var(--bg); color:var(--text); }
@@ -12,9 +11,9 @@
     .card { background:var(--card); border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.3); }
     h1 { margin:0 0 8px; font-size:24px; }
     .muted { color:var(--muted); }
-    .row { display:flex; gap:12px; flex-wrap:wrap; margin:14px 0; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; margin:14px 0; align-items:center; }
     button { appearance:none; border:0; border-radius:12px; padding:12px 16px; font-weight:600; cursor:pointer; }
-    .primary { background:#3b82f6; color:white; } .danger{ background:#ef4444; color:white; } .ghost{ background:transparent; color:var(--text); border:1px solid #2a2a38; }
+    .primary { background:#3b82f6; color:#fff; } .danger{ background:#ef4444; color:#fff; } .ghost{ background:transparent; color:var(--text); border:1px solid #2a2a38; }
     audio { width:100%; margin-top:12px; }
     .status { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px; white-space:pre-wrap; background:#101017; border:1px solid #2a2a38; border-radius:12px; padding:12px; margin-top:12px; }
     .ok { color:var(--ok); } .warn{ color:var(--warn);} .err{ color:var(--err); }
@@ -28,7 +27,7 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>Kenai Recorder – SuperSafe v2</h1>
+      <h1>Kenai Recorder — SuperSafe v2</h1>
       <div class="muted">WAV-only, 44.1 kHz mono, auto-stop, Supabase-upload med delbar länk.</div>
 
       <div class="row">
@@ -37,7 +36,7 @@
         <button id="btnDownload" class="ghost" disabled>Ladda ner WAV</button>
       </div>
 
-      <div class="row" style="align-items:center">
+      <div class="row">
         <label>Auto-stop (sek): <input id="autoSeconds" type="number" min="10" max="600" step="10" value="120"></label>
         <span class="pill">codec: wav @ 44.1k mono</span>
         <span class="pill" id="ua"></span>
@@ -56,77 +55,84 @@
       </div>
     </div>
   </div>
-<script>
-<script>
-// ===== Supabase (hardcoded) =====
-const SB_URL  = "https://hywwzzzxgagqhlxooekz.supabase.co"  // <-- BYT
-const SB_ANON = "<eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA" // <-- BYT
-const BUCKET = "audio";
-const BASE_PATH = "reviews";
-const MAKE_PUBLIC = true;
 
-// ===== UI refs =====
-const statusEl = document.getElementById("status");
-const player   = document.getElementById("player");
-const btnStart = document.getElementById("btnStart");
-const btnStop  = document.getElementById("btnStop");
-const btnDl    = document.getElementById("btnDownload");
-const uaEl     = document.getElementById("ua");
-uaEl.textContent = navigator.userAgent;
+  <script>
+  // EN (1) SCRIPT-TAG. Byt bara SB_URL och SB_ANON nedan.
+  // Supabase (hardcoded)
+  const SB_URL  = "https://hywwzzzxgagqhlxooekz.supabase.co       // BYT till din Project URL (utan ;)
+  const SB_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA      // BYT till din anon key (en rad, börjar med eyJ)
+  const BUCKET = "audio";
+  const BASE_PATH = "reviews";
+  const MAKE_PUBLIC = true;
 
-function log(msg, cls) {
-  statusEl.innerHTML = (cls ? "<span class='" + cls + "'>" + msg + "</span>" : msg) + "\n" + statusEl.innerHTML;
-}
+  // UI refs
+  const statusEl = document.getElementById("status");
+  const player   = document.getElementById("player");
+  const btnStart = document.getElementById("btnStart");
+  const btnStop  = document.getElementById("btnStop");
+  const btnDl    = document.getElementById("btnDownload");
+  const uaEl     = document.getElementById("ua");
+  uaEl.textContent = navigator.userAgent;
 
-// ===== WAV encoder (44.1k mono, 16-bit) =====
-function floatTo16BitPCM(float32){const out=new Int16Array(float32.length);for(let i=0;i<float32.length;i++){let s=Math.max(-1,Math.min(1,float32[i]));out[i]=s<0?s*0x8000:s*0x7FFF;}return out;}
-function writeWavHeader(view,sampleRate,numSamples){function wstr(o,s){for(let i=0;i<s.length;i++)view.setUint8(o+i,s.charCodeAt(i));}
-const numChannels=1,bitsPerSample=16,byteRate=sampleRate*numChannels*bitsPerSample/8,blockAlign=numChannels*bitsPerSample/8;
-wstr(0,"RIFF");view.setUint32(4,36+numSamples*2,true);wstr(8,"WAVE");wstr(12,"fmt ");view.setUint32(16,16,true);
-view.setUint16(20,1,true);view.setUint16(22,numChannels,true);view.setUint32(24,sampleRate,true);view.setUint32(28,byteRate,true);
-view.setUint16(32,blockAlign,true);view.setUint16(34,bitsPerSample,true);wstr(36,"data");view.setUint32(40,numSamples*2,true);}
-function encodeWav(chunks,sampleRate){const totalLen=chunks.reduce((a,c)=>a+c.length,0);const pcm=new Int16Array(totalLen);let off=0;
-for(const f32 of chunks){const s16=floatTo16BitPCM(f32);pcm.set(s16,off);off+=s16.length;}const buffer=new ArrayBuffer(44+pcm.length*2);
-const view=new DataView(buffer);writeWavHeader(view,sampleRate,pcm.length);let pos=44;for(let i=0;i<pcm.length;i++,pos+=2)view.setInt16(pos,pcm[i],true);
-return new Blob([view],{type:"audio/wav"});}
+  function log(msg, cls) {
+    statusEl.innerHTML = (cls ? "<span class='" + cls + "'>" + msg + "</span>" : msg) + "\n" + statusEl.innerHTML;
+  }
 
-// ===== Recorder =====
-let audioCtx,mediaStream,sourceNode,processor,recBuffer=[],recording=false,autoTimer=null;
-async function startRec(){if(recording)return;recBuffer=[];const autoSec=parseInt(document.getElementById("autoSeconds").value||"120",10);
-mediaStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false},video:false});
-audioCtx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:44100});sourceNode=audioCtx.createMediaStreamSource(mediaStream);
-processor=audioCtx.createScriptProcessor(4096,1,1);sourceNode.connect(processor);processor.connect(audioCtx.destination);
-processor.onaudioprocess=e=>{if(recording)recBuffer.push(new Float32Array(e.inputBuffer.getChannelData(0)));};
-recording=true;btnStart.disabled=true;btnStop.disabled=false;btnDl.disabled=true;log("Recording... auto-stop in "+autoSec+"s");autoTimer=setTimeout(stopRec,autoSec*1000);}
-async function stopRec(){if(!recording)return;recording=false;if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
-processor&&processor.disconnect();sourceNode&&sourceNode.disconnect();mediaStream&&mediaStream.getTracks().forEach(t=>t.stop());
-const wavBlob=encodeWav(recBuffer,44100);const fname="kenai-"+Date.now()+".wav";player.src=URL.createObjectURL(wavBlob);player.load();
-btnStart.disabled=false;btnStop.disabled=true;btnDl.disabled=false;btnDl.onclick=function(){const a=document.createElement("a");a.href=player.src;a.download=fname;a.click();};
-log("Done: "+fname+" • "+(wavBlob.size/1024/1024).toFixed(2)+" MB");try{const url=await uploadToSupabase(wavBlob,fname);if(url){
-document.getElementById("uploadArea").style.display="grid";document.getElementById("publicUrl").textContent=url;
-document.getElementById("btnOpen").onclick=function(){window.open(url,"_blank");};
-document.getElementById("btnCopy").onclick=async function(){await navigator.clipboard.writeText(url);log("Link copied.");};}}catch(e){log("Upload failed: "+e.message);}}
-btnStart.addEventListener("click",startRec);btnStop.addEventListener("click",stopRec);
+  // WAV encoder (44.1k mono, 16-bit)
+  function floatTo16BitPCM(float32){const out=new Int16Array(float32.length);for(let i=0;i<float32.length;i++){let s=Math.max(-1,Math.min(1,float32[i]));out[i]=s<0?s*0x8000:s*0x7FFF;}return out;}
+  function writeWavHeader(view,sampleRate,numSamples){function wstr(o,s){for(let i=0;i<s.length;i++)view.setUint8(o+i,s.charCodeAt(i));}
+    const numChannels=1,bitsPerSample=16,byteRate=sampleRate*numChannels*bitsPerSample/8,blockAlign=numChannels*bitsPerSample/8;
+    wstr(0,"RIFF");view.setUint32(4,36+numSamples*2,true);wstr(8,"WAVE");wstr(12,"fmt ");view.setUint32(16,16,true);
+    view.setUint16(20,1,true);view.setUint16(22,numChannels,true);view.setUint32(24,sampleRate,true);view.setUint32(28,byteRate,true);
+    view.setUint16(32,blockAlign,true);view.setUint16(34,bitsPerSample,true);wstr(36,"data");view.setUint32(40,numSamples*2,true);}
+  function encodeWav(chunks,sampleRate){const totalLen=chunks.reduce((a,c)=>a+c.length,0);const pcm=new Int16Array(totalLen);let off=0;
+    for(const f32 of chunks){const s16=floatTo16BitPCM(f32);pcm.set(s16,off);off+=s16.length;}const buffer=new ArrayBuffer(44+pcm.length*2);
+    const view=new DataView(buffer);writeWavHeader(view,sampleRate,pcm.length);let pos=44;for(let i=0;i<pcm.length;i++,pos+=2)view.setInt16(pos,pcm[i],true);
+    return new Blob([view],{type:"audio/wav"});}
 
-// ===== Supabase upload =====
-async function uploadToSupabase(blob,filename){
-  if(!SB_URL.startsWith("https"))throw new Error("Missing SUPABASE_URL");
-  if(!SB_ANON||SB_ANON.length<20)throw new Error("Missing SUPABASE_ANON");
-  const path=BASE_PATH+"/"+filename;
-  const res=await fetch(SB_URL+"/storage/v1/object/"+encodeURIComponent(BUCKET)+"/"+encodeURIComponent(path),{
-    method:"POST",
-    headers:{"Authorization":"Bearer "+SB_ANON,"apikey":SB_ANON,"x-upsert":"true","Content-Type":"audio/wav"},
-    body:blob
-  });
-  if(!res.ok){const t=await res.text();log("Supabase response: "+t);throw new Error("HTTP "+res.status);}
-  log("Uploaded: "+path);
-  if(MAKE_PUBLIC){return SB_URL+"/storage/v1/object/public/"+encodeURIComponent(BUCKET)+"/"+encodeURIComponent(path);}
-  const sign=await fetch(SB_URL+"/storage/v1/object/sign/"+encodeURIComponent(BUCKET)+"/"+encodeURIComponent(path),{
-    method:"POST",
-    headers:{"Authorization":"Bearer "+SB_ANON,"apikey":SB_ANON,"Content-Type":"application/json"},
-    body:JSON.stringify({expiresIn:5184000})
-  });
-  if(!sign.ok)throw new Error("Could not create signed URL");
-  const data=await sign.json();return SB_URL+data.signedURL;
-}
-</script>
+  // Recorder
+  let audioCtx,mediaStream,sourceNode,processor,recBuffer=[],recording=false,autoTimer=null;
+  async function startRec(){ if(recording) return; recBuffer=[]; const autoSec=parseInt(document.getElementById("autoSeconds").value||"120",10);
+    mediaStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false},video:false});
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:44100}); sourceNode=audioCtx.createMediaStreamSource(mediaStream);
+    processor=audioCtx.createScriptProcessor(4096,1,1); sourceNode.connect(processor); processor.connect(audioCtx.destination);
+    processor.onaudioprocess=e=>{ if(recording) recBuffer.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
+    recording=true; btnStart.disabled=true; btnStop.disabled=false; btnDl.disabled=true; log("Recording... auto-stop in "+autoSec+"s");
+    autoTimer=setTimeout(stopRec,autoSec*1000);}
+  async function stopRec(){ if(!recording) return; recording=false; if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
+    processor&&processor.disconnect(); sourceNode&&sourceNode.disconnect(); mediaStream&&mediaStream.getTracks().forEach(t=>t.stop());
+    const wavBlob=encodeWav(recBuffer,44100); const fname="kenai-"+Date.now()+".wav"; player.src=URL.createObjectURL(wavBlob); player.load();
+    btnStart.disabled=false; btnStop.disabled=true; btnDl.disabled=false;
+    btnDl.onclick=function(){const a=document.createElement("a"); a.href=player.src; a.download=fname; a.click();};
+    log("Done: "+fname+" • "+(wavBlob.size/1024/1024).toFixed(2)+" MB","ok");
+    try{ const url=await uploadToSupabase(wavBlob,fname);
+      if(url){ document.getElementById("uploadArea").style.display="grid"; document.getElementById("publicUrl").textContent=url;
+        document.getElementById("btnOpen").onclick=function(){window.open(url,"_blank");};
+        document.getElementById("btnCopy").onclick=async function(){await navigator.clipboard.writeText(url); log("Link copied.","ok");}; }
+    }catch(e){ log("Upload failed: "+e.message,"err"); } }
+  btnStart.addEventListener("click",startRec); btnStop.addEventListener("click",stopRec);
+
+  // Supabase upload
+  async function uploadToSupabase(blob,filename){
+    if(!SB_URL.startsWith("https")) throw new Error("Missing SUPABASE_URL");
+    if(!SB_ANON || SB_ANON.length<20) throw new Error("Missing SUPABASE_ANON");
+    const path=BASE_PATH+"/"+filename;
+    const res=await fetch(SB_URL+"/storage/v1/object/"+encodeURIComponent(BUCKET)+"/"+encodeURIComponent(path),{
+      method:"POST",
+      headers:{ "Authorization":"Bearer "+SB_ANON, "apikey":SB_ANON, "x-upsert":"true", "Content-Type":"audio/wav" },
+      body:blob
+    });
+    if(!res.ok){ const t=await res.text(); log("Supabase response: "+t,"err"); throw new Error("HTTP "+res.status); }
+    log("Uploaded: "+path,"ok");
+    if(MAKE_PUBLIC){ return SB_URL+"/storage/v1/object/public/"+encodeURIComponent(BUCKET)+"/"+encodeURIComponent(path); }
+    const sign=await fetch(SB_URL+"/storage/v1/object/sign/"+encodeURIComponent(BUCKET)+"/"+encodeURIComponent(path),{
+      method:"POST",
+      headers:{ "Authorization":"Bearer "+SB_ANON, "apikey":SB_ANON, "Content-Type":"application/json" },
+      body:JSON.stringify({expiresIn:5184000})
+    });
+    if(!sign.ok) throw new Error("Could not create signed URL");
+    const data=await sign.json(); return SB_URL+data.signedURL;
+  }
+  </script>
+</body>
+</html>
