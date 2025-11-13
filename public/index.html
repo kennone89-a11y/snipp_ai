@@ -67,160 +67,153 @@
 
 <script>
 // ---- Supabase-konfig (hårdkodad) ----
-const SB_URL  = "https://hywwzzzxgagqhlxooekz.supabase.co
-const SB_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA
+<script>
+// ---- Supabase-konfig (HÅRDKODAD) ----
+// BYT ENDAST TEXTEN INUTI CITATTECKNEN ↓↓
+const SB_URL  = "https://<DITT-PROJEKT-ID>.supabase.co";
+const SB_ANON = "eyJ...HELA_DIN_SUPERLÅNGA_ANON_KEY...";
+
 const BUCKET = "audio";
 const BASE_PATH = "reviews";
 const MAKE_PUBLIC = true; // false = signed URL istället
-</script>
- // false = signed URL istället
 
-  // ---- UI refs ----
-  const statusEl = document.getElementById('status');
-  const player   = document.getElementById('player');
-  const btnStart = document.getElementById('btnStart');
-  const btnStop  = document.getElementById('btnStop');
-  const btnDl    = document.getElementById('btnDownload');
-  const uaEl     = document.getElementById('ua');
-  uaEl.textContent = navigator.userAgent;
+// sanity-check i konsolen
+console.log("SB_URL ok?", SB_URL.startsWith("https://"));
+console.log("SB_ANON prefix/len:", SB_ANON.slice(0,3), SB_ANON.length);
 
-  function log(msg, cls) {
-    statusEl.innerHTML = (cls ? "<span class='"+cls+"'>"+msg+"</span>" : msg) + "\n" + statusEl.innerHTML;
+// ---- UI refs ----
+const statusEl = document.getElementById('status');
+const player   = document.getElementById('player');
+const btnStart = document.getElementById('btnStart');
+const btnStop  = document.getElementById('btnStop');
+const btnDl    = document.getElementById('btnDownload');
+const uaEl     = document.getElementById('ua');
+uaEl.textContent = navigator.userAgent;
+
+function log(msg, cls) {
+  statusEl.innerHTML = (cls ? "<span class='"+cls+"'>"+msg+"</span>" : msg) + "\n" + statusEl.innerHTML;
+}
+
+// ---- WAV encoder (44.1k mono, 16-bit) ----
+function floatTo16BitPCM(float32) {
+  const out = new Int16Array(float32.length);
+  for (let i=0;i<float32.length;i++) {
+    let s = Math.max(-1, Math.min(1, float32[i]));
+    out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
   }
+  return out;
+}
+function writeWavHeader(view, sampleRate, numSamples) {
+  function wstr(o,s){ for(let i=0;i<s.length;i++) view.setUint8(o+i, s.charCodeAt(i)); }
+  const numChannels=1, bitsPerSample=16;
+  const byteRate = sampleRate * numChannels * bitsPerSample/8;
+  const blockAlign = numChannels * bitsPerSample/8;
+  wstr(0,'RIFF'); view.setUint32(4, 36 + numSamples*2, true);
+  wstr(8,'WAVE'); wstr(12,'fmt '); view.setUint32(16,16,true);
+  view.setUint16(20,1,true); view.setUint16(22,numChannels,true);
+  view.setUint32(24,sampleRate,true); view.setUint32(28,byteRate,true);
+  view.setUint16(32,blockAlign,true); view.setUint16(34,bitsPerSample,true);
+  wstr(36,'data'); view.setUint32(40, numSamples*2, true);
+}
+function encodeWav(chunks, sampleRate) {
+  const totalLen = chunks.reduce((a,c)=>a+c.length,0);
+  const pcm = new Int16Array(totalLen);
+  let off = 0;
+  for (const f32 of chunks) { const s16 = floatTo16BitPCM(f32); pcm.set(s16, off); off += s16.length; }
+  const buffer = new ArrayBuffer(44 + pcm.length*2);
+  const view = new DataView(buffer);
+  writeWavHeader(view, sampleRate, pcm.length);
+  let pos = 44;
+  for (let i=0;i<pcm.length;i++,pos+=2) view.setInt16(pos, pcm[i], true);
+  return new Blob([view], { type: 'audio/wav' });
+}
 
-  // ---- WAV encoder (44.1k mono, 16-bit) ----
-  function floatTo16BitPCM(float32) {
-    const out = new Int16Array(float32.length);
-    for (let i=0;i<float32.length;i++) {
-      let s = Math.max(-1, Math.min(1, float32[i]));
-      out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+// ---- Recorder (WAV-only 44.1k mono) ----
+let audioCtx, mediaStream, sourceNode, processor, recBuffer=[], recording=false, autoTimer=null;
+
+async function startRec() {
+  if (recording) return;
+  recBuffer = [];
+  const autoSec = parseInt(document.getElementById('autoSeconds').value || "120", 10);
+  mediaStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation:false, noiseSuppression:false }, video:false });
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+  sourceNode = audioCtx.createMediaStreamSource(mediaStream);
+  processor = audioCtx.createScriptProcessor(4096, 1, 1);
+  sourceNode.connect(processor);
+  processor.connect(audioCtx.destination);
+  processor.onaudioprocess = e => { if (recording) recBuffer.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
+  recording = true;
+  btnStart.disabled = true; btnStop.disabled = false; btnDl.disabled = true;
+  log("🎙️ Recording... auto-stop om " + autoSec + "s");
+  autoTimer = setTimeout(stopRec, autoSec * 1000);
+}
+
+async function stopRec() {
+  if (!recording) return;
+  recording = false;
+  if (autoTimer){ clearTimeout(autoTimer); autoTimer=null; }
+  processor && processor.disconnect(); sourceNode && sourceNode.disconnect();
+  mediaStream && mediaStream.getTracks().forEach(t=>t.stop());
+
+  const wavBlob = encodeWav(recBuffer, 44100);
+  const fname = "kenai-" + Date.now() + ".wav";
+  player.src = URL.createObjectURL(wavBlob);
+  player.load();
+  btnStart.disabled = false; btnStop.disabled = true; btnDl.disabled = false;
+  btnDl.onclick = () => { const a=document.createElement('a'); a.href=player.src; a.download=fname; a.click(); };
+  log("✅ Klar: " + fname + " • " + (wavBlob.size/1024/1024).toFixed(2) + " MB", "ok");
+
+  try {
+    const url = await uploadToSupabase(wavBlob, fname);
+    if (url) {
+      document.getElementById('uploadArea').style.display = 'grid';
+      document.getElementById('publicUrl').textContent = url;
+      document.getElementById('btnOpen').onclick = ()=> window.open(url, "_blank");
+      document.getElementById('btnCopy').onclick = async ()=>{ await navigator.clipboard.writeText(url); log("🔗 Länk kopierad.", "ok"); };
     }
-    return out;
+  } catch (e) {
+    log("Upload misslyckades: " + e.message, "err");
   }
-  function writeWavHeader(view, sampleRate, numSamples) {
-    function wstr(o,s){ for(let i=0;i<s.length;i++) view.setUint8(o+i, s.charCodeAt(i)); }
-    const numChannels=1, bitsPerSample=16;
-    const byteRate = sampleRate * numChannels * bitsPerSample/8;
-    const blockAlign = numChannels * bitsPerSample/8;
-    wstr(0,'RIFF'); view.setUint32(4, 36 + numSamples*2, true);
-    wstr(8,'WAVE'); wstr(12,'fmt '); view.setUint32(16,16,true);
-    view.setUint16(20,1,true); view.setUint16(22,numChannels,true);
-    view.setUint32(24,sampleRate,true); view.setUint32(28,byteRate,true);
-    view.setUint16(32,blockAlign,true); view.setUint16(34,bitsPerSample,true);
-    wstr(36,'data'); view.setUint32(40, numSamples*2, true);
+}
+
+btnStart.addEventListener('click', startRec);
+btnStop .addEventListener('click', stopRec);
+
+// ---- Supabase Storage upload (via fetch) ----
+async function uploadToSupabase(blob, filename) {
+  if (!SB_URL.startsWith("https")) throw new Error("Saknar korrekt SUPABASE_URL.");
+  if (!SB_ANON || SB_ANON.length < 20) throw new Error("Saknar SUPABASE_ANON key.");
+
+  const path = BASE_PATH + "/" + filename;
+  const res = await fetch(SB_URL + "/storage/v1/object/" + encodeURIComponent(BUCKET) + "/" + encodeURIComponent(path), {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + SB_ANON,
+      "apikey": SB_ANON,
+      "x-upsert": "true",
+      "Content-Type": "audio/wav"
+    },
+    body: blob
+  });
+
+  if (!res.ok) {
+    const t = await res.text();
+    log("Supabase svar: " + t, "err");
+    throw new Error("HTTP " + res.status);
   }
-  function encodeWav(chunks, sampleRate) {
-    const totalLen = chunks.reduce((a,c)=>a+c.length,0);
-    const pcm = new Int16Array(totalLen);
-    let off = 0;
-    for (const f32 of chunks) {
-      const s16 = floatTo16BitPCM(f32);
-      pcm.set(s16, off);
-      off += s16.length;
-    }
-    const buffer = new ArrayBuffer(44 + pcm.length*2);
-    const view = new DataView(buffer);
-    writeWavHeader(view, sampleRate, pcm.length);
-    let pos = 44;
-    for (let i=0;i<pcm.length;i++,pos+=2) view.setInt16(pos, pcm[i], true);
-    return new Blob([view], { type: 'audio/wav' });
-  }
+  log("⬆️ Uppladdat: " + path, "ok");
 
-  // ---- Recorder (WAV-only 44.1k mono) ----
-  let audioCtx, mediaStream, sourceNode, processor, recBuffer=[], recording=false, autoTimer=null;
-
-  async function startRec() {
-    if (recording) return;
-    recBuffer = [];
-    const autoSec = parseInt(document.getElementById('autoSeconds').value || "120", 10);
-    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation:false, noiseSuppression:false }, video:false });
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
-    sourceNode = audioCtx.createMediaStreamSource(mediaStream);
-    processor = audioCtx.createScriptProcessor(4096, 1, 1);
-    sourceNode.connect(processor);
-    processor.connect(audioCtx.destination);
-    processor.onaudioprocess = e => {
-      if (!recording) return;
-      recBuffer.push(new Float32Array(e.inputBuffer.getChannelData(0)));
-    };
-    recording = true;
-    btnStart.disabled = true; btnStop.disabled = false; btnDl.disabled = true;
-    log("🎙️ Recording... auto-stop om " + autoSec + "s");
-    autoTimer = setTimeout(stopRec, autoSec * 1000);
-  }
-
-  async function stopRec() {
-    if (!recording) return;
-    recording = false;
-    if (autoTimer){ clearTimeout(autoTimer); autoTimer=null; }
-    processor && processor.disconnect(); sourceNode && sourceNode.disconnect();
-    mediaStream && mediaStream.getTracks().forEach(t=>t.stop());
-
-    const wavBlob = encodeWav(recBuffer, 44100);
-    const fname = "kenai-" + Date.now() + ".wav";
-    player.src = URL.createObjectURL(wavBlob);
-    player.load();
-    btnStart.disabled = false; btnStop.disabled = true; btnDl.disabled = false;
-    btnDl.onclick = () => { const a=document.createElement('a'); a.href=player.src; a.download=fname; a.click(); };
-    log("✅ Klar: " + fname + " • " + (wavBlob.size/1024/1024).toFixed(2) + " MB", "ok");
-
-    try {
-      const url = await uploadToSupabase(wavBlob, fname);
-      if (url) {
-        document.getElementById('uploadArea').style.display = 'grid';
-        document.getElementById('publicUrl').textContent = url;
-        document.getElementById('btnOpen').onclick = ()=> window.open(url, "_blank");
-        document.getElementById('btnCopy').onclick = async ()=>{
-          await navigator.clipboard.writeText(url);
-          log("🔗 Länk kopierad.", "ok");
-        };
-      }
-    } catch (e) {
-      log("Upload misslyckades: " + e.message, "err");
-    }
-  }
-
-  btnStart.addEventListener('click', startRec);
-  btnStop .addEventListener('click', stopRec);
-
-  // ---- Supabase Storage upload (via fetch) ----
-  async function uploadToSupabase(blob, filename) {
-    if (!SB_URL.startsWith("http")) throw new Error("Saknar korrekt SUPABASE_URL.");
-    if (!SB_ANON || SB_ANON.length < 20) throw new Error("Saknar SUPABASE_ANON key.");
-
-    const path = BASE_PATH + "/" + filename;
-    const res = await fetch(SB_URL + "/storage/v1/object/" + encodeURIComponent(BUCKET) + "/" + encodeURIComponent(path), {
+  if (MAKE_PUBLIC) {
+    return SB_URL + "/storage/v1/object/public/" + encodeURIComponent(BUCKET) + "/" + encodeURIComponent(path);
+  } else {
+    const sign = await fetch(SB_URL + "/storage/v1/object/sign/" + encodeURIComponent(BUCKET) + "/" + encodeURIComponent(path), {
       method: "POST",
-      headers: {
-        "Authorization": "Bearer " + SB_ANON,
-        "apikey": SB_ANON,
-        "x-upsert": "true",
-        "Content-Type": "audio/wav"
-      },
-      body: blob
+      headers: { "Authorization":"Bearer " + SB_ANON, "apikey": SB_ANON, "Content-Type":"application/json" },
+      body: JSON.stringify({ expiresIn: 5184000 })
     });
-
-    if (!res.ok) {
-      const t = await res.text();
-      log("Supabase svar: " + t, "err");
-      throw new Error("HTTP " + res.status);
-    }
-    log("⬆️ Uppladdat: " + path, "ok");
-
-    if (MAKE_PUBLIC) {
-      return SB_URL + "/storage/v1/object/public/" + encodeURIComponent(BUCKET) + "/" + encodeURIComponent(path);
-    } else {
-      // 60 dagar (5184000 s) signed URL
-      const sign = await fetch(SB_URL + "/storage/v1/object/sign/" + encodeURIComponent(BUCKET) + "/" + encodeURIComponent(path), {
-        method: "POST",
-        headers: { "Authorization":"Bearer " + SB_ANON, "apikey": SB_ANON, "Content-Type":"application/json" },
-        body: JSON.stringify({ expiresIn: 5184000 })
-      });
-      if (!sign.ok) throw new Error("Kunde inte skapa signed URL.");
-      const data = await sign.json();
-      return SB_URL + data.signedURL;
-    }
+    if (!sign.ok) throw new Error("Kunde inte skapa signed URL.");
+    const data = await sign.json();
+    return SB_URL + data.signedURL;
   }
-  </script>
-</body>
-</html>
+}
+</script>
