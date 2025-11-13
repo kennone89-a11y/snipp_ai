@@ -79,125 +79,54 @@ function log(msg, cls) {
 }
 
 // ===== WAV encoder (44.1k mono, 16-bit) =====
-function floatTo16BitPCM(float32) {
-  const out = new Int16Array(float32.length);
-  for (let i=0;i<float32.length;i++) {
-    let s = Math.max(-1, Math.min(1, float32[i]));
-    out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-  }
-  return out;
-}
-function writeWavHeader(view, sampleRate, numSamples) {
-  function wstr(o,s){ for(let i=0;i<s.length;i++) view.setUint8(o+i, s.charCodeAt(i)); }
-  const numChannels=1, bitsPerSample=16;
-  const byteRate = sampleRate * numChannels * bitsPerSample/8;
-  const blockAlign = numChannels * bitsPerSample/8;
-  wstr(0,"RIFF"); view.setUint32(4, 36 + numSamples*2, true);
-  wstr(8,"WAVE"); wstr(12,"fmt "); view.setUint32(16,16,true);
-  view.setUint16(20,1,true); view.setUint16(22,numChannels,true);
-  view.setUint32(24,sampleRate,true); view.setUint32(28,byteRate,true);
-  view.setUint16(32,blockAlign,true); view.setUint16(34,bitsPerSample,true);
-  wstr(36,"data"); view.setUint32(40, numSamples*2, true);
-}
-function encodeWav(chunks, sampleRate) {
-  const totalLen = chunks.reduce((a,c)=>a+c.length,0);
-  const pcm = new Int16Array(totalLen);
-  let off = 0;
-  for (const f32 of chunks) { const s16 = floatTo16BitPCM(f32); pcm.set(s16, off); off += s16.length; }
-  const buffer = new ArrayBuffer(44 + pcm.length*2);
-  const view = new DataView(buffer);
-  writeWavHeader(view, sampleRate, pcm.length);
-  let pos = 44;
-  for (let i=0;i<pcm.length;i++,pos+=2) view.setInt16(pos, pcm[i], true);
-  return new Blob([view], { type: "audio/wav" });
-}
+function floatTo16BitPCM(float32){const out=new Int16Array(float32.length);for(let i=0;i<float32.length;i++){let s=Math.max(-1,Math.min(1,float32[i]));out[i]=s<0?s*0x8000:s*0x7FFF;}return out;}
+function writeWavHeader(view,sampleRate,numSamples){function wstr(o,s){for(let i=0;i<s.length;i++)view.setUint8(o+i,s.charCodeAt(i));}
+const numChannels=1,bitsPerSample=16,byteRate=sampleRate*numChannels*bitsPerSample/8,blockAlign=numChannels*bitsPerSample/8;
+wstr(0,"RIFF");view.setUint32(4,36+numSamples*2,true);wstr(8,"WAVE");wstr(12,"fmt ");view.setUint32(16,16,true);
+view.setUint16(20,1,true);view.setUint16(22,numChannels,true);view.setUint32(24,sampleRate,true);view.setUint32(28,byteRate,true);
+view.setUint16(32,blockAlign,true);view.setUint16(34,bitsPerSample,true);wstr(36,"data");view.setUint32(40,numSamples*2,true);}
+function encodeWav(chunks,sampleRate){const totalLen=chunks.reduce((a,c)=>a+c.length,0);const pcm=new Int16Array(totalLen);let off=0;
+for(const f32 of chunks){const s16=floatTo16BitPCM(f32);pcm.set(s16,off);off+=s16.length;}const buffer=new ArrayBuffer(44+pcm.length*2);
+const view=new DataView(buffer);writeWavHeader(view,sampleRate,pcm.length);let pos=44;for(let i=0;i<pcm.length;i++,pos+=2)view.setInt16(pos,pcm[i],true);
+return new Blob([view],{type:"audio/wav"});}
 
 // ===== Recorder =====
-let audioCtx, mediaStream, sourceNode, processor, recBuffer=[], recording=false, autoTimer=null;
-
-async function startRec() {
-  if (recording) return;
-  recBuffer = [];
-  const autoSec = parseInt(document.getElementById("autoSeconds").value || "120", 10);
-  mediaStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation:false, noiseSuppression:false }, video:false });
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
-  sourceNode = audioCtx.createMediaStreamSource(mediaStream);
-  processor = audioCtx.createScriptProcessor(4096, 1, 1);
-  sourceNode.connect(processor);
-  processor.connect(audioCtx.destination);
-  processor.onaudioprocess = e => { if (recording) recBuffer.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
-  recording = true;
-  btnStart.disabled = true; btnStop.disabled = false; btnDl.disabled = true;
-  log("Recording... auto-stop in " + autoSec + "s");
-  autoTimer = setTimeout(stopRec, autoSec * 1000);
-}
-
-async function stopRec() {
-  if (!recording) return;
-  recording = false;
-  if (autoTimer){ clearTimeout(autoTimer); autoTimer=null; }
-  processor && processor.disconnect(); sourceNode && sourceNode.disconnect();
-  mediaStream && mediaStream.getTracks().forEach(t=>t.stop());
-
-  const wavBlob = encodeWav(recBuffer, 44100);
-  const fname = "kenai-" + Date.now() + ".wav";
-  player.src = URL.createObjectURL(wavBlob);
-  player.load();
-  btnStart.disabled = false; btnStop.disabled = true; btnDl.disabled = false;
-  btnDl.onclick = function(){ const a=document.createElement("a"); a.href=player.src; a.download=fname; a.click(); };
-  log("Done: " + fname + " • " + (wavBlob.size/1024/1024).toFixed(2) + " MB");
-
-  try {
-    const url = await uploadToSupabase(wavBlob, fname);
-    if (url) {
-      document.getElementById("uploadArea").style.display = "grid";
-      document.getElementById("publicUrl").textContent = url;
-      document.getElementById("btnOpen").onclick = function(){ window.open(url, "_blank"); };
-      document.getElementById("btnCopy").onclick = async function(){ await navigator.clipboard.writeText(url); log("Link copied."); };
-    }
-  } catch (e) {
-    log("Upload failed: " + e.message);
-  }
-}
-
-btnStart.addEventListener("click", startRec);
-btnStop .addEventListener("click", stopRec);
+let audioCtx,mediaStream,sourceNode,processor,recBuffer=[],recording=false,autoTimer=null;
+async function startRec(){if(recording)return;recBuffer=[];const autoSec=parseInt(document.getElementById("autoSeconds").value||"120",10);
+mediaStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false},video:false});
+audioCtx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:44100});sourceNode=audioCtx.createMediaStreamSource(mediaStream);
+processor=audioCtx.createScriptProcessor(4096,1,1);sourceNode.connect(processor);processor.connect(audioCtx.destination);
+processor.onaudioprocess=e=>{if(recording)recBuffer.push(new Float32Array(e.inputBuffer.getChannelData(0)));};
+recording=true;btnStart.disabled=true;btnStop.disabled=false;btnDl.disabled=true;log("Recording... auto-stop in "+autoSec+"s");autoTimer=setTimeout(stopRec,autoSec*1000);}
+async function stopRec(){if(!recording)return;recording=false;if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
+processor&&processor.disconnect();sourceNode&&sourceNode.disconnect();mediaStream&&mediaStream.getTracks().forEach(t=>t.stop());
+const wavBlob=encodeWav(recBuffer,44100);const fname="kenai-"+Date.now()+".wav";player.src=URL.createObjectURL(wavBlob);player.load();
+btnStart.disabled=false;btnStop.disabled=true;btnDl.disabled=false;btnDl.onclick=function(){const a=document.createElement("a");a.href=player.src;a.download=fname;a.click();};
+log("Done: "+fname+" • "+(wavBlob.size/1024/1024).toFixed(2)+" MB");try{const url=await uploadToSupabase(wavBlob,fname);if(url){
+document.getElementById("uploadArea").style.display="grid";document.getElementById("publicUrl").textContent=url;
+document.getElementById("btnOpen").onclick=function(){window.open(url,"_blank");};
+document.getElementById("btnCopy").onclick=async function(){await navigator.clipboard.writeText(url);log("Link copied.");};}}catch(e){log("Upload failed: "+e.message);}}
+btnStart.addEventListener("click",startRec);btnStop.addEventListener("click",stopRec);
 
 // ===== Supabase upload =====
-async function uploadToSupabase(blob, filename) {
-  if (!SB_URL.startsWith("https")) throw new Error("Missing SUPABASE_URL");
-  if (!SB_ANON || SB_ANON.length < 20) throw new Error("Missing SUPABASE_ANON");
-
-  const path = BASE_PATH + "/" + filename;
-  const res = await fetch(SB_URL + "/storage/v1/object/" + encodeURIComponent(BUCKET) + "/" + encodeURIComponent(path), {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer " + SB_ANON,
-      "apikey": SB_ANON,
-      "x-upsert": "true",
-      "Content-Type": "audio/wav"
-    },
-    body: blob
+async function uploadToSupabase(blob,filename){
+  if(!SB_URL.startsWith("https"))throw new Error("Missing SUPABASE_URL");
+  if(!SB_ANON||SB_ANON.length<20)throw new Error("Missing SUPABASE_ANON");
+  const path=BASE_PATH+"/"+filename;
+  const res=await fetch(SB_URL+"/storage/v1/object/"+encodeURIComponent(BUCKET)+"/"+encodeURIComponent(path),{
+    method:"POST",
+    headers:{"Authorization":"Bearer "+SB_ANON,"apikey":SB_ANON,"x-upsert":"true","Content-Type":"audio/wav"},
+    body:blob
   });
-
-  if (!res.ok) {
-    const t = await res.text();
-    log("Supabase response: " + t);
-    throw new Error("HTTP " + res.status);
-  }
-  log("Uploaded: " + path);
-
-  if (MAKE_PUBLIC) {
-    return SB_URL + "/storage/v1/object/public/" + encodeURIComponent(BUCKET) + "/" + encodeURIComponent(path);
-  } else {
-    const sign = await fetch(SB_URL + "/storage/v1/object/sign/" + encodeURIComponent(BUCKET) + "/" + encodeURIComponent(path), {
-      method: "POST",
-      headers: { "Authorization":"Bearer " + SB_ANON, "apikey": SB_ANON, "Content-Type":"application/json" },
-      body: JSON.stringify({ expiresIn: 5184000 })
-    });
-    if (!sign.ok) throw new Error("Could not create signed URL");
-    const data = await sign.json();
-    return SB_URL + data.signedURL;
-  }
+  if(!res.ok){const t=await res.text();log("Supabase response: "+t);throw new Error("HTTP "+res.status);}
+  log("Uploaded: "+path);
+  if(MAKE_PUBLIC){return SB_URL+"/storage/v1/object/public/"+encodeURIComponent(BUCKET)+"/"+encodeURIComponent(path);}
+  const sign=await fetch(SB_URL+"/storage/v1/object/sign/"+encodeURIComponent(BUCKET)+"/"+encodeURIComponent(path),{
+    method:"POST",
+    headers:{"Authorization":"Bearer "+SB_ANON,"apikey":SB_ANON,"Content-Type":"application/json"},
+    body:JSON.stringify({expiresIn:5184000})
+  });
+  if(!sign.ok)throw new Error("Could not create signed URL");
+  const data=await sign.json();return SB_URL+data.signedURL;
 }
 </script>
