@@ -559,18 +559,15 @@
         btnStart.disabled = false;
       }
     }
-
     // ====== Supabase upload ======
-        // ====== Supabase upload ======
     async function uploadToSupabase(blob) {
       try {
         const ts = Date.now();
         const filename = `kenai-${ts}.wav`;
         const objectPath = `${BASE_PATH}/${filename}`;
 
-        // Bygg URL UTAN encodeURIComponent på "public/audio"
-        const prefix = MAKE_PUBLIC ? "public/" : "";
-        const uploadUrl = `${SB_URL}/storage/v1/object/${prefix}${BUCKET}/${objectPath}`;
+        // Upload-URL: bucket + path (ingen "public/" här)
+        const uploadUrl = `${SB_URL}/storage/v1/object/${BUCKET}/${objectPath}`;
 
         const res = await fetch(uploadUrl, {
           method: "POST",
@@ -590,7 +587,7 @@
           return "";
         }
 
-        // Publik URL – enkel path, ingen encoding behövs eftersom filnamnet är safe
+        // Publik URL – här används "public/" för läsning
         const publicUrl = `${SB_URL}/storage/v1/object/public/${BUCKET}/${objectPath}`;
         return publicUrl;
       } catch (err) {
@@ -598,22 +595,7 @@
         return "";
       }
     }
-
-        
-
-        const publicUrl =
-          SB_URL +
-          "/storage/v1/object/public/" +
-          BUCKET +
-          "/" +
-          encodeURIComponent(objectPath);
-
-        return publicUrl;
-      } catch (err) {
-        log("Upload exception: " + err.message, "err");
-        return "";
-      }
-    }
+ }
 
     // ====== Buttons ======
     btnStart.addEventListener("click", () => {
