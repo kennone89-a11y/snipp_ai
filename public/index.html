@@ -561,20 +561,16 @@
     }
 
     // ====== Supabase upload ======
+        // ====== Supabase upload ======
     async function uploadToSupabase(blob) {
       try {
         const ts = Date.now();
         const filename = `kenai-${ts}.wav`;
         const objectPath = `${BASE_PATH}/${filename}`;
-        const encodedPath = encodeURIComponent(objectPath);
 
-        const uploadUrl =
-          SB_URL +
-          "/storage/v1/object/" +
-          (MAKE_PUBLIC ? "public/" : "") +
-          BUCKET +
-          "/" +
-          encodedPath;
+        // Bygg URL UTAN encodeURIComponent på "public/audio"
+        const prefix = MAKE_PUBLIC ? "public/" : "";
+        const uploadUrl = `${SB_URL}/storage/v1/object/${prefix}${BUCKET}/${objectPath}`;
 
         const res = await fetch(uploadUrl, {
           method: "POST",
@@ -593,6 +589,17 @@
           if (text) log(text, "err");
           return "";
         }
+
+        // Publik URL – enkel path, ingen encoding behövs eftersom filnamnet är safe
+        const publicUrl = `${SB_URL}/storage/v1/object/public/${BUCKET}/${objectPath}`;
+        return publicUrl;
+      } catch (err) {
+        log("Upload exception: " + err.message, "err");
+        return "";
+      }
+    }
+
+        
 
         const publicUrl =
           SB_URL +
