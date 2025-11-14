@@ -2,22 +2,22 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <title>Kenai Recorder — SuperSafe v2</title>
+  <title>Kenai Recorder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
       color-scheme: dark;
-      --bg: #050712;
-      --bg2: #111320;
-      --bg3: #191c2a;
+      --bg: #020617;
+      --bg2: #020617;
+      --card: #020617;
       --accent: #2563eb;
-      --accent-soft: rgba(37, 99, 235, 0.15);
+      --accent-soft: rgba(37, 99, 235, 0.16);
       --danger: #ef4444;
-      --text: #f9fafb;
+      --text: #e5e7eb;
       --muted: #9ca3af;
-      --border: #272a3a;
+      --border: #1f2937;
       --radius: 18px;
-      --shadow: 0 22px 45px rgba(0, 0, 0, 0.6);
+      --shadow: 0 24px 55px rgba(15, 23, 42, 0.8);
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
         "Segoe UI", sans-serif;
     }
@@ -27,7 +27,9 @@
     body {
       margin: 0;
       min-height: 100vh;
-      background: radial-gradient(circle at top left, #111827 0, #020617 55%);
+      background:
+        radial-gradient(circle at top left, #0b1120 0, #020617 52%),
+        radial-gradient(circle at bottom right, #020617 0, #000 60%);
       color: var(--text);
       display: flex;
       align-items: center;
@@ -37,20 +39,20 @@
     .shell {
       width: 100%;
       max-width: 720px;
-      background: radial-gradient(circle at top left, #111827 0, #020617 55%);
+      background: radial-gradient(circle at top left, #111827 0, #020617 60%);
       border-radius: 28px;
-      padding: 28px 26px 26px;
+      padding: 24px 22px 20px;
       box-shadow: var(--shadow);
       border: 1px solid rgba(148, 163, 184, 0.3);
     }
     h1 {
       margin: 0 0 4px;
-      font-size: 1.45rem;
-      letter-spacing: 0.03em;
+      font-size: 1.4rem;
+      letter-spacing: 0.04em;
     }
     .sub {
       margin: 0 0 16px;
-      font-size: 0.9rem;
+      font-size: 0.86rem;
       color: var(--muted);
     }
     .row {
@@ -60,23 +62,8 @@
       gap: 10px 12px;
       margin-bottom: 14px;
     }
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.8rem;
-      padding: 3px 9px;
-      border-radius: 999px;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid rgba(148, 163, 184, 0.3);
-      color: var(--muted);
-    }
-    .pill strong {
-      color: var(--text);
-      font-weight: 500;
-    }
     label {
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       color: var(--muted);
     }
     input[type="number"] {
@@ -84,7 +71,7 @@
       padding: 4px 6px;
       border-radius: 999px;
       border: 1px solid var(--border);
-      background: var(--bg3);
+      background: #020617;
       color: var(--text);
       font-size: 0.85rem;
       outline: none;
@@ -94,7 +81,7 @@
       box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.4);
     }
     .btn {
-      padding: 7px 15px;
+      padding: 8px 15px;
       border-radius: 999px;
       border: none;
       font-size: 0.86rem;
@@ -110,11 +97,11 @@
     .btn-primary {
       background: linear-gradient(135deg, #2563eb, #38bdf8);
       color: white;
-      box-shadow: 0 14px 30px rgba(37, 99, 235, 0.55);
+      box-shadow: 0 16px 36px rgba(37, 99, 235, 0.65);
     }
     .btn-primary:active {
       transform: translateY(1px) scale(0.99);
-      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.45);
+      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.5);
     }
     .btn-danger {
       background: rgba(248, 113, 113, 0.08);
@@ -140,39 +127,40 @@
       font-size: 0.8rem;
       color: var(--muted);
     }
-    #status {
-      margin-top: 12px;
-      padding: 8px 10px;
-      border-radius: 10px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-        "Liberation Mono", "Courier New", monospace;
-      font-size: 0.78rem;
-      white-space: pre-line;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid var(--border);
-      max-height: 140px;
-      overflow: auto;
+    #status-wrap {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: var(--muted);
     }
-    #status .ok {
+    #status-pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.9);
+    }
+    #status-pill.ok {
+      border-color: rgba(34, 197, 94, 0.8);
       color: #bbf7d0;
     }
-    #status .warn {
-      color: #fde68a;
+    #status-pill.warn {
+      border-color: rgba(234, 179, 8, 0.8);
+      color: #facc15;
     }
-    #status .err {
+    #status-pill.err {
+      border-color: rgba(248, 113, 113, 0.9);
       color: #fecaca;
-    }
-    #ua {
-      font-size: 0.7rem;
-      color: var(--muted);
     }
     #uploadArea {
       margin-top: 16px;
       padding: 12px 12px 10px;
       border-radius: 16px;
-      background: radial-gradient(circle at top left, #0f172a, #020617);
+      background: radial-gradient(circle at top left, #020617, #020617);
       border: 1px solid rgba(148, 163, 184, 0.4);
       display: none;
+      font-size: 0.82rem;
     }
     #publicUrl {
       margin-top: 4px;
@@ -188,6 +176,12 @@
       flex-wrap: wrap;
       gap: 8px;
       margin-top: 10px;
+    }
+    #meta {
+      margin-top: 8px;
+      font-size: 0.7rem;
+      color: var(--muted);
+      opacity: 0.8;
     }
     @media (max-width: 640px) {
       .shell {
@@ -211,53 +205,47 @@
 </head>
 <body>
   <div class="shell">
-    <h1>Kenai Recorder — SuperSafe v2</h1>
+    <h1>Kenai Recorder</h1>
     <p class="sub">
-      WAV-only, 44.1 kHz mono, auto-stop, Supabase-upload med delbar länk.
+      Spela in korta röster som WAV (44.1 kHz mono), auto-stop och få en delbar länk.
     </p>
 
     <div class="row">
       <button id="btnStart" class="btn btn-primary">Starta inspelning</button>
       <button id="btnStop" class="btn btn-danger" disabled>Stoppa</button>
-      <button id="btnDownload" class="btn btn-ghost" disabled>
-        Ladda ner WAV
-      </button>
+      <button id="btnDownload" class="btn btn-ghost" disabled>Ladda ner WAV</button>
     </div>
 
     <div class="row">
-      <label
-        >Auto-stop (sek):
-        <input
-          id="autoSeconds"
-          type="number"
-          min="10"
-          max="600"
-          step="10"
-          value="120"
-      /></label>
-      <span class="pill">codec: <strong>wav @ 44.1k mono</strong></span>
-      <span class="pill" id="ua"></span>
+      <label>
+        Auto-stop (sek):
+        <input id="autoSeconds" type="number" min="5" max="600" step="5" value="120" />
+      </label>
+      <span style="font-size:0.8rem;color:var(--muted);">
+        WAV @ 44.1k mono · funkar på dator & iPhone
+      </span>
     </div>
 
     <audio id="player" controls></audio>
-    <small
-      id="rec-timer"
-      style="display: block; margin-top: 4px; opacity: 0.85"
-    >
-      Inspelningstid: 00:00
-    </small>
+    <small id="rec-timer">Inspelningstid: 00:00</small>
 
-    <div id="status">Idle.</div>
+    <div id="status-wrap">
+      <span style="opacity:0.8;">Status:</span>
+      <span id="status-pill">Idle</span>
+    </div>
 
     <div id="uploadArea">
-      <div><strong>Uppladdad! Delbar länk:</strong></div>
+      <div><strong>Ljudet är sparat ✔</strong></div>
+      <div>Delbar länk:</div>
       <div id="publicUrl"></div>
       <div class="upload-row">
-        <button id="btnOpen" class="btn btn-primary" disabled>Öppna</button>
-        <button id="btnCopy" class="btn btn-ghost" disabled>
-          Kopiera länk
-        </button>
+        <button id="btnOpen" class="btn btn-primary" disabled>Öppna länk</button>
+        <button id="btnCopy" class="btn btn-ghost" disabled>Kopiera länk</button>
       </div>
+    </div>
+
+    <div id="meta">
+      Kenai · app.kenai.technology · WAV-only · ingen inloggning.
     </div>
   </div>
 
@@ -265,17 +253,15 @@
     "use strict";
 
     // ====== SUPABASE – BYT BARA HÄR ======
-    // Project URL, t.ex. https://abcxyz.supabase.co
-    const SB_URL = 'https://hywwzzzxgagqhlxooekz.supabase.co'; 
+    // Project URL, t.ex. https://dittprojekt.supabase.co
+    const SB_URL = 'https://hywwzzzxgagqhlxooekz.supabase.co';
     // Anon public key (EN rad)
     const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
 
     const BUCKET = "audio";
     const BASE_PATH = "reviews";
-    const MAKE_PUBLIC = true;
 
     // ====== UI refs ======
-    const statusEl = document.getElementById("status");
     const playerEl = document.getElementById("player");
     const autoSecEl = document.getElementById("autoSeconds");
     const btnStart = document.getElementById("btnStart");
@@ -285,18 +271,21 @@
     const btnCopy = document.getElementById("btnCopy");
     const uploadArea = document.getElementById("uploadArea");
     const publicUrlEl = document.getElementById("publicUrl");
-    const uaEl = document.getElementById("ua");
     const timerEl = document.getElementById("rec-timer");
+    const statusPill = document.getElementById("status-pill");
 
-    uaEl.textContent = navigator.userAgent;
-
-    function log(msg, cls) {
-      const line =
-        (cls ? '<span class="' + cls + '">' + msg + "</span>" : msg) + "\n";
-      statusEl.innerHTML = line + statusEl.innerHTML;
+    // ====== Status / log (EN rad, ingen logghistorik) ======
+    function setStatus(msg, type) {
+      statusPill.textContent = msg;
+      statusPill.classList.remove("ok", "warn", "err");
+      if (type) statusPill.classList.add(type);
+    }
+    function log(msg, type) {
+      setStatus(msg, type);
+      console.log("[Kenai]", msg);
     }
 
-    // ====== TIMER ======
+    // ====== Timer ======
     let recTimerId = null;
     let recStartedAt = 0;
 
@@ -399,7 +388,7 @@
       return new Blob([view], { type: "audio/wav" });
     }
 
-    // ====== Recorder ======
+    // ====== Recorder state ======
     let audioCtx = null;
     let mediaStream = null;
     let sourceNode = null;
@@ -456,13 +445,13 @@
         btnStart.disabled = true;
         btnStop.disabled = false;
 
-        log("Recording... auto-stop in " + maxSeconds + "s", "ok");
+        log("Spelar in... auto-stop om " + maxSeconds + " sek", "ok");
         startTimer();
 
         if (autoStopId) clearTimeout(autoStopId);
         autoStopId = setTimeout(() => {
           if (state === "recording") {
-            log("Auto-stop nådd, stoppar inspelning...", "warn");
+            log("Auto-stop: stoppar inspelning", "warn");
             stopRec();
           }
         }, maxSeconds * 1000);
@@ -506,7 +495,7 @@
       state = "stopping";
       btnStop.disabled = true;
       stopTimer();
-      log("Stoppar inspelning och kodar WAV...", "warn");
+      log("Stoppar inspelning...", "warn");
 
       cleanupAudio();
 
@@ -524,31 +513,20 @@
         playerEl.src = url;
         btnDl.disabled = false;
 
-        const sizeMb = (wavBlob.size / (1024 * 1024)).toFixed(2);
-        log(
-          "Done: " +
-            new Date().toISOString() +
-            " wav ≈ " +
-            sizeMb +
-            " MB @ " +
-            sampleRate +
-            " Hz",
-          "ok"
-        );
+        log("Inspelning klar – laddar upp...", "ok");
 
         state = "done";
         btnStart.disabled = false;
 
         // direkt upload
         uploadArea.style.display = "block";
-        log("Laddar upp till Supabase...", "warn");
         const publicUrl = await uploadToSupabase(wavBlob);
         if (publicUrl) {
           lastPublicUrl = publicUrl;
           publicUrlEl.textContent = publicUrl;
           btnOpen.disabled = false;
           btnCopy.disabled = false;
-          log("Upload OK ✅", "ok");
+          log("Klar! Ljudet är sparat & länken redo.", "ok");
         } else {
           log("Upload misslyckades.", "err");
         }
@@ -559,6 +537,7 @@
         btnStart.disabled = false;
       }
     }
+
     // ====== Supabase upload ======
     async function uploadToSupabase(blob) {
       try {
@@ -566,7 +545,7 @@
         const filename = `kenai-${ts}.wav`;
         const objectPath = `${BASE_PATH}/${filename}`;
 
-        // Upload-URL: bucket + path (ingen "public/" här)
+        // Upload-URL: bucket + path
         const uploadUrl = `${SB_URL}/storage/v1/object/${BUCKET}/${objectPath}`;
 
         const res = await fetch(uploadUrl, {
@@ -582,16 +561,14 @@
 
         if (!res.ok) {
           const text = await res.text().catch(() => "");
-          log("Upload fel: " + res.status + " " + res.statusText, "err");
-          if (text) log(text, "err");
+          console.error("Upload fel:", res.status, res.statusText, text);
           return "";
         }
 
-        // Publik URL – här används "public/" för läsning
         const publicUrl = `${SB_URL}/storage/v1/object/public/${BUCKET}/${objectPath}`;
         return publicUrl;
       } catch (err) {
-        log("Upload exception: " + err.message, "err");
+        console.error("Upload exception:", err);
         return "";
       }
     }
@@ -628,11 +605,12 @@
         await navigator.clipboard.writeText(lastPublicUrl);
         log("Länk kopierad till urklipp.", "ok");
       } catch (err) {
-        log("Kunde inte kopiera länk: " + err.message, "err");
+        log("Kunde inte kopiera länk.", "err");
       }
     });
 
-    log("Idle.");
+    // Init
+    setStatus("Idle", null);
   </script>
 </body>
 </html>
