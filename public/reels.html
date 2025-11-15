@@ -65,23 +65,6 @@
       color: #0b1120;
       cursor: pointer;
     }
-    button[disabled] {
-      opacity: 0.5;
-      cursor: default;
-    }
-    .secondary-btn {
-      margin-top: 10px;
-      border-radius: 999px;
-      padding: 7px 14px;
-      font-size: 13px;
-      border: 1px solid rgba(148, 163, 184, 0.6);
-      background: rgba(15, 23, 42, 0.9);
-      color: #e5e7eb;
-    }
-    .secondary-btn[disabled] {
-      opacity: 0.5;
-      cursor: default;
-    }
     #status {
       margin-top: 10px;
       font-size: 13px;
@@ -110,22 +93,6 @@
       color: #38bdf8;
       text-decoration: none;
     }
-    #reelResult {
-      margin-top: 16px;
-      font-size: 13px;
-    }
-    #reelResult video {
-      max-width: 100%;
-      border-radius: 12px;
-      display: block;
-    }
-    #reelResult a {
-      display: block;
-      margin-top: 8px;
-      color: #38bdf8;
-      text-decoration: none;
-      font-size: 13px;
-    }
   </style>
 </head>
 <body>
@@ -134,8 +101,8 @@
     <p>
       Här börjar vi bygga din reel-funktion. Nu kan du välja bilder och klipp,
       välja ungefär hur lång reelen ska bli (max 90 sek) – och vi laddar upp
-      allt till Kenai (Supabase) tillsammans med en <strong>reel-plan</strong>.
-      Därefter kan du bygga en första <strong>bild-reel (MP4)</strong> direkt i browsern.
+      allt till Kenai (Supabase) tillsammans med en <strong>reel-plan</strong>
+      som visar ordning & tid per klipp.
     </p>
 
     <div class="card">
@@ -162,23 +129,15 @@
       <div id="status"></div>
       <ul id="fileList"></ul>
       <div id="planSummary"></div>
-
-      <button id="buildReelBtn" class="secondary-btn" disabled>
-        Bygg bild-reel som video (BETA)
-      </button>
-      <div id="reelResult"></div>
     </div>
   </div>
-
-  <!-- ffmpeg.wasm för att bygga video i browsern -->
-  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/ffmpeg.min.js"></script>
 
   <script>
     // --------------------------------------------------
     // 1) Supabase-konfiguration
     //    BYT UT dessa två rader till dina riktiga värden.
     // --------------------------------------------------
-    const SB_URL = 'https://hywwzzzxgagqhlxooekz.supabase.co'; // <-- BYT
+    const SB_URL = 'https://hywwzzzxgagqhlxooekz.supabase.co';  // <-- BYT
     const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA'; // <-- BYT
 
     const BUCKET = "audio";        // vi återanvänder 'audio'-bucket
@@ -191,15 +150,8 @@
     const fileListEl = document.getElementById("fileList");
     const planSummaryEl = document.getElementById("planSummary");
     const targetSelect = document.getElementById("targetSeconds");
-    const buildBtn = document.getElementById("buildReelBtn");
-    const reelResultEl = document.getElementById("reelResult");
-
-    let lastFiles = null;
-    let lastPlan = null;
-    let lastSessionId = null;
 
     function safeName(name) {
-      // väldigt enkel "städning" av filnamn
       return name.replace(/[^a-zA-Z0-9._-]/g, "_");
     }
 
@@ -231,7 +183,6 @@
         throw new Error(`Upload failade för ${file.name}: ${res.status} ${text}`);
       }
 
-      // publik URL (bucket 'audio' är redan public)
       const publicUrl = `${SB_URL}/storage/v1/object/public/${BUCKET}/${path}`;
       return { name: file.name, url: publicUrl };
     }
@@ -254,7 +205,6 @@
       let requested = Number(requestedSeconds) || 30;
       if (requested > MAX_REEL_SECONDS) requested = MAX_REEL_SECONDS;
 
-      // minst 1 sekund per klipp
       let effective = requested;
       if (effective < clipCount) {
         effective = clipCount;
@@ -358,107 +308,11 @@
       planSummaryEl.appendChild(ol);
     }
 
-    // --------------------------------------------------
-    // 2) ffmpeg.wasm – bygger bild-reel i browsern
-    // --------------------------------------------------
-    const { createFFmpeg, fetchFile } = FFmpeg;
-    const ffmpeg = createFFmpeg({ log: true });
-
-    async function ensureFfmpegLoaded() {
-      if (!ffmpeg.isLoaded()) {
-        statusEl.textContent =
-          "Laddar videomotorn (första gången kan det ta några sekunder)...";
-        await ffmpeg.load();
-      }
-    }
-
-    async function buildReelFromImages(files, plan) {
-      const fileMap = new Map();
-      files.forEach((f) => fileMap.set(f.name, f));
-
-      const imageClips = plan.clips.filter((c) => c.type === "image");
-      if (!imageClips.length) {
-        throw new Error("Planen innehåller inga bilder – v1 bygger bara bild-reels.");
-      }
-
-      await ensureFfmpegLoaded();
-
-      // enkel cleanup: försök rensa tidigare körningar
-      try {
-        const entries = ffmpeg.FS("readdir", "/");
-        entries.forEach((name) => {
-          if (name !== "." && name !== ".." && name !== "tmp") {
-            try {
-              ffmpeg.FS("unlink", name);
-            } catch (e) {}
-          }
-        });
-      } catch (e) {}
-
-      const partNames = [];
-      let idx = 0;
-
-      for (const clip of imageClips) {
-        const file = fileMap.get(clip.name);
-        if (!file) continue;
-
-        const inputName = `input_${idx}.img`;
-        const outputName = `part_${idx}.mp4`;
-        const duration = clip.durationSeconds || 2;
-
-        ffmpeg.FS("writeFile", inputName, await fetchFile(file));
-
-        await ffmpeg.run(
-          "-loop", "1",
-          "-t", String(duration),
-          "-i", inputName,
-          "-vf", "scale=1080:1920:force_original_aspect_ratio=cover",
-          "-r", "30",
-          "-c:v", "libx264",
-          "-pix_fmt", "yuv420p",
-          "-movflags", "faststart",
-          outputName
-        );
-
-        partNames.push(outputName);
-        idx++;
-      }
-
-      if (!partNames.length) {
-        throw new Error("Kunde inte bygga några delar – kanske konstiga filtyper?");
-      }
-
-      let concatText = "";
-      for (const name of partNames) {
-        concatText += `file '${name}'\n`;
-      }
-      ffmpeg.FS("writeFile", "concat_list.txt", concatText);
-
-      await ffmpeg.run(
-        "-f", "concat",
-        "-safe", "0",
-        "-i", "concat_list.txt",
-        "-c", "copy",
-        "reel.mp4"
-      );
-
-      const data = ffmpeg.FS("readFile", "reel.mp4");
-      return new Blob([data.buffer], { type: "video/mp4" });
-    }
-
-    // --------------------------------------------------
-    // 3) Event handlers
-    // --------------------------------------------------
     btn.addEventListener("click", async () => {
       const files = mediaInput.files;
 
       fileListEl.innerHTML = "";
       planSummaryEl.innerHTML = "";
-      reelResultEl.innerHTML = "";
-      buildBtn.disabled = true;
-      lastFiles = null;
-      lastPlan = null;
-      lastSessionId = null;
 
       if (!files.length) {
         statusEl.textContent = "Välj minst en bild eller ett klipp först.";
@@ -489,55 +343,10 @@
         const planUrl = await uploadPlan(plan, sessionId);
 
         renderPlanSummary(plan, planUrl);
-
-        // spara för videobyggaren
-        lastFiles = Array.from(files);
-        lastPlan = plan;
-        lastSessionId = sessionId;
-        buildBtn.disabled = false;
       } catch (err) {
         console.error(err);
         statusEl.textContent =
           "Något gick fel vid uppladdning eller sparande av plan. Kolla konsolen för detaljer.";
-      }
-    });
-
-    buildBtn.addEventListener("click", async () => {
-      if (!lastFiles || !lastPlan) {
-        statusEl.textContent =
-          "Skapa först en reel-plan genom att ladda upp klipp.";
-        return;
-      }
-
-      reelResultEl.innerHTML = "";
-      buildBtn.disabled = true;
-      statusEl.textContent =
-        "Bygger bild-reel (kan ta lite tid, låt sidan vara öppen)...";
-
-      try {
-        const blob = await buildReelFromImages(lastFiles, lastPlan);
-        const url = URL.createObjectURL(blob);
-
-        const video = document.createElement("video");
-        video.controls = true;
-        video.playsInline = true;
-        video.src = url;
-        reelResultEl.appendChild(video);
-
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "kenai-reel.mp4";
-        link.textContent = "Ladda ner reelen (MP4)";
-        reelResultEl.appendChild(link);
-
-        statusEl.textContent =
-          "Reel byggd! Du kan spela upp videon här eller ladda ner den.";
-      } catch (err) {
-        console.error(err);
-        statusEl.textContent =
-          "Kunde inte bygga reelen. V1 funkar bäst med ett par bilder, inte för stora filer.";
-      } finally {
-        buildBtn.disabled = false;
       }
     });
   </script>
