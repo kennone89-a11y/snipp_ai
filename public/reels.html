@@ -46,6 +46,16 @@
       display: block;
       margin-bottom: 12px;
     }
+    select {
+      display: block;
+      margin-bottom: 16px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      font-size: 13px;
+    }
     button {
       border-radius: 999px;
       padding: 8px 16px;
@@ -70,15 +80,29 @@
       color: #38bdf8;
       text-decoration: none;
     }
+    #planSummary {
+      margin-top: 14px;
+      font-size: 13px;
+      color: #e5e7eb;
+    }
+    #planSummary ol {
+      margin-top: 6px;
+      padding-left: 20px;
+    }
+    #planSummary a {
+      color: #38bdf8;
+      text-decoration: none;
+    }
   </style>
 </head>
 <body>
   <div class="page">
     <h1>AI Reels Maker (tidig test)</h1>
     <p>
-      Här börjar vi bygga din reel-funktion. Nu kan du välja bilder och klipp –
-      och vi laddar upp dem till Kenai (Supabase) så att de kan användas för att
-      bygga riktiga reels senare.
+      Här börjar vi bygga din reel-funktion. Nu kan du välja bilder och klipp,
+      välja ungefär hur lång reelen ska bli (max 90 sek) – och vi laddar upp
+      allt till Kenai (Supabase) tillsammans med en <strong>reel-plan</strong>
+      som visar ordning & tid per klipp.
     </p>
 
     <div class="card">
@@ -90,29 +114,53 @@
         multiple
       />
 
-      <button id="createReelBtn">Ladda upp till Kenai</button>
+      <label for="targetSeconds">
+        Välj ungefär hur lång reelen ska bli (max 90 sek)
+      </label>
+      <select id="targetSeconds">
+        <option value="15">Ca 15 sekunder</option>
+        <option value="30" selected>Ca 30 sekunder</option>
+        <option value="60">Ca 60 sekunder</option>
+        <option value="90">Max 90 sekunder</option>
+      </select>
+
+      <button id="createReelBtn">Ladda upp & skapa reel-plan</button>
 
       <div id="status"></div>
       <ul id="fileList"></ul>
+      <div id="planSummary"></div>
     </div>
   </div>
 
   <script>
-    // TODO: fyll i din Supabase-info här:
-    const SB_URL = 'https://hywwzzzxgagqhlxooekz.supabase.co'; // <-- byt ut
-    const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA'; // <-- byt ut
+    // --------------------------------------------------
+    // 1) Supabase-konfiguration
+    //    BYT UT dessa två rader till dina riktiga värden.
+    // --------------------------------------------------
+    const SB_URL = 'https://hywwzzzxgagqhlxooekz.supabase.co'; // <-- BYT
+    const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';// <-- BYT
 
     const BUCKET = "audio";        // vi återanvänder 'audio'-bucket
     const REELS_PREFIX = "reels";  // allt hamnar under audio/reels/...
+    const MAX_REEL_SECONDS = 90;
 
     const mediaInput = document.getElementById("mediaInput");
     const btn = document.getElementById("createReelBtn");
     const statusEl = document.getElementById("status");
     const fileListEl = document.getElementById("fileList");
+    const planSummaryEl = document.getElementById("planSummary");
+    const targetSelect = document.getElementById("targetSeconds");
 
     function safeName(name) {
       // väldigt enkel "städning" av filnamn
       return name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    }
+
+    function guessTypeFromName(name) {
+      const lower = name.toLowerCase();
+      if (/\.(mp4|mov|webm|m4v|mkv)$/.test(lower)) return "video";
+      if (/\.(jpg|jpeg|png|gif|webp|heic|heif)$/.test(lower)) return "image";
+      return "unknown";
     }
 
     async function uploadOneFile(file, sessionId) {
@@ -141,21 +189,133 @@
       return { name: file.name, url: publicUrl };
     }
 
-    async function uploadAll(files) {
-      const sessionId = Date.now().toString();
+    async function uploadAll(files, sessionId) {
       const uploaded = [];
-
       for (const file of files) {
         const result = await uploadOneFile(file, sessionId);
         uploaded.push(result);
       }
-
       return uploaded;
+    }
+
+    function buildPlan(uploaded, requestedSeconds, sessionId) {
+      const clipCount = uploaded.length;
+      if (!clipCount) {
+        throw new Error("Inga klipp att bygga plan av.");
+      }
+
+      let requested = Number(requestedSeconds) || 30;
+      if (requested > MAX_REEL_SECONDS) requested = MAX_REEL_SECONDS;
+
+      // minst 1 sekund per klipp
+      let effective = requested;
+      if (effective < clipCount) {
+        effective = clipCount;
+      }
+      if (effective > MAX_REEL_SECONDS) {
+        effective = MAX_REEL_SECONDS;
+      }
+
+      const base = Math.floor(effective / clipCount);
+      const remainder = effective % clipCount;
+
+      const clips = uploaded.map((item, index) => {
+        const durationSeconds = base + (index < remainder ? 1 : 0);
+        return {
+          index: index + 1,
+          name: item.name,
+          url: item.url,
+          type: guessTypeFromName(item.name),
+          durationSeconds,
+        };
+      });
+
+      return {
+        version: 1,
+        sessionId,
+        createdAt: new Date().toISOString(),
+        requestedSeconds: requested,
+        effectiveSeconds: effective,
+        maxSeconds: MAX_REEL_SECONDS,
+        clipCount,
+        clips,
+      };
+    }
+
+    async function uploadPlan(plan, sessionId) {
+      const path = `${REELS_PREFIX}/${sessionId}/plan.json`;
+      const url = `${SB_URL}/storage/v1/object/${BUCKET}/${path}`;
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          apikey: SB_ANON,
+          Authorization: `Bearer ${SB_ANON}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(plan, null, 2),
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`Upload av plan.json misslyckades: ${res.status} ${text}`);
+      }
+
+      const publicUrl = `${SB_URL}/storage/v1/object/public/${BUCKET}/${path}`;
+      return publicUrl;
+    }
+
+    function renderUploadedList(uploaded) {
+      fileListEl.innerHTML = "";
+      uploaded.forEach((item) => {
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.href = item.url;
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.textContent = item.name;
+        li.appendChild(a);
+        fileListEl.appendChild(li);
+      });
+    }
+
+    function renderPlanSummary(plan, planUrl) {
+      planSummaryEl.innerHTML = "";
+
+      const p = document.createElement("p");
+      p.innerHTML =
+        `Reel-plan sparad (` +
+        `${plan.effectiveSeconds}s totalt, ` +
+        `${plan.clipCount} klipp). ` +
+        `Planfil: <a href="${planUrl}" target="_blank" rel="noopener">plan.json</a>`;
+      planSummaryEl.appendChild(p);
+
+      const info = document.createElement("p");
+      if (plan.requestedSeconds !== plan.effectiveSeconds) {
+        info.textContent =
+          `Du valde ca ${plan.requestedSeconds}s, ` +
+          `men vi justerade till ${plan.effectiveSeconds}s ` +
+          `för max 90s och minst 1s per klipp.`;
+      } else {
+        info.textContent =
+          `Målslängd: ca ${plan.effectiveSeconds} sekunder (max 90s).`;
+      }
+      planSummaryEl.appendChild(info);
+
+      const ol = document.createElement("ol");
+      plan.clips.forEach((clip) => {
+        const li = document.createElement("li");
+        li.textContent = `${clip.name} – ${clip.durationSeconds}s (${clip.type})`;
+        ol.appendChild(li);
+      });
+      planSummaryEl.appendChild(ol);
     }
 
     btn.addEventListener("click", async () => {
       const files = mediaInput.files;
+
       fileListEl.innerHTML = "";
+      planSummaryEl.innerHTML = "";
 
       if (!files.length) {
         statusEl.textContent = "Välj minst en bild eller ett klipp först.";
@@ -168,28 +328,28 @@
         return;
       }
 
-      statusEl.textContent = `Laddar upp ${files.length} fil(er) till Kenai...`;
+      const requestedSeconds = targetSelect.value || "30";
+      const sessionId = Date.now().toString();
+
+      statusEl.textContent =
+        `Laddar upp ${files.length} fil(er) till Kenai och skapar reel-plan...`;
 
       try {
-        const uploaded = await uploadAll(Array.from(files));
+        const uploaded = await uploadAll(Array.from(files), sessionId);
 
         statusEl.textContent =
-          "Klar! Dina filer är uppladdade. Klicka på länkarna nedan för att testa.";
+          "Klar! Dina filer är uppladdade. Länkarna syns nedan, och reel-planen sparas som plan.json.";
 
-        uploaded.forEach((item) => {
-          const li = document.createElement("li");
-          const a = document.createElement("a");
-          a.href = item.url;
-          a.target = "_blank";
-          a.rel = "noopener";
-          a.textContent = item.name;
-          li.appendChild(a);
-          fileListEl.appendChild(li);
-        });
+        renderUploadedList(uploaded);
+
+        const plan = buildPlan(uploaded, requestedSeconds, sessionId);
+        const planUrl = await uploadPlan(plan, sessionId);
+
+        renderPlanSummary(plan, planUrl);
       } catch (err) {
         console.error(err);
         statusEl.textContent =
-          "Något gick fel vid uppladdningen. Kolla konsolen för detaljer.";
+          "Något gick fel vid uppladdning eller sparande av plan. Kolla konsolen för detaljer.";
       }
     });
   </script>
