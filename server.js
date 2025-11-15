@@ -1,4 +1,4 @@
-// server.js - Kenai backend: statiska filer + health + build-reel (plan-läsning)
+// server.js - Kenai backend med env-debug + build-reel (plan-läsning)
 
 const express = require("express");
 const cors = require("cors");
@@ -7,7 +7,15 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// ----- Environment vars (Supabase) -----
+// Acceptera både SB_* och SBL_* för säkerhets skull
+const SB_URL = process.env.SB_URL || process.env.SBL_URL;
+const SB_ANON = process.env.SB_ANON || process.env.SBL_ANON;
+
+// Logga vad servern faktiskt ser
+console.log("ENV DEBUG SB_URL:", SB_URL ? "SET" : "MISSING");
+console.log("ENV DEBUG SB_ANON:", SB_ANON ? "SET" : "MISSING");
+
 app.use(cors());
 app.use(express.json());
 
@@ -21,19 +29,13 @@ app.get("/", (req, res) => {
 
 // ----- Health-check -----
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, message: "Kenai backend är igång ✅" });
+  res.json({
+    ok: true,
+    message: "Kenai backend env-debug ✅",
+    SB_URL_present: !!SB_URL,
+    SB_ANON_present: !!SB_ANON
+  });
 });
-
-// ----- Reels: läs plan.json från Supabase -----
-
-// Supabase URL behövs för att bygga public-länkarna
-const SB_URL = process.env.SB_URL;
-
-if (!SB_URL) {
-  console.warn(
-    "⚠️ SB_URL saknas i environment variables! /api/build-reel kommer inte fungera."
-  );
-}
 
 // Hjälp-funktion för att hämta JSON
 async function fetchJson(url) {
@@ -47,31 +49,24 @@ async function fetchJson(url) {
 /**
  * POST /api/build-reel
  * Body: { sessionId: "..." }
- *
- * v1: läser bara plan.json och returnerar:
- *  - basePublic (mapp-URL)
- *  - plan (innehållet i plan.json)
- *  - files[] med färdiga public URLs till alla klipp
  */
 app.post("/api/build-reel", async (req, res) => {
   try {
     const { sessionId } = req.body || {};
 
     if (!sessionId) {
-      return res.status(400).json({ error: "sessionId saknas" });
+      return res.status(400).json({ ok: false, error: "sessionId saknas" });
     }
 
     if (!SB_URL) {
-      return res
-        .status(500)
-        .json({ error: "SB_URL saknas på servern (kolla environment vars)" });
+      return res.status(500).json({
+        ok: false,
+        error:
+          "SB_URL/SBL_URL saknas på servern (kolla environment vars i Render)"
+      });
     }
 
-    // Bas-URL till din public bucket:
-    // audio/reels/<sessionId>/...
     const basePublic = `${SB_URL}/storage/v1/object/public/audio/reels/${sessionId}`;
-
-    // 1. Hämta plan.json
     const planUrl = `${basePublic}/plan.json`;
 
     let plan;
@@ -88,7 +83,6 @@ app.post("/api/build-reel", async (req, res) => {
 
     const clips = Array.isArray(plan.clips) ? plan.clips : [];
 
-    // 2. Bygg lista med public URLs för klippen
     const files = clips.map((clip, index) => {
       const name =
         clip.file || clip.path || clip.name || clip.filename || `clip-${index}`;
@@ -101,7 +95,6 @@ app.post("/api/build-reel", async (req, res) => {
       };
     });
 
-    // 3. Skicka tillbaka info
     res.json({
       ok: true,
       sessionId,
