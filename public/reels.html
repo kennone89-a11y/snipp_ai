@@ -112,4 +112,86 @@
 
     function safeName(name) {
       // väldigt enkel "städning" av filnamn
-      return name.replace(/[^a-zA-Z0-9._-]/_]()
+      return name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    }
+
+    async function uploadOneFile(file, sessionId) {
+      const cleanName = safeName(file.name);
+      const path = `${REELS_PREFIX}/${sessionId}/${cleanName}`;
+
+      const url = `${SB_URL}/storage/v1/object/${BUCKET}/${path}`;
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          apikey: SB_ANON,
+          Authorization: `Bearer ${SB_ANON}`,
+          "Content-Type": file.type || "application/octet-stream",
+        },
+        body: file,
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`Upload failade för ${file.name}: ${res.status} ${text}`);
+      }
+
+      // publik URL (bucket 'audio' är redan public)
+      const publicUrl = `${SB_URL}/storage/v1/object/public/${BUCKET}/${path}`;
+      return { name: file.name, url: publicUrl };
+    }
+
+    async function uploadAll(files) {
+      const sessionId = Date.now().toString();
+      const uploaded = [];
+
+      for (const file of files) {
+        const result = await uploadOneFile(file, sessionId);
+        uploaded.push(result);
+      }
+
+      return uploaded;
+    }
+
+    btn.addEventListener("click", async () => {
+      const files = mediaInput.files;
+      fileListEl.innerHTML = "";
+
+      if (!files.length) {
+        statusEl.textContent = "Välj minst en bild eller ett klipp först.";
+        return;
+      }
+
+      if (!SB_URL.startsWith("https://") || SB_ANON === "DIN_ANON_KEY_HÄR") {
+        statusEl.textContent =
+          "Fyll i SB_URL och SB_ANON högst upp i filen innan du testar uppladdning.";
+        return;
+      }
+
+      statusEl.textContent = `Laddar upp ${files.length} fil(er) till Kenai...`;
+
+      try {
+        const uploaded = await uploadAll(Array.from(files));
+
+        statusEl.textContent =
+          "Klar! Dina filer är uppladdade. Klicka på länkarna nedan för att testa.";
+
+        uploaded.forEach((item) => {
+          const li = document.createElement("li");
+          const a = document.createElement("a");
+          a.href = item.url;
+          a.target = "_blank";
+          a.rel = "noopener";
+          a.textContent = item.name;
+          li.appendChild(a);
+          fileListEl.appendChild(li);
+        });
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent =
+          "Något gick fel vid uppladdningen. Kolla konsolen för detaljer.";
+      }
+    });
+  </script>
+</body>
+</html>
