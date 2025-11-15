@@ -21,7 +21,7 @@ app.get("/", (req, res) => {
 
 // ----- Health-check -----
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, message: "Kenai backend (minimal) är igång ✅" });
+  res.json({ ok: true, message: "Kenai backend är igång ✅" });
 });
 
 // ----- Reels: läs plan.json från Supabase -----
@@ -37,7 +37,7 @@ if (!SB_URL) {
 
 // Hjälp-funktion för att hämta JSON
 async function fetchJson(url) {
-  const res = await fetch(url);
+  const res = await fetch(url); // Node 22 har global fetch
   if (!res.ok) {
     throw new Error(`Failed to fetch JSON ${url} (${res.status})`);
   }
@@ -80,6 +80,7 @@ app.post("/api/build-reel", async (req, res) => {
     } catch (err) {
       console.error("Kunde inte läsa plan.json:", err.message);
       return res.status(404).json({
+        ok: false,
         error: "plan.json hittades inte eller gick inte att läsa",
         url: planUrl
       });
@@ -89,17 +90,14 @@ app.post("/api/build-reel", async (req, res) => {
 
     // 2. Bygg lista med public URLs för klippen
     const files = clips.map((clip, index) => {
-      // Försök hitta nåt fältnamn som innehåller filen
       const name =
         clip.file || clip.path || clip.name || clip.filename || `clip-${index}`;
-
       const url = `${basePublic}/${name}`;
-
       return {
         index,
         type: clip.type || "unknown",
-        original: clip,
-        url
+        url,
+        original: clip
       };
     });
 
@@ -114,6 +112,7 @@ app.post("/api/build-reel", async (req, res) => {
   } catch (err) {
     console.error("build-reel error:", err);
     res.status(500).json({
+      ok: false,
       error: "Något gick fel i /api/build-reel",
       details: err.message
     });
