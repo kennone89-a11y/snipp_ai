@@ -446,54 +446,77 @@
     // --------------------------------------------------
     // 4. Anropa backend /api/build-reel
     // --------------------------------------------------
-    async function buildReel() {
-      const sessionId = window.KENAI_LAST_REELS_SESSION;
+   async function buildReel() {
+  const sessionId = window.KENAI_LAST_REELS_SESSION;
 
-      if (!sessionId) {
-        setResult("Ingen reel-session hittades. Ladda upp klipp först.");
-        return;
+  if (!sessionId) {
+    setResult("Ingen reel-session hittades. Ladda upp klipp först.");
+    return;
+  }
+
+  setResult("Bygger reel-plan + testvideo (v1), vänta lite...");
+  if (buildBtn) buildBtn.disabled = true;
+
+  try {
+    const resp = await fetch(`${BACKEND_BASE}/api/build-reel`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId })
+    });
+
+    const data = await resp.json();
+    console.log("build-reel response:", data);
+
+    if (!data.ok) {
+      setResult(
+        "Kunde inte bygga reel ännu:\n" +
+          (data.error || "okänt fel") +
+          (data.url ? "\nURL: " + data.url : "")
+      );
+    } else {
+      const count = data.files ? data.files.length : 0;
+      const basePublic = data.basePublic || "(okänd URL)";
+      const outputUrl = data.outputUrl || null;
+
+      let html =
+        "✅ Reel-plan hämtad för <b>" +
+        htmlEscape(sessionId) +
+        "</b><br>" +
+        "Klipp i planen: <b>" +
+        count +
+        "</b><br>" +
+        "Bas-URL i Supabase:<br><code>" +
+        htmlEscape(basePublic) +
+        "</code>";
+
+      if (outputUrl) {
+        html +=
+          "<br><br><b>Färdig test-reel (v1 – bygger på första klippet):</b><br>" +
+          '<video controls style="max-width:100%;margin-top:8px;border-radius:12px;">' +
+          '<source src="' +
+          htmlEscape(outputUrl) +
+          '" type="video/mp4">' +
+          "Din webbläsare kan inte spela upp videon." +
+          "</video>" +
+          "<br>" +
+          '<a href="' +
+          htmlEscape(outputUrl) +
+          '" download>⬇️ Ladda ner reel.mp4</a>';
+      } else {
+        html +=
+          "<br><br>Ingen output.mp4 genererad ännu (outputUrl saknas i svaret).";
       }
 
-      setResult("Bygger reel-plan, vänta lite...");
-      if (buildBtn) buildBtn.disabled = true;
-
-      try {
-        const resp = await fetch(`${BACKEND_BASE}/api/build-reel`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId })
-        });
-
-        const data = await resp.json();
-        console.log("build-reel response:", data);
-
-        if (!data.ok) {
-          setResult(
-            "Kunde inte läsa plan.json ännu:\n" +
-              (data.error || "okänt fel") +
-              (data.url ? "\nURL: " + data.url : "")
-          );
-        } else {
-          const count = data.files ? data.files.length : 0;
-          const basePublic = data.basePublic || "(okänd URL)";
-          reelResultEl.innerHTML =
-            "✅ Reel-plan hämtad för <b>" +
-            htmlEscape(sessionId) +
-            "</b><br>" +
-            "Klipp i planen: <b>" +
-            count +
-            "</b><br>" +
-            "Bas-URL i Supabase:<br><code>" +
-            htmlEscape(basePublic) +
-            "</code>";
-        }
-      } catch (err) {
-        console.error(err);
-        setResult("Något gick fel med build-reel: " + err.message);
-      } finally {
-        if (buildBtn) buildBtn.disabled = false;
-      }
+      reelResultEl.innerHTML = html;
     }
+  } catch (err) {
+    console.error(err);
+    setResult("Något gick fel med build-reel: " + err.message);
+  } finally {
+    if (buildBtn) buildBtn.disabled = false;
+  }
+}
+
   </script>
 </body>
 </html>
