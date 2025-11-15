@@ -7,11 +7,9 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.48.0",
     "cors": "^2.8.5",
     "express": "^4.19.0",
     "ffmpeg-static": "^5.2.0",
-    "fluent-ffmpeg": "^2.1.2",
-    "node-fetch": "^3.3.2"
+    "fluent-ffmpeg": "^2.1.2"
   }
 }
