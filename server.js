@@ -143,79 +143,22 @@ app.post("/api/build-reel", async (req, res) => {
       });
     }
 
-    // Gör en lista med public URLs
+    // Bygg lista med klipp + total längd
+    let totalDuration = 0;
     const files = clips.map((clip, index) => {
       const name =
         clip.file || clip.path || clip.name || clip.filename || `clip-${index}`;
-      const url = `${basePublic}/${name}`;
+      const dur = Number(clip.duration) || 0;
+      totalDuration += dur;
+
       return {
         index,
         type: clip.type || "unknown",
-        url,
-        original: clip
+        file: name,
+        url: `${basePublic}/${name}`,
+        duration: dur || null
       };
     });
-
-    // ----- v1: bygg video av FÖRSTA klippet -----
-    const first = files[0];
-    const firstClip = first.original;
-
-    const workDir = path.join("/tmp", `reel-${sessionId}-${Date.now()}`);
-    fs.mkdirSync(workDir, { recursive: true });
-
-    const extFromName =
-      (firstClip.file && path.extname(firstClip.file)) ||
-      (firstClip.name && path.extname(firstClip.name)) ||
-      ".mp4";
-
-    const localInput = path.join(workDir, `input${extFromName}`);
-    const localOutput = path.join(workDir, "output.mp4");
-
-    console.log("Laddar ned första klippet:", first.url);
-    await downloadToFile(first.url, localInput);
-
-    const durationSeconds =
-      Number(firstClip.duration) ||
-      Number(plan.targetDuration) ||
-      15;
-
-    console.log(
-      `Bygger output.mp4 av första klippet (${extFromName}), duration ~${durationSeconds}s`
-    );
-
-    await new Promise((resolve, reject) => {
-      let command = ffmpeg(localInput)
-        .videoCodec("libx264")
-        .outputOptions(["-pix_fmt", "yuv420p"]) // kompatibel mp4
-        .duration(durationSeconds);
-
-      if (first.type === "image") {
-        // loopa bild
-        command = command.loop(1);
-      }
-
-      command
-        .on("start", (cmdLine) => {
-          console.log("ffmpeg start:", cmdLine);
-        })
-        .on("error", (err) => {
-          console.error("ffmpeg error:", err);
-          reject(err);
-        })
-        .on("end", () => {
-          console.log("ffmpeg klar, output.mp4 skapad");
-          resolve();
-        })
-        .save(localOutput);
-    });
-
-    const fileBuffer = fs.readFileSync(localOutput);
-    const outputPath = `reels/${sessionId}/output.mp4`;
-
-    console.log("Laddar upp output.mp4 till Supabase:", outputPath);
-    await uploadToSupabase(outputPath, fileBuffer, "video/mp4");
-
-    const outputUrl = `${SB_URL}/storage/v1/object/public/${BUCKET}/${outputPath}`;
 
     return res.json({
       ok: true,
@@ -223,8 +166,10 @@ app.post("/api/build-reel", async (req, res) => {
       basePublic,
       plan,
       files,
-      outputPath,
-      outputUrl
+      totalDuration,
+      videoBuildEnabled: false,
+      message:
+        "Videobygge med ffmpeg är AVSTÄNGT i denna testversion (gratis Render-minne). Planen funkar och kan användas i t.ex. CapCut."
     });
   } catch (err) {
     console.error("build-reel error:", err);
@@ -235,6 +180,7 @@ app.post("/api/build-reel", async (req, res) => {
     });
   }
 });
+
 
 // ----- Starta servern -----
 app.listen(PORT, () => {
