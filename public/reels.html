@@ -335,10 +335,25 @@ window.startUpload = async function startUpload() {
 
   setStatus(`Startar uppladdning… Session: ${htmlEscape(sessionId)}`);
 
-  for (let i = 0; i < files.length; i++) {
+   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    const safeName = file.name;
-    const ext = safeName.split(".").pop().toLowerCase();
+
+    // Originalfilnamn från input
+    const originalName = file.name || `clip_${i}`;
+
+    // Plocka ut extension (t.ex. "png")
+    const extMatch = originalName.match(/\.([a-zA-Z0-9]+)$/);
+    const ext = extMatch ? extMatch[1].toLowerCase() : "dat";
+
+    // Gör ett "säkert" namn: bara a–z, 0–9, _, -
+    const base = originalName
+      .replace(/\.[^/.]+$/, "") // ta bort extension
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "") // ta bort accent/åäö etc
+      .replace(/[^a-zA-Z0-9_-]/g, "_");
+
+    const safeName = `${base || "clip_" + i}.${ext}`;
+
     const type =
       ext === "png" ||
       ext === "jpg" ||
@@ -355,7 +370,7 @@ window.startUpload = async function startUpload() {
     if (clipDuration <= 0) {
       appendStatus(
         `⏭️ Hoppar över ${htmlEscape(
-          safeName
+          originalName
         )} (max ${MAX_TOTAL_SECONDS}s totalt).`
       );
       continue;
@@ -364,11 +379,9 @@ window.startUpload = async function startUpload() {
     totalDuration += clipDuration;
 
     const storagePath = `reels/${sessionId}/${safeName}`;
-    const uploadUrl = `${SB_URL}/storage/v1/object/${encodeURIComponent(
-      BUCKET
-    )}/${encodeURIComponent(storagePath)}`;
+    const uploadUrl = `${SB_URL}/storage/v1/object/${BUCKET}/${storagePath}`;
 
-    appendStatus(`⬆️ Laddar upp ${htmlEscape(safeName)}…`);
+    appendStatus(`⬆️ Laddar upp ${htmlEscape(originalName)} som ${htmlEscape(safeName)}…`);
 
     try {
       const resp = await fetch(uploadUrl, {
@@ -385,7 +398,7 @@ window.startUpload = async function startUpload() {
         const text = await resp.text().catch(() => "");
         appendStatus(
           `❌ Kunde inte ladda upp ${htmlEscape(
-            safeName
+            originalName
           )} (${resp.status}). ${htmlEscape(text)}`
         );
         continue;
@@ -394,18 +407,19 @@ window.startUpload = async function startUpload() {
       appendStatus(`✅ Uppladdad: ${htmlEscape(safeName)}`);
 
       planClips.push({
-        file: safeName,
+        file: safeName,    // vi sparar det säkra namnet i planen
         type,
         duration: clipDuration
       });
     } catch (err) {
       appendStatus(
-        `❌ Fel vid uppladdning av ${htmlEscape(safeName)}: ${htmlEscape(
+        `❌ Fel vid uppladdning av ${htmlEscape(originalName)}: ${htmlEscape(
           err.message
         )}`
       );
     }
   }
+
 
   if (!planClips.length) {
     appendStatus("Inga klipp i planen (allt hoppades över).");
