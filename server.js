@@ -156,7 +156,7 @@ app.post("/api/build-reel", async (req, res) => {
         type: clip.type || "unknown",
         url,
         original: clip
-      });
+      };
     });
 
     // ----- v1: bygg video av FÖRSTA klippet -----
