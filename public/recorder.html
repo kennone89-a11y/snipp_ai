@@ -601,13 +601,29 @@
       }
     }
 
-    // ====== Event-koppling ======
-    startBtn.addEventListener("click", startRecording);
-    stopBtn.addEventListener("click", stopRecording);
-    downloadBtn.addEventListener("click", downloadWav);
-    uploadBtn.addEventListener("click", uploadToSupabase);
-    openLinkBtn.addEventListener("click", openLink);
-    copyLinkBtn.addEventListener("click", copyLink);
+     // ====== Playback-timer på spelaren ======
+  player.addEventListener("play", () => {
+    // säkerställ att ev. gammal timer stoppas
+    stopTimer(false);
+    timerHandle = setInterval(() => {
+      // currentTime är i sekunder – vi gör om till ms
+      recTimeLabel.textContent = formatTime(player.currentTime * 1000);
+    }, 250);
+  });
+
+  player.addEventListener("pause", () => {
+    // stoppa tick när man pausar
+    stopTimer(false);
+  });
+
+  player.addEventListener("ended", () => {
+    // när ljudet är slut visar vi sluttiden
+    stopTimer(false);
+    if (!isNaN(player.duration)) {
+      recTimeLabel.textContent = formatTime(player.duration * 1000);
+    }
+  });
+
   </script>
 </body>
 </html>
