@@ -261,324 +261,320 @@
       </div>
     </div>
 
-    <script>
-      // ====== KONFIG ======
-      const BACKEND_BASE = "https://snipp-ai-1.onrender.com";
+   <script>
+// ====== KONFIG ======
+const BACKEND_BASE = "https://snipp-ai-1.onrender.com";
 
-      // BYT TILL DINA RIKTIGA SUPABASE-VÄRDEN EFTER DU KLISTRAT IN FILEN
-      const SB_URL ='https://hywwzzzxgagqhlxooekz.supabase.co'; 
-      const SB_ANON ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
+const SB_URL = 'https://hywwzzzxgagqhlxooekz.supabase.co'; 
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
 
+const BUCKET = "audio";
+const MAX_TOTAL_SECONDS = 90;
 
+const fileInput = document.getElementById("files");
+const lengthSelect = document.getElementById("targetLength");
+const uploadStatusEl = document.getElementById("uploadStatus");
+const buildBtn = document.getElementById("buildReelBtn");
+const reelResultEl = document.getElementById("reelResult");
 
+function htmlEscape(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
-      const BUCKET = "audio";
-      const MAX_TOTAL_SECONDS = 90;
+function formatSeconds(sec) {
+  sec = Math.round(sec || 0);
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  if (m <= 0) return `${s}s`;
+  return `${m}m ${s}s`;
+}
 
-      const fileInput = document.getElementById("files");
-      const lengthSelect = document.getElementById("targetLength");
-      const uploadStatusEl = document.getElementById("uploadStatus");
-      const buildBtn = document.getElementById("buildReelBtn");
-      const reelResultEl = document.getElementById("reelResult");
+function setStatus(msg) {
+  uploadStatusEl.innerHTML = msg;
+}
 
-      function htmlEscape(str) {
-        return String(str)
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;")
-          .replace(/'/g, "&#039;");
+function appendStatus(msg) {
+  uploadStatusEl.innerHTML += "<br>" + msg;
+}
+
+function setResult(msg) {
+  reelResultEl.innerHTML = htmlEscape(msg).replace(/\n/g, "<br>");
+}
+
+// ====== STEG 1: Ladda upp & skapa plan.json ======
+window.startUpload = async function startUpload() {
+  const files = fileInput.files;
+  if (!files || !files.length) {
+    setStatus("Välj minst ett klipp först.");
+    return;
+  }
+
+  if (
+    !SB_URL ||
+    !SB_ANON ||
+    SB_URL.includes("YOUR_PROJECT_ID") ||
+    SB_ANON === "YOUR_PUBLIC_ANON_KEY"
+  ) {
+    setStatus("SB_URL / SB_ANON saknas i koden (längst ned i reels.html).");
+    return;
+  }
+
+  const targetSec = parseInt(lengthSelect.value, 10) || 30;
+  const sessionId = "reel_" + Date.now();
+  window.KENAI_LAST_REELS_SESSION = sessionId;
+  buildBtn.disabled = true;
+  setResult("Inget byggt ännu. Du kan bygga efter uppladdning.");
+
+  let totalDuration = 0;
+  const planClips = [];
+
+  setStatus(`Startar uppladdning… Session: ${htmlEscape(sessionId)}`);
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const safeName = file.name;
+    const ext = safeName.split(".").pop().toLowerCase();
+    const type =
+      ext === "png" ||
+      ext === "jpg" ||
+      ext === "jpeg" ||
+      ext === "webp" ||
+      ext === "gif"
+        ? "image"
+        : "video";
+
+    let clipDuration = 10;
+    if (totalDuration + clipDuration > MAX_TOTAL_SECONDS) {
+      clipDuration = Math.max(0, MAX_TOTAL_SECONDS - totalDuration);
+    }
+    if (clipDuration <= 0) {
+      appendStatus(
+        `⏭️ Hoppar över ${htmlEscape(
+          safeName
+        )} (max ${MAX_TOTAL_SECONDS}s totalt).`
+      );
+      continue;
+    }
+
+    totalDuration += clipDuration;
+
+    const storagePath = `reels/${sessionId}/${safeName}`;
+    const uploadUrl = `${SB_URL}/storage/v1/object/${encodeURIComponent(
+      BUCKET
+    )}/${encodeURIComponent(storagePath)}`;
+
+    appendStatus(`⬆️ Laddar upp ${htmlEscape(safeName)}…`);
+
+    try {
+      const resp = await fetch(uploadUrl, {
+        method: "POST",
+        headers: {
+          apikey: SB_ANON,
+          authorization: `Bearer ${SB_ANON}`,
+          "x-upsert": "true"
+        },
+        body: file
+      });
+
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => "");
+        appendStatus(
+          `❌ Kunde inte ladda upp ${htmlEscape(
+            safeName
+          )} (${resp.status}). ${htmlEscape(text)}`
+        );
+        continue;
       }
 
-      function formatSeconds(sec) {
-        sec = Math.round(sec || 0);
-        const m = Math.floor(sec / 60);
-        const s = sec % 60;
-        if (m <= 0) return `${s}s`;
-        return `${m}m ${s}s`;
+      appendStatus(`✅ Uppladdad: ${htmlEscape(safeName)}`);
+
+      planClips.push({
+        file: safeName,
+        type,
+        duration: clipDuration
+      });
+    } catch (err) {
+      appendStatus(
+        `❌ Fel vid uppladdning av ${htmlEscape(safeName)}: ${htmlEscape(
+          err.message
+        )}`
+      );
+    }
+  }
+
+  if (!planClips.length) {
+    appendStatus("Inga klipp i planen (allt hoppades över).");
+    return;
+  }
+
+  const plan = {
+    sessionId,
+    createdAt: new Date().toISOString(),
+    targetDuration: targetSec,
+    totalDuration,
+    maxTotalSeconds: MAX_TOTAL_SECONDS,
+    clips: planClips
+  };
+
+  const planJson = JSON.stringify(plan, null, 2);
+  const planPath = `reels/${sessionId}/plan.json`;
+  const planUploadUrl = `${SB_URL}/storage/v1/object/${encodeURIComponent(
+    BUCKET
+  )}/${encodeURIComponent(planPath)}`;
+
+  appendStatus("💾 Sparar plan.json…");
+
+  try {
+    const planResp = await fetch(planUploadUrl, {
+      method: "POST",
+      headers: {
+        apikey: SB_ANON,
+        authorization: `Bearer ${SB_ANON}`,
+        "content-type": "application/json",
+        "x-upsert": "true"
+      },
+      body: planJson
+    });
+
+    if (!planResp.ok) {
+      const text = await planResp.text().catch(() => "");
+      appendStatus(
+        `❌ Kunde inte spara plan.json (${planResp.status}). ${htmlEscape(
+          text
+        )}`
+      );
+      return;
+    }
+
+    const publicPlanUrl = `${SB_URL}/storage/v1/object/public/${BUCKET}/reels/${sessionId}/plan.json`;
+
+    appendStatus(
+      `Plan sparad (${formatSeconds(
+        totalDuration
+      )}, ${planClips.length} klipp). <a href="${publicPlanUrl}" target="_blank">plan.json</a>`
+    );
+
+    buildBtn.disabled = false;
+    setResult("Uppladdning klar. Klicka \"Bygg min reel-plan\".");
+  } catch (err) {
+    appendStatus(
+      `❌ Något gick fel när plan.json skulle sparas: ${htmlEscape(
+        err.message
+      )}`
+    );
+  }
+};
+
+// ====== STEG 2: Be backend läsa plan.json ======
+window.buildReel = async function buildReel() {
+  const sessionId = window.KENAI_LAST_REELS_SESSION;
+
+  if (!sessionId) {
+    setResult("Ingen reel-session hittades. Ladda upp klipp först.");
+    return;
+  }
+
+  setResult("Bygger reel-plan, vänta…");
+  buildBtn.disabled = true;
+
+  try {
+    const resp = await fetch(`${BACKEND_BASE}/api/build-reel`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId })
+    });
+
+    let data;
+    try {
+      data = await resp.json();
+    } catch (e) {
+      throw new Error("Kunde inte läsa JSON-svar.");
+    }
+
+    console.log("build-reel response:", data);
+
+    if (!resp.ok || !data.ok) {
+      setResult(
+        "Kunde inte bygga plan:\n" +
+          (data && data.error ? data.error : `HTTP ${resp.status}`) +
+          (data && data.url ? "\nURL: " + data.url : "")
+      );
+      return;
+    }
+
+    const count = data.files ? data.files.length : 0;
+    const basePublic = data.basePublic || "(okänd URL)";
+    const totalDur = data.totalDuration || 0;
+
+    let html =
+      "✅ Reel-plan hämtad för <b>" +
+      htmlEscape(sessionId) +
+      "</b><br>" +
+      "Klipp: <b>" +
+      count +
+      "</b><br>" +
+      "Total längd: <b>" +
+      htmlEscape(formatSeconds(totalDur)) +
+      "</b><br>" +
+      "Bas-URL:<br><code>" +
+      htmlEscape(basePublic) +
+      "</code>";
+
+    if (Array.isArray(data.files) && data.files.length) {
+      html += "<br><br><b>Klipp:</b><br><ol>";
+      for (const f of data.files) {
+        const idx =
+          typeof f.index === "number" ? f.index + 1 : data.files.indexOf(f) + 1;
+        html +=
+          "<li>" +
+          htmlEscape(String(idx) + ". ") +
+          htmlEscape(f.file || "") +
+          " – " +
+          htmlEscape(f.type || "?") +
+          (f.duration
+            ? " (" + htmlEscape(formatSeconds(f.duration)) + ")"
+            : "") +
+          "</li>";
       }
+      html += "</ol>";
+    }
 
-      function setStatus(msg) {
-        uploadStatusEl.innerHTML = msg;
-      }
+    html +=
+      "<br><b>Obs:</b> Den här versionen bygger bara plan (ingen video).";
 
-      function appendStatus(msg) {
-        uploadStatusEl.innerHTML += "<br>" + msg;
-      }
+    reelResultEl.innerHTML = html;
+  } catch (err) {
+    console.error(err);
+    setResult("Något gick fel med build-reel: " + err.message);
+  } finally {
+    buildBtn.disabled = false;
+  }
+};
 
-      function setResult(msg) {
-        reelResultEl.innerHTML = htmlEscape(msg).replace(/\n/g, "<br>");
-      }
+// ====== Health-check badge ======
+async function checkBackend() {
+  const badge = document.getElementById("backendStatus");
+  try {
+    const resp = await fetch(`${BACKEND_BASE}/api/health`);
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const data = await resp.json();
+    console.log("health:", data);
+    badge.textContent = "backend OK";
+    badge.style.backgroundColor = "#0b9444";
+    badge.style.color = "#e5e7eb";
+  } catch (e) {
+    badge.textContent = "backend OFFLINE";
+    badge.style.backgroundColor = "#b91c1c";
+    badge.style.color = "#fee2e2";
+  }
+}
 
-      // ====== STEG 1: Ladda upp & skapa plan.json ======
-      async function startUpload() {
-        const files = fileInput.files;
-        if (!files || !files.length) {
-          setStatus("Välj minst ett klipp först.");
-          return;
-        }
-
-        if (
-          !SB_URL ||
-          !SB_ANON ||
-          SB_URL.includes("YOUR_PROJECT_ID") ||
-          SB_ANON === "YOUR_PUBLIC_ANON_KEY"
-        ) {
-          setStatus("SB_URL / SB_ANON saknas i koden (längst ned i reels.html).");
-          return;
-        }
-
-        const targetSec = parseInt(lengthSelect.value, 10) || 30;
-        const sessionId = "reel_" + Date.now();
-        window.KENAI_LAST_REELS_SESSION = sessionId;
-        buildBtn.disabled = true;
-        setResult("Inget byggt ännu. Du kan bygga efter uppladdning.");
-
-        let totalDuration = 0;
-        const planClips = [];
-
-        setStatus(`Startar uppladdning… Session: ${htmlEscape(sessionId)}`);
-
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          const safeName = file.name;
-          const ext = safeName.split(".").pop().toLowerCase();
-          const type =
-            ext === "png" ||
-            ext === "jpg" ||
-            ext === "jpeg" ||
-            ext === "webp" ||
-            ext === "gif"
-              ? "image"
-              : "video";
-
-          let clipDuration = 10;
-          if (totalDuration + clipDuration > MAX_TOTAL_SECONDS) {
-            clipDuration = Math.max(0, MAX_TOTAL_SECONDS - totalDuration);
-          }
-          if (clipDuration <= 0) {
-            appendStatus(
-              `⏭️ Hoppar över ${htmlEscape(
-                safeName
-              )} (max ${MAX_TOTAL_SECONDS}s totalt).`
-            );
-            continue;
-          }
-
-          totalDuration += clipDuration;
-
-          const storagePath = `reels/${sessionId}/${safeName}`;
-          const uploadUrl = `${SB_URL}/storage/v1/object/${encodeURIComponent(
-            BUCKET
-          )}/${encodeURIComponent(storagePath)}`;
-
-          appendStatus(`⬆️ Laddar upp ${htmlEscape(safeName)}…`);
-
-          try {
-            const resp = await fetch(uploadUrl, {
-              method: "POST",
-              headers: {
-                apikey: SB_ANON,
-                authorization: `Bearer ${SB_ANON}`,
-                "x-upsert": "true"
-              },
-              body: file
-            });
-
-            if (!resp.ok) {
-              const text = await resp.text().catch(() => "");
-              appendStatus(
-                `❌ Kunde inte ladda upp ${htmlEscape(
-                  safeName
-                )} (${resp.status}). ${htmlEscape(text)}`
-              );
-              continue;
-            }
-
-            appendStatus(`✅ Uppladdad: ${htmlEscape(safeName)}`);
-
-            planClips.push({
-              file: safeName,
-              type,
-              duration: clipDuration
-            });
-          } catch (err) {
-            appendStatus(
-              `❌ Fel vid uppladdning av ${htmlEscape(safeName)}: ${htmlEscape(
-                err.message
-              )}`
-            );
-          }
-        }
-
-        if (!planClips.length) {
-          appendStatus("Inga klipp i planen (allt hoppades över).");
-          return;
-        }
-
-        const plan = {
-          sessionId,
-          createdAt: new Date().toISOString(),
-          targetDuration: targetSec,
-          totalDuration,
-          maxTotalSeconds: MAX_TOTAL_SECONDS,
-          clips: planClips
-        };
-
-        const planJson = JSON.stringify(plan, null, 2);
-        const planPath = `reels/${sessionId}/plan.json`;
-        const planUploadUrl = `${SB_URL}/storage/v1/object/${encodeURIComponent(
-          BUCKET
-        )}/${encodeURIComponent(planPath)}`;
-
-        appendStatus("💾 Sparar plan.json…");
-
-        try {
-          const planResp = await fetch(planUploadUrl, {
-            method: "POST",
-            headers: {
-              apikey: SB_ANON,
-              authorization: `Bearer ${SB_ANON}`,
-              "content-type": "application/json",
-              "x-upsert": "true"
-            },
-            body: planJson
-          });
-
-          if (!planResp.ok) {
-            const text = await planResp.text().catch(() => "");
-            appendStatus(
-              `❌ Kunde inte spara plan.json (${planResp.status}). ${htmlEscape(
-                text
-              )}`
-            );
-            return;
-          }
-
-          const publicPlanUrl = `${SB_URL}/storage/v1/object/public/${BUCKET}/reels/${sessionId}/plan.json`;
-
-          appendStatus(
-            `Plan sparad (${formatSeconds(
-              totalDuration
-            )}, ${planClips.length} klipp). <a href="${publicPlanUrl}" target="_blank">plan.json</a>`
-          );
-
-          buildBtn.disabled = false;
-          setResult("Uppladdning klar. Klicka &quot;Bygg min reel-plan&quot;.");
-        } catch (err) {
-          appendStatus(
-            `❌ Något gick fel när plan.json skulle sparas: ${htmlEscape(
-              err.message
-            )}`
-          );
-        }
-      }
-
-      // ====== STEG 2: Be backend läsa plan.json ======
-      async function buildReel() {
-        const sessionId = window.KENAI_LAST_REELS_SESSION;
-
-        if (!sessionId) {
-          setResult("Ingen reel-session hittades. Ladda upp klipp först.");
-          return;
-        }
-
-        setResult("Bygger reel-plan, vänta…");
-        buildBtn.disabled = true;
-
-        try {
-          const resp = await fetch(`${BACKEND_BASE}/api/build-reel`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sessionId })
-          });
-
-          let data;
-          try {
-            data = await resp.json();
-          } catch (e) {
-            throw new Error("Kunde inte läsa JSON-svar.");
-          }
-
-          console.log("build-reel response:", data);
-
-          if (!resp.ok || !data.ok) {
-            setResult(
-              "Kunde inte bygga plan:\n" +
-                (data && data.error ? data.error : `HTTP ${resp.status}`) +
-                (data && data.url ? "\nURL: " + data.url : "")
-            );
-            return;
-          }
-
-          const count = data.files ? data.files.length : 0;
-          const basePublic = data.basePublic || "(okänd URL)";
-          const totalDur = data.totalDuration || 0;
-
-          let html =
-            "✅ Reel-plan hämtad för <b>" +
-            htmlEscape(sessionId) +
-            "</b><br>" +
-            "Klipp: <b>" +
-            count +
-            "</b><br>" +
-            "Total längd: <b>" +
-            htmlEscape(formatSeconds(totalDur)) +
-            "</b><br>" +
-            "Bas-URL:<br><code>" +
-            htmlEscape(basePublic) +
-            "</code>";
-
-          if (Array.isArray(data.files) && data.files.length) {
-            html += "<br><br><b>Klipp:</b><br><ol>";
-            for (const f of data.files) {
-              const idx =
-                typeof f.index === "number" ? f.index + 1 : data.files.indexOf(f) + 1;
-              html +=
-                "<li>" +
-                htmlEscape(String(idx) + ". ") +
-                htmlEscape(f.file || "") +
-                " – " +
-                htmlEscape(f.type || "?") +
-                (f.duration
-                  ? " (" + htmlEscape(formatSeconds(f.duration)) + ")"
-                  : "") +
-                "</li>";
-            }
-            html += "</ol>";
-          }
-
-          html +=
-            "<br><b>Obs:</b> Den här versionen bygger bara plan (ingen video).";
-
-          reelResultEl.innerHTML = html;
-        } catch (err) {
-          console.error(err);
-          setResult("Något gick fel med build-reel: " + err.message);
-        } finally {
-          buildBtn.disabled = false;
-        }
-      }
-
-      // ====== Health-check badge ======
-      async function checkBackend() {
-        const badge = document.getElementById("backendStatus");
-        try {
-          const resp = await fetch(`${BACKEND_BASE}/api/health`);
-          if (!resp.ok) throw new Error("HTTP " + resp.status);
-          const data = await resp.json();
-          console.log("health:", data);
-          badge.textContent = "backend OK";
-          badge.style.backgroundColor = "#0b9444";
-          badge.style.color = "#e5e7eb";
-        } catch (e) {
-          badge.textContent = "backend OFFLINE";
-          badge.style.backgroundColor = "#b91c1c";
-          badge.style.color = "#fee2e2";
-        }
-      }
-
-      checkBackend();
-    </script>
+checkBackend();
+</script>
   </body>
 </html>
