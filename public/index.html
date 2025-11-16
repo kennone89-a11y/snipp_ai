@@ -2,19 +2,19 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <title>Kenai – Inspelning, Reels & delning</title>
+  <title>Kenai – AI-verktyg för röster & content</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: radial-gradient(circle at top, #111827 0, #020617 45%, #000000 100%);
-      color: #f9fafb;
+      background: radial-gradient(circle at top, #020617 0, #020617 40%, #000000 100%);
+      color: #e5e7eb;
       min-height: 100vh;
-      padding: 32px 16px 48px;
       display: flex;
       justify-content: center;
+      padding: 32px 16px 48px;
     }
 
     .page {
@@ -22,217 +22,328 @@
       max-width: 1120px;
     }
 
-    /* Top nav */
+    /* TOP NAV */
     .nav {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 32px;
+      margin-bottom: 28px;
     }
 
     .brand {
       display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 10%, #38bdf8, #4f46e5, #0f172a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      color: #e5e7eb;
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.5);
+    }
+
+    .brand-text {
+      display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 2px;
     }
 
     .logo {
       font-weight: 800;
-      letter-spacing: 0.16em;
+      letter-spacing: 0.18em;
       text-transform: uppercase;
-      font-size: 14px;
-      color: #a5b4fc;
+      font-size: 13px;
+      color: #c7d2fe;
     }
 
-    .brand small {
+    .brand-text small {
       font-size: 11px;
       color: #6b7280;
     }
 
-    .nav-actions {
+    .nav-right {
       display: flex;
-      gap: 10px;
       align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: #9ca3af;
     }
 
-    .nav-actions a {
-      text-decoration: none;
-      font-size: 13px;
-      padding: 7px 14px;
+    .nav-pill {
+      padding: 4px 10px;
       border-radius: 999px;
-      border: 1px solid #374151;
-      color: #e5e7eb;
-      background: rgba(15, 23, 42, 0.9);
-      transition: background 0.16s ease, border-color 0.16s ease, transform 0.12s ease;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.9);
     }
 
-    .nav-actions a.primary {
-      background: linear-gradient(135deg, #6366f1, #a855f7);
-      border-color: transparent;
+    .nav-pill-cta {
+      border-color: rgba(129,140,248,0.9);
+      color: #c7d2fe;
     }
 
-    .nav-actions a:hover {
-      background: #020617;
-      border-color: #6b7280;
-      transform: translateY(-1px);
+    /* HERO WRAP */
+    .hero-wrap {
+      background: radial-gradient(circle at top left, rgba(56,189,248,0.18), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(129,140,248,0.24), #020617);
+      border-radius: 24px;
+      padding: 22px 22px 20px;
+      border: 1px solid rgba(31,41,55,0.9);
+      box-shadow: 0 26px 60px rgba(0,0,0,0.85);
+      margin-bottom: 28px;
     }
 
-    .nav-actions a.primary:hover {
-      background: linear-gradient(135deg, #4f46e5, #9333ea);
-    }
-
-    /* Layout */
-    .layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.8fr);
-      gap: 32px;
-      align-items: flex-start;
-    }
-
-    @media (max-width: 880px) {
-      body { padding: 20px 12px 32px; }
-      .layout { grid-template-columns: 1fr; }
-      .nav { flex-direction: column; align-items: flex-start; gap: 10px; }
-    }
-
-    /* Hero */
-    .hero label {
+    .hero-top-label {
       display: inline-flex;
       align-items: center;
       gap: 8px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(75,85,99,0.9);
+      background: rgba(15,23,42,0.95);
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.16em;
-      padding: 4px 9px;
-      border-radius: 999px;
-      border: 1px solid rgba(55, 65, 81, 0.9);
-      background: rgba(15, 23, 42, 0.9);
       color: #9ca3af;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
 
-    .hero label span.dot {
+    .hero-top-label span.dot {
       width: 8px;
       height: 8px;
       border-radius: 999px;
       background: #22c55e;
-      box-shadow: 0 0 10px rgba(34, 197, 94, 0.9);
+      box-shadow: 0 0 14px rgba(34,197,94,0.95);
     }
 
-    .hero h1 {
-      font-size: clamp(30px, 4.4vw, 42px);
-      margin-bottom: 10px;
+    .hero-main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr);
+      gap: 24px;
+      align-items: stretch;
     }
 
-    .hero p {
+    @media (max-width: 900px) {
+      body { padding: 20px 12px 32px; }
+      .nav { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .hero-main { grid-template-columns: 1fr; }
+    }
+
+    .hero-main-left h1 {
+      font-size: clamp(26px, 4vw, 34px);
+      margin-bottom: 8px;
+    }
+
+    .hero-main-left p {
       font-size: 14px;
       color: #9ca3af;
       max-width: 480px;
       line-height: 1.6;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
     }
 
-    .hero-list {
-      margin-top: 10px;
-      margin-bottom: 18px;
-      list-style: none;
-    }
-
-    .hero-list li {
-      font-size: 13px;
-      color: #d1d5db;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 6px;
-    }
-
-    .hero-list span.bullet {
-      width: 6px;
-      height: 6px;
-      border-radius: 999px;
-      background: #6366f1;
-    }
-
-    .hero-actions {
+    .hero-buttons {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
-      margin-top: 10px;
+      margin-bottom: 10px;
     }
 
-    .hero-actions a {
+    .btn {
       text-decoration: none;
       font-size: 13px;
       padding: 9px 16px;
       border-radius: 999px;
       border: 1px solid #374151;
       color: #e5e7eb;
-      background: rgba(15, 23, 42, 0.9);
-      transition: background 0.16s ease, border-color 0.16s ease, transform 0.12s ease;
+      background: rgba(15,23,42,0.96);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+      cursor: pointer;
     }
 
-    .hero-actions a.primary {
+    .btn-primary {
       background: linear-gradient(135deg, #6366f1, #a855f7);
       border-color: transparent;
     }
 
-    .hero-actions a:hover {
+    .btn:hover {
       background: #020617;
       border-color: #6b7280;
       transform: translateY(-1px);
     }
 
-    .hero-actions a.primary:hover {
+    .btn-primary:hover {
       background: linear-gradient(135deg, #4f46e5, #9333ea);
     }
 
     .hero-footnote {
-      margin-top: 14px;
       font-size: 11px;
       color: #6b7280;
+      margin-top: 4px;
     }
 
-    /* Cards */
-    .cards {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px;
-    }
-
-    @media (max-width: 640px) {
-      .cards { grid-template-columns: 1fr; }
-    }
-
-    .card {
-      position: relative;
-      padding: 16px 15px 18px;
+    /* Recorder mini-panel in hero */
+    .hero-recorder-card {
       border-radius: 18px;
-      background: radial-gradient(circle at top left, rgba(129, 140, 248, 0.18), transparent 45%),
-                  radial-gradient(circle at bottom right, rgba(15, 23, 42, 0.9), #020617);
-      border: 1px solid rgba(55, 65, 81, 0.95);
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
-      overflow: hidden;
-      transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease, background 0.14s ease;
-      cursor: pointer;
+      padding: 14px 14px 12px;
+      background: radial-gradient(circle at top left, rgba(56,189,248,0.24), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(15,23,42,0.96), #020617);
+      border: 1px solid rgba(55,65,81,0.95);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
-    .card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.85);
-      border-color: rgba(129, 140, 248, 0.95);
-      background: radial-gradient(circle at top left, rgba(129, 140, 248, 0.26), transparent 45%),
-                  radial-gradient(circle at bottom right, rgba(15, 23, 42, 0.98), #020617);
-    }
-
-    .card-header {
+    .hero-rec-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 6px;
+      font-size: 13px;
     }
 
-    .card-tag {
+    .hero-rec-title {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .hero-rec-title span.label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: #9ca3af;
+    }
+
+    .hero-rec-title strong {
+      font-size: 14px;
+    }
+
+    .hero-rec-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(34,197,94,0.95);
+      background: rgba(21,128,61,0.15);
+      color: #bbf7d0;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    .hero-rec-body {
+      font-size: 12px;
+      color: #9ca3af;
+      line-height: 1.6;
+    }
+
+    .hero-rec-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .hero-chip {
+      font-size: 11px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(75,85,99,0.9);
+      background: rgba(15,23,42,0.96);
+      color: #d1d5db;
+      white-space: nowrap;
+    }
+
+    /* SECTIONS */
+    .section {
+      margin-top: 28px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 10px;
+    }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .section-sub {
+      font-size: 12px;
+      color: #6b7280;
+      max-width: 600px;
+    }
+
+    .section-badge {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.96);
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    @media (max-width: 780px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    /* FEATURE CARDS */
+    .feature-card {
+      position: relative;
+      padding: 16px 15px 14px;
+      border-radius: 18px;
+      background: radial-gradient(circle at top left, rgba(129,140,248,0.22), transparent 45%),
+                  radial-gradient(circle at bottom right, rgba(15,23,42,0.96), #020617);
+      border: 1px solid rgba(31,41,55,0.95);
+      box-shadow: 0 18px 44px rgba(0,0,0,0.9);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    }
+
+    .feature-card.clickable {
+      cursor: pointer;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 24px 56px rgba(0,0,0,0.95);
+      border-color: rgba(129,140,248,0.95);
+      background: radial-gradient(circle at top left, rgba(129,140,248,0.3), transparent 45%),
+                  radial-gradient(circle at bottom right, rgba(15,23,42,0.98), #020617);
+    }
+
+    .feature-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2px;
+    }
+
+    .feature-label {
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.16em;
@@ -242,179 +353,427 @@
       gap: 6px;
     }
 
-    .card-tag span.icon {
+    .feature-label span.icon {
       font-size: 16px;
     }
 
-    .badge {
+    .feature-badge {
       font-size: 11px;
       padding: 3px 8px;
       border-radius: 999px;
-      border: 1px solid rgba(55, 65, 81, 0.9);
-      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.98);
       color: #d1d5db;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      white-space: nowrap;
     }
 
-    .badge-live { border-color: #22c55e; color: #bbf7d0; }
-    .badge-beta { border-color: #60a5fa; color: #bfdbfe; }
-    .badge-soon { border-color: #fb923c; color: #fed7aa; }
+    .feature-badge-live {
+      border-color: rgba(34,197,94,0.95);
+      color: #bbf7d0;
+    }
 
-    .card h3 {
+    .feature-badge-beta {
+      border-color: rgba(96,165,250,0.95);
+      color: #bfdbfe;
+    }
+
+    .feature-badge-soon {
+      border-color: rgba(250,204,21,0.95);
+      color: #fef9c3;
+    }
+
+    .feature-title {
       font-size: 15px;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }
 
-    .card p {
+    .feature-desc {
       font-size: 13px;
       color: #9ca3af;
       line-height: 1.6;
-      margin-bottom: 10px;
     }
 
-    .card-footer {
+    .feature-list {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 4px;
+      padding-left: 14px;
+    }
+
+    .feature-list li {
+      margin-bottom: 2px;
+    }
+
+    .feature-footer {
+      margin-top: 6px;
       font-size: 11px;
       color: #6b7280;
       display: flex;
       justify-content: space-between;
-      gap: 8px;
+      gap: 6px;
+      flex-wrap: wrap;
     }
 
-    .card-footer span {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    /* HIGHLIGHT LOGIC */
+    .highlight-block {
+      position: relative;
+      transition:
+        box-shadow 0.25s ease,
+        transform 0.25s ease,
+        border-color 0.25s ease,
+        background 0.25s ease;
     }
+
+    .highlight-block.is-highlighted {
+      box-shadow:
+        0 0 0 1px rgba(250,204,21,0.95),
+        0 0 26px rgba(250,204,21,0.55),
+        0 24px 60px rgba(0,0,0,0.95);
+      border-color: rgba(250,204,21,0.95) !important;
+      transform: translateY(-4px) scale(1.01);
+      background: radial-gradient(circle at top left, rgba(250,204,21,0.35), transparent 48%),
+                  radial-gradient(circle at bottom right, rgba(15,23,42,0.98), #020617);
+    }
+
   </style>
 </head>
 <body>
   <div class="page">
-    <!-- Top navigation -->
+    <!-- NAV -->
     <header class="nav">
       <div class="brand">
-        <div class="logo">K E N A I</div>
-        <small>Inspelning, reels & delning – allt på ett ställe.</small>
+        <div class="brand-avatar">K</div>
+        <div class="brand-text">
+          <div class="logo">KENAI</div>
+          <small>AI-verktyg för röster &amp; content</small>
+        </div>
       </div>
-      <div class="nav-actions">
-        <a href="#verktyg">Verktyg</a>
-        <a href="recorder.html" class="primary">Öppna inspelaren</a>
+      <div class="nav-right">
+        <span class="nav-pill">BETA · BYGGS JUST NU</span>
+        <span class="nav-pill nav-pill-cta">RÖST · VIDEO · AI · PÅ SVENSKA</span>
       </div>
     </header>
 
-    <main class="layout">
-      <!-- Left: hero -->
-      <section class="hero">
-        <label>
-          <span class="dot"></span>
-          <span>Dina verktyg, live</span>
-        </label>
+    <!-- HERO -->
+    <section class="hero-wrap">
+      <div class="hero-top-label">
+        <span class="dot"></span>
+        <span>Smarta AI-verktyg för ljud, video &amp; content</span>
+      </div>
 
-        <h1>Spela in, klipp reels och dela – direkt i Kenai.</h1>
-        <p>
-          Just nu kan du spela in röster, bygga upp ett reels-underlag och dela
-          dina inspelningar via länk. Allt körs direkt i webbläsaren.
-        </p>
-
-        <ul class="hero-list">
-          <li><span class="bullet"></span> 🎙 Stabil röstinspelning (Kenai Recorder).</li>
-          <li><span class="bullet"></span> 🎬 Reels-plan & uppladdning av bilder/klipp.</li>
-          <li><span class="bullet"></span> 🔗 Delningssida för att skicka klipp till andra.</li>
-        </ul>
-
-        <div class="hero-actions">
-          <a href="recorder.html" class="primary">🎙 Börja spela in</a>
-          <a href="reels.html">🎬 Gå till Reels</a>
-          <a href="share.html">🔗 Testa delningssidan</a>
-        </div>
-
-        <div class="hero-footnote">
-          Fler AI-funktioner (sammanfattning, trender &amp; hashtags) byggs ovanpå
-          de här verktygen senare.
-        </div>
-      </section>
-
-      <!-- Right: cards that highlight what you have -->
-      <section id="verktyg" class="cards">
-        <!-- Recorder -->
-        <article class="card" onclick="location.href='recorder.html'">
-          <div class="card-header">
-            <div class="card-tag">
-              <span class="icon">🎙</span>
-              <span>Röstinspelning</span>
-            </div>
-            <span class="badge badge-live">Live</span>
-          </div>
-          <h3>Kenai Recorder</h3>
+      <div class="hero-main">
+        <!-- Left text -->
+        <div class="hero-main-left">
+          <h1>Spela in röster, bygg reels och dela klipp – allt på ett ställe.</h1>
           <p>
-            Din kärnfunktion: spela in röst, auto-stop, ladda upp och få en
-            delbar länk. Optimerad för både dator och iPhone.
+            Börja i inspelaren, skicka klipp via delningssidan och bygg upp underlag
+            till reels. Kenai ska bli din AI-studio online – utan krångel.
           </p>
-          <div class="card-footer">
-            <span>WAV • 44.1 kHz mono</span>
+
+          <div class="hero-buttons">
+            <a href="recorder.html" class="btn btn-primary">🎙 Öppna Kenai Recorder</a>
+            <a href="#verktyg-idag" class="btn">🔦 Visa vad som finns idag</a>
+            <a href="#kommande" class="btn">🧠 Kika på kommande AI-verktyg</a>
+          </div>
+
+          <div class="hero-footnote">
+            Testad i Chrome (desktop) &amp; Safari (iPhone). Inspelning &amp; uppladdning är live – fler AI-funktioner läggs på ovanpå det här.
+          </div>
+        </div>
+
+        <!-- Right: Recorder mini card -->
+        <aside class="hero-recorder-card highlight-block">
+          <div class="hero-rec-header">
+            <div class="hero-rec-title">
+              <span class="label">Kenai Recorder</span>
+              <strong>Live-inspelning · WAV 44.1 kHz · Auto-stop</strong>
+            </div>
+            <span class="hero-rec-badge">Live · Beta</span>
+          </div>
+          <div class="hero-rec-body">
+            Spela in korta röstklipp – perfekt när du vill recensera en podd, film
+            eller bara skicka ett meddelande till en vän.
+            <div class="hero-rec-tags">
+              <span class="hero-chip">Funkar på mobil &amp; desktop</span>
+              <span class="hero-chip">Delbar länk (share-sida)</span>
+              <span class="hero-chip">Auto-stop vid valt maxlängd</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- VERKTYG SOM FINNS IDAG -->
+    <section id="verktyg-idag" class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Verktyg som finns idag</div>
+          <div class="section-sub">
+            Allt detta fungerar redan nu och går att använda direkt. Klicka på ett kort
+            för att öppna rätt sida.
+          </div>
+        </div>
+        <div class="section-badge">NU LIVE</div>
+      </div>
+
+      <div class="grid">
+        <!-- Recorder card -->
+        <article
+          class="feature-card highlight-block clickable"
+          onclick="location.href='recorder.html'">
+          <div class="feature-top">
+            <div class="feature-label">
+              <span class="icon">🎙</span>
+              <span>Röstinspelning &amp; delning</span>
+            </div>
+            <span class="feature-badge feature-badge-live">Live</span>
+          </div>
+          <div class="feature-title">Kenai Recorder – röst-recensioner &amp; voice notes</div>
+          <div class="feature-desc">
+            Spela in ljudklipp – perfekt för att recensera en podd, film eller serie,
+            eller bara lämna ett meddelande till en kompis.
+          </div>
+          <ul class="feature-list">
+            <li>Inspelning direkt i webbläsaren (Chrome &amp; Safari).</li>
+            <li>Auto-stop efter vald maxlängd.</li>
+            <li>Färdig länk du kan dela vidare.</li>
+          </ul>
+          <div class="feature-footer">
+            <span>Filformat: WAV · 44.1 kHz mono</span>
             <span>app.kenai.technology/recorder.html</span>
           </div>
         </article>
 
-        <!-- Reels -->
-        <article class="card" onclick="location.href='reels.html'">
-          <div class="card-header">
-            <div class="card-tag">
+        <!-- Reels maker v1 -->
+        <article
+          class="feature-card highlight-block clickable"
+          onclick="location.href='reels.html'">
+          <div class="feature-top">
+            <div class="feature-label">
               <span class="icon">🎬</span>
-              <span>Reels-bygge</span>
+              <span>Reels-underlag</span>
             </div>
-            <span class="badge badge-beta">Beta</span>
+            <span class="feature-badge feature-badge-beta">Beta</span>
           </div>
-          <h3>Kenai Reels Maker v1</h3>
-          <p>
-            Ladda upp bilder och videoklipp, välj längd och skapa en plan för
-            din reel. Allt sparas i Supabase redo för AI-klippning.
-          </p>
-          <div class="card-footer">
-            <span>Upload → plan.json</span>
-            <span>Prefix: reels/&lt;sessionId&gt;/</span>
+          <div class="feature-title">Kenai Reels Maker v1 – bygg upp dina klipp</div>
+          <div class="feature-desc">
+            Ladda upp bilder och korta videoklipp, välj mål-längd och låt Kenai skapa
+            en plan (plan.json) som senare kan bli en färdig reel.
+          </div>
+          <ul class="feature-list">
+            <li>Ladda upp flera bilder och videor i ett flöde.</li>
+            <li>Sätter längd och ordning på varje klipp.</li>
+            <li>Sparar allt i Supabase under <code>reels/&lt;sessionId&gt;/</code>.</li>
+          </ul>
+          <div class="feature-footer">
+            <span>Underlag klart för AI-klippning</span>
+            <span>app.kenai.technology/reels.html</span>
           </div>
         </article>
 
-        <!-- Delningssida -->
-        <article class="card" onclick="location.href='share.html'">
-          <div class="card-header">
-            <div class="card-tag">
+        <!-- Share page -->
+        <article
+          class="feature-card highlight-block clickable"
+          onclick="location.href='share.html'">
+          <div class="feature-top">
+            <div class="feature-label">
               <span class="icon">🔗</span>
-              <span>Delning</span>
+              <span>Delningssida</span>
             </div>
-            <span class="badge badge-live">Live</span>
+            <span class="feature-badge feature-badge-live">Live</span>
           </div>
-          <h3>Delningssida för klipp</h3>
-          <p>
-            Visa upp inspelningar via en enkel share-sida. Perfekt när du vill
-            skicka en länk till vänner eller testa flödet.
-          </p>
-          <div class="card-footer">
-            <span>Whatsapp / Telegram / copy</span>
+          <div class="feature-title">Share-sida – visa upp dina klipp</div>
+          <div class="feature-desc">
+            En enkel visningssida där andra kan lyssna på ditt inspelade klipp via länk.
+            Perfekt att skicka till vänner eller testpersoner.
+          </div>
+          <ul class="feature-list">
+            <li>Lyssning direkt i webbläsaren.</li>
+            <li>Kopiera länk eller dela via t.ex. WhatsApp.</li>
+            <li>Byggd för att hänga ihop med Kenai Recorder.</li>
+          </ul>
+          <div class="feature-footer">
+            <span>Visar ett inspelat klipp i fokus</span>
             <span>app.kenai.technology/share.html</span>
           </div>
         </article>
 
-        <!-- Kommande AI-grejer -->
-        <article class="card">
-          <div class="card-header">
-            <div class="card-tag">
-              <span class="icon">🧠</span>
-              <span>Kommande AI</span>
+        <!-- Bas för framtida tools -->
+        <article class="feature-card highlight-block">
+          <div class="feature-top">
+            <div class="feature-label">
+              <span class="icon">🧱</span>
+              <span>Bas för kommande AI</span>
             </div>
-            <span class="badge badge-soon">Snart</span>
+            <span class="feature-badge feature-badge-beta">Byggs på</span>
           </div>
-          <h3>AI-sammanfattning &amp; trend-boost</h3>
-          <p>
-            Nästa steg: AI som sammanfattar klipp &amp; möten, bygger färdiga
-            reels och föreslår trendande hashtags för fler visningar.
-          </p>
-          <div class="card-footer">
-            <span>Byggs ovanpå dagens verktyg</span>
-            <span>Kenai Labs</span>
+          <div class="feature-title">Kenai-grunden – inspelning, uppladdning &amp; lagring</div>
+          <div class="feature-desc">
+            Allt du har nu (Recorder, Reels, delning) är själva grunden som framtida
+            AI-verktyg ska jobba ovanpå.
+          </div>
+          <ul class="feature-list">
+            <li>Stabil inspelning &amp; uppladdning.</li>
+            <li>Supabase som lagring &amp; struktur.</li>
+            <li>Redo att kopplas till AI-sammanfattning &amp; reels-klippning.</li>
+          </ul>
+          <div class="feature-footer">
+            <span>Detta är din “MVP-baseline”</span>
+            <span>Perfekt läge att bygga vidare från</span>
           </div>
         </article>
-      </section>
-    </main>
+      </div>
+    </section>
+
+    <!-- KOMMANDE AI-VERKTYG -->
+    <section id="kommande" class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Kommande AI-verktyg</div>
+          <div class="section-sub">
+            Idéer du har pratat om – de bygger vidare på det som redan finns idag.
+            Texten här är “roadmap”, själva koden kommer sen.
+          </div>
+        </div>
+        <div class="section-badge">PÅ VÄG IN</div>
+      </div>
+
+      <div class="grid">
+        <!-- AI Reels Maker full -->
+        <article class="feature-card highlight-block">
+          <div class="feature-top">
+            <div class="feature-label">
+              <span class="icon">⚡</span>
+              <span>AI Reels Maker</span>
+            </div>
+            <span class="feature-badge feature-badge-soon">Kommer snart</span>
+          </div>
+          <div class="feature-title">Automatiska reels av dina klipp</div>
+          <div class="feature-desc">
+            Ladda upp bilder &amp; videos – AI klipper ihop en snygg, vertikal reel
+            redo att laddas ner och läggas upp på Instagram, TikTok eller YouTube Shorts.
+          </div>
+          <ul class="feature-list">
+            <li>AI bestämmer tempo, längd per klipp och övergångar.</li>
+            <li>Optimerat för 15/30/60/90 sekunder.</li>
+            <li>Du laddar ner videon och lägger på musik direkt i appen du använder.</li>
+          </ul>
+          <div class="feature-footer">
+            <span>Bygger vidare på Reels Maker v1</span>
+            <span>Planerad AI-klippning</span>
+          </div>
+        </article>
+
+        <!-- Trends & hashtags -->
+        <article class="feature-card highlight-block">
+          <div class="feature-top">
+            <div class="feature-label">
+              <span class="icon">📈</span>
+              <span>Trender &amp; hashtags</span>
+            </div>
+            <span class="feature-badge feature-badge-soon">Planerad</span>
+          </div>
+          <div class="feature-title">Trend- &amp; hashtag-coach</div>
+          <div class="feature-desc">
+            Efter att reelen är byggd ska AI kunna föreslå trendande hashtags och
+            vinklar så du kan få fler visningar.
+          </div>
+          <ul class="feature-list">
+            <li>Föreslår hashtags för Instagram, TikTok &amp; Shorts.</li>
+            <li>Kombinerar breda trend-taggar med nisch-taggar.</li>
+            <li>En “Kopiera hashtags”-knapp gör det enkelt att klistra in.</li>
+          </ul>
+          <div class="feature-footer">
+            <span>Fokuserar på reach &amp; växande konto</span>
+            <span>Bygger på innehållet du laddar upp</span>
+          </div>
+        </article>
+
+        <!-- Möten -->
+        <article class="feature-card highlight-block">
+          <div class="feature-top">
+            <div class="feature-label">
+              <span class="icon">📋</span>
+              <span>Möten &amp; sammanfattning</span>
+            </div>
+            <span class="feature-badge feature-badge-soon">Planerad</span>
+          </div>
+          <div class="feature-title">Spela in mötet – få det summerat</div>
+          <div class="feature-desc">
+            Ladda upp ett mötesklipp så skriver AI anteckningar, highlights och
+            “nästa steg” åt dig.
+          </div>
+          <ul class="feature-list">
+            <li>Automatisk transkribering av mötet.</li>
+            <li>Tydlig sammanfattning med action points.</li>
+            <li>Perfekt när du inte orkar lyssna på allt i efterhand.</li>
+          </ul>
+          <div class="feature-footer">
+            <span>Ljud → text &amp; summary</span>
+            <span>Svenska i fokus</span>
+          </div>
+        </article>
+
+        <!-- YouTube / poddar -->
+        <article class="feature-card highlight-block">
+          <div class="feature-top">
+            <div class="feature-label">
+              <span class="icon">🔗</span>
+              <span>Sammanfattning via länk</span>
+            </div>
+            <span class="feature-badge feature-badge-soon">Planerad</span>
+          </div>
+          <div class="feature-title">Sammanfatta YouTube &amp; poddar</div>
+          <div class="feature-desc">
+            Klistra in en länk till ett klipp eller avsnitt och låt AI ge dig en
+            kort, tydlig sammanfattning och de viktigaste takeaways.
+          </div>
+          <ul class="feature-list">
+            <li>Snabb överblick av långa videor &amp; poddar.</li>
+            <li>Både text- och röst-sammanfattning planeras.</li>
+            <li>Perfekt när du vill veta om något är värt att lyssna på.</li>
+          </ul>
+          <div class="feature-footer">
+            <span>URL → smart översikt</span>
+            <span>Komplement till dina egna inspelningar</span>
+          </div>
+        </article>
+      </div>
+    </section>
   </div>
+
+  <!-- AUTO-HIGHLIGHT SCRIPT -->
+  <script>
+    (function () {
+      const blocks = Array.from(document.querySelectorAll('.highlight-block'));
+      if (!blocks.length) return;
+
+      let index = 0;
+
+      function setHighlight(i) {
+        blocks.forEach(el => el.classList.remove('is-highlighted'));
+        const target = blocks[i];
+        if (target) {
+          target.classList.add('is-highlighted');
+          // scrolla mjukt om blocket är långt ner
+          const rect = target.getBoundingClientRect();
+          if (rect.top < 80 || rect.bottom > window.innerHeight) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      }
+
+      // Första highlight
+      setHighlight(index);
+
+      // Byt highlight var 4:e sekund
+      setInterval(() => {
+        index = (index + 1) % blocks.length;
+        setHighlight(index);
+      }, 4000);
+    })();
+  </script>
 </body>
 </html>
