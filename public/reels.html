@@ -227,29 +227,26 @@
         </p>
       </header>
 
-      <div class="card">
-        <div class="section-label">1. Välj material</div>
-        <h2>Välj bilder/klipp</h2>
-        <p style="margin-bottom: 12px">
-          Välj en eller flera filer (bild eller video). Välj sedan ungefärlig mållängd
-          för reelen – vi lägger in klipp i planen tills vi når maxlängden.
-        </p>
+      <<div class="card">
+  <div class="section-label">2. Bygg reel-plan</div>
 
-        <div class="row">
-          <div>
-            <label for="files">Bilder &amp; videoklipp (du kan välja flera)</label>
-            <input id="files" type="file" multiple />
-          </div>
+  <div style="margin: 8px 0 10px">
+    <button id="buildReelBtn" onclick="buildReel()" disabled>
+      🔥
+      <span>Bygg min reel-plan</span>
+    </button>
+  </div>
 
-          <div>
-            <label for="targetLength">Mål-längd (sekunder)</label>
-            <select id="targetLength">
-              <option value="30" selected>30 sek</option>
-              <option value="60">60 sek</option>
-              <option value="90">90 sek (max)</option>
-            </select>
-          </div>
+  <div
+    id="reelResult"
+    class="log"
+    style="margin-top: 4px; font-size: 0.86rem"
+  >
+    Inget byggt ännu. Ladda upp först.
+  </div>
+</div>
 
+        
           <div style="margin-top: 22px">
   <button id="uploadBtn" onclick="startUpload()">
     ⬆️
