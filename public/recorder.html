@@ -1,15 +1,25 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kenai Recorder</title>
 
-  <!-- BYT TILL DINA EGNA SUPABASE-VÄRDEN (utan extra mellanslag!) -->
+  <!-- BYT BARA DESSA TVÅ RADER TILL DINA RIKTIGA VÄRDEN -->
   <meta name='https://hywwzzzxgagqhlxooekz.supabase.co';
   <meta name='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
+  <!-- SLUTA RÖR HÄR 😄 -->
 
   <style>
+    :root {
+      --kenai-bg-top: #020617;
+      --kenai-bg-mid: #020e2b;
+      --kenai-bg-bottom: #000000;
+      --kenai-card: rgba(15, 23, 42, 0.96);
+      --kenai-border: rgba(148, 163, 184, 0.35);
+      --kenai-accent: #f97316;
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
@@ -18,13 +28,14 @@
 
     body {
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      background: radial-gradient(circle at top, #092061 0, #020617 45%, #000000 100%);
-      color: #e5e7eb;
       min-height: 100vh;
+      background:
+        radial-gradient(circle at top, var(--kenai-bg-mid) 0, var(--kenai-bg-top) 40%, var(--kenai-bg-bottom) 100%);
+      color: #e5e7eb;
       display: flex;
-      align-items: center;
       justify-content: center;
-      padding: 24px 16px;
+      align-items: flex-start;
+      padding: 32px 16px;
     }
 
     .page {
@@ -33,288 +44,300 @@
     }
 
     .card {
-      background: rgba(15, 23, 42, 0.92);
-      border-radius: 18px;
-      padding: 24px 22px;
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
-      border: 1px solid rgba(56, 189, 248, 0.14);
+      background: var(--kenai-card);
+      border-radius: 20px;
+      padding: 24px 20px 22px;
+      border: 1px solid var(--kenai-border);
+      box-shadow: 0 26px 90px rgba(0, 0, 0, 0.75);
     }
 
     h1 {
-      font-size: 1.5rem;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: #f9fafb;
+      font-size: 24px;
+      letter-spacing: 0.02em;
       margin-bottom: 4px;
     }
 
-    .sub {
-      font-size: 0.85rem;
+    .subtitle {
+      font-size: 13px;
       color: #9ca3af;
-      margin-bottom: 16px;
+      margin-bottom: 18px;
     }
 
-    .row {
+    .link-row {
+      font-size: 12px;
+      margin-bottom: 18px;
+      color: #9ca3af;
+    }
+
+    .link-row a {
+      color: #38bdf8;
+      text-decoration: none;
+    }
+
+    .link-row a:hover {
+      text-decoration: underline;
+    }
+
+    .controls-row {
       display: flex;
-      gap: 8px;
       flex-wrap: wrap;
+      gap: 8px;
       align-items: center;
       margin-bottom: 12px;
     }
 
     button {
-      padding: 8px 14px;
-      border-radius: 999px;
       border: none;
-      font-size: 0.9rem;
+      outline: none;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 14px;
       cursor: pointer;
-      background: linear-gradient(135deg, #f97316, #ec4899);
-      color: #0b1020;
-      font-weight: 600;
-      box-shadow: 0 8px 20px rgba(236, 72, 153, 0.45);
-      transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+      background: #111827;
+      color: #e5e7eb;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.55);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
 
-    button.secondary {
-      background: #0b1120;
-      color: #e5e7eb;
-      box-shadow: 0 0 0 rgba(0, 0, 0, 0.0);
-      border: 1px solid rgba(148, 163, 184, 0.5);
+    button span.dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #22c55e;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.8);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7);
+    }
+
+    #startBtn {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+    }
+
+    #stopBtn {
+      background: linear-gradient(135deg, #f97316, #fb923c);
+    }
+
+    #uploadBtn {
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
     }
 
     button:disabled {
-      opacity: 0.4;
-      cursor: default;
-      transform: none;
+      opacity: 0.32;
       box-shadow: none;
+      cursor: default;
     }
 
-    button:not(:disabled):hover {
-      transform: translateY(-1px);
-      box-shadow: 0 12px 26px rgba(236, 72, 153, 0.65);
-    }
-
-    .status {
-      font-size: 0.8rem;
+    #status {
+      font-size: 12px;
       color: #9ca3af;
-      margin-top: 4px;
-      min-height: 1.2em;
     }
 
     audio {
       width: 100%;
-      margin-top: 12px;
-      border-radius: 999px;
-      background-color: #020617;
-    }
-
-    .link-wrap {
-      margin-top: 14px;
-      font-size: 0.8rem;
-    }
-
-    .link-wrap label {
-      display: block;
-      margin-bottom: 4px;
-      color: #9ca3af;
-    }
-
-    #shareLink {
-      width: 100%;
-      padding: 6px 10px;
-      border-radius: 10px;
-      border: 1px solid #1f2937;
-      background: #020617;
-      color: #e5e7eb;
-      font-size: 0.8rem;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      display: none;
-    }
-
-    .hint {
       margin-top: 10px;
-      font-size: 0.75rem;
-      color: #6b7280;
     }
 
-    .top-link {
-      font-size: 0.75rem;
-      margin-bottom: 8px;
+    .result {
+      margin-top: 12px;
+      font-size: 12px;
+      color: #9ca3af;
+      word-break: break-all;
     }
 
-    .top-link a {
-      color: #38bdf8;
-      text-decoration: none;
-    }
-
-    .top-link a:hover {
-      text-decoration: underline;
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      background: rgba(15, 118, 110, 0.2);
+      color: #6ee7b7;
+      margin-left: 6px;
     }
   </style>
 </head>
 <body>
   <div class="page">
     <div class="card">
-      <div class="top-link">
-        Nytt: <a href="reels.html">Testa Kenai Reels (tidig test)</a>
-      </div>
-
       <h1>Kenai Recorder</h1>
-      <div class="sub">Snabb röstinspelning med delbar länk (Supabase).</div>
+      <p class="subtitle">
+        Spela in en kort röst-note och ladda upp till Kenai. Perfekt för podd-recensioner, idéer och snabb feedback.
+      </p>
 
-      <div class="row">
-        <button id="recordBtn">🎙️ Starta inspelning</button>
-        <button id="stopBtn" class="secondary">⏹️ Stoppa</button>
-        <button id="uploadBtn" class="secondary">☁️ Ladda upp</button>
+      <div class="link-row">
+        Testa även <a href="/reels.html">AI Reels Maker</a> – ladda upp klipp och låt Kenai bygga en reel-plan.
       </div>
 
-      <div id="status" class="status">Redo. Klicka ”Starta inspelning”.</div>
+      <div class="controls-row">
+        <button id="startBtn">
+          <span class="dot"></span>
+          Starta inspelning
+        </button>
+        <button id="stopBtn" disabled>Stoppa</button>
+        <button id="uploadBtn" disabled>Upload &amp; kopiera länk</button>
+        <span id="status">status: idle</span>
+      </div>
 
       <audio id="player" controls></audio>
 
-      <div class="link-wrap">
-        <label for="shareLink">Delbar länk (Supabase):</label>
-        <input id="shareLink" type="text" readonly />
-      </div>
-
-      <div class="hint">
-        Tips: Spela in korta klipp (t.ex. podd-recensioner), ladda upp, och klistra in länken där du vill dela.
+      <div id="result" class="result">
+        Inget uppladdat ännu.
       </div>
     </div>
   </div>
 
   <script>
-    (function () {
-      const SB_URL_META = document.querySelector('meta[name="supabase-url"]');
-      const SB_KEY_META = document.querySelector('meta[name="supabase-key"]');
-      const SB_URL = SB_URL_META ? SB_URL_META.content.trim() : "";
-      const SB_KEY = SB_KEY_META ? SB_KEY_META.content.trim() : "";
+    // ==== Supabase config ====
+    const SB_URL =
+      document.querySelector('meta[name="supabase-url"]')?.content.trim() || "";
+    const SB_KEY =
+      document.querySelector('meta[name="supabase-key"]')?.content.trim() || "";
 
-      const recordBtn = document.getElementById("recordBtn");
-      const stopBtn = document.getElementById("stopBtn");
-      const uploadBtn = document.getElementById("uploadBtn");
-      const statusEl = document.getElementById("status");
-      const audioEl = document.getElementById("player");
-      const linkEl = document.getElementById("shareLink");
+    const BUCKET = "audio";
+    const FOLDER = "reviews";
 
-      let mediaRecorder = null;
-      let chunks = [];
-      let currentBlob = null;
-      let currentFilename = null;
+    if (!SB_URL || !SB_KEY) {
+      console.warn("Supabase-konfig saknas – upload inaktiveras.");
+    }
 
-      function setStatus(msg) {
-        statusEl.textContent = msg;
+    // ==== DOM ====
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const statusEl = document.getElementById("status");
+    const player = document.getElementById("player");
+    const resultEl = document.getElementById("result");
+
+    // ==== Recording state ====
+    let mediaRecorder = null;
+    let chunks = [];
+    let audioBlob = null;
+
+    function setStatus(text) {
+      statusEl.textContent = "status: " + text;
+    }
+
+    function resetRecording() {
+      chunks = [];
+      audioBlob = null;
+      player.src = "";
+      uploadBtn.disabled = true;
+    }
+
+    // ==== Start recording ====
+    startBtn.addEventListener("click", async () => {
+      try {
+        resetRecording();
+        setStatus("begär mikrofon...");
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            chunks.push(e.data);
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          const type = chunks[0]?.type || "audio/webm";
+          audioBlob = new Blob(chunks, { type });
+          player.src = URL.createObjectURL(audioBlob);
+          uploadBtn.disabled = !SB_URL || !SB_KEY;
+          setStatus("klar att ladda upp");
+        };
+
+        mediaRecorder.start();
+        setStatus("spelar in...");
+      } catch (err) {
+        console.error(err);
+        setStatus("kunde inte starta inspelning (mic-åtkomst?)");
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+      }
+    });
+
+    // ==== Stop recording ====
+    stopBtn.addEventListener("click", () => {
+      if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach((t) => t.stop());
+        stopBtn.disabled = true;
+        startBtn.disabled = false;
+        setStatus("stoppar...");
+      }
+    });
+
+    // ==== Upload to Supabase ====
+    uploadBtn.addEventListener("click", async () => {
+      if (!audioBlob) {
+        setStatus("ingen inspelning att ladda upp");
+        return;
+      }
+      if (!SB_URL || !SB_KEY) {
+        setStatus("Supabase saknas – kolla meta-taggarna");
+        return;
       }
 
-      async function startRecording() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          setStatus("Din webbläsare stödjer tyvärr inte inspelning.");
-          return;
-        }
-
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-          chunks = [];
-          mediaRecorder = new MediaRecorder(stream);
-
-          mediaRecorder.ondataavailable = (e) => {
-            if (e.data && e.data.size > 0) {
-              chunks.push(e.data);
-            }
-          };
-
-          mediaRecorder.onstop = () => {
-            const blob = new Blob(chunks, { type: "audio/webm" });
-            currentBlob = blob;
-            currentFilename = "rec_" + Date.now() + ".webm";
-
-            audioEl.src = URL.createObjectURL(blob);
-            audioEl.play().catch(() => {});
-
-            uploadBtn.disabled = false;
-            setStatus("Inspelning klar. Spela upp eller klicka ”Ladda upp”.");
-          };
-
-          mediaRecorder.start();
-
-          recordBtn.disabled = true;
-          stopBtn.disabled = false;
-          uploadBtn.disabled = true;
-          linkEl.style.display = "none";
-          setStatus("Spelar in...");
-        } catch (err) {
-          console.error(err);
-          setStatus("Kunde inte starta inspelning: " + err.message);
-        }
-      }
-
-      function stopRecording() {
-        if (mediaRecorder && mediaRecorder.state === "recording") {
-          mediaRecorder.stop();
-          recordBtn.disabled = false;
-          stopBtn.disabled = true;
-          setStatus("Stoppar inspelning...");
-        }
-      }
-
-      async function uploadRecording() {
-        if (!currentBlob) {
-          setStatus("Ingen inspelning att ladda upp.");
-          return;
-        }
-        if (!SB_URL || !SB_KEY) {
-          setStatus("Supabase URL eller key saknas i &lt;meta&gt;-taggarna.");
-          return;
-        }
-
-        const bucketPath = "audio/reviews/" + currentFilename;
-        const base = SB_URL.replace(/\/+$/, "");
-        const uploadUrl = base + "/storage/v1/object/" + bucketPath;
-
-        setStatus("Laddar upp till Supabase...");
+      try {
+        setStatus("laddar upp...");
         uploadBtn.disabled = true;
 
-        try {
-          const resp = await fetch(uploadUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": currentBlob.type || "audio/webm",
-              Authorization: "Bearer " + SB_KEY,
-              apikey: SB_KEY,
-              "x-upsert": "true",
-            },
-            body: currentBlob,
-          });
+        const ext = audioBlob.type.includes("webm")
+          ? "webm"
+          : audioBlob.type.includes("ogg")
+          ? "ogg"
+          : "m4a";
+        const filename = `rec_${Date.now()}.${ext}`;
+        const path = `${BUCKET}/${FOLDER}/${filename}`;
 
-          if (!resp.ok) {
-            const text = await resp.text();
-            console.error("Upload error", resp.status, text);
-            throw new Error("Supabase " + resp.status);
-          }
+        const uploadUrl = `${SB_URL}/storage/v1/object/${encodeURIComponent(
+          path
+        )}`;
 
-          const publicBase = base + "/storage/v1/object/public/";
-          const publicUrl = publicBase + bucketPath;
+        const resp = await fetch(uploadUrl, {
+          method: "POST",
+          headers: {
+            apikey: SB_KEY,
+            Authorization: `Bearer ${SB_KEY}`,
+            "Content-Type": audioBlob.type || "audio/webm",
+            "x-upsert": "true",
+          },
+          body: audioBlob,
+        });
 
-          linkEl.value = publicUrl;
-          linkEl.style.display = "block";
-          setStatus("Uppladdning klar ✅ Länken är redo att kopieras.");
-        } catch (err) {
-          console.error(err);
+        if (!resp.ok) {
+          const errText = await resp.text();
+          console.error("Upload error", resp.status, errText);
+          setStatus("fel vid uppladdning (" + resp.status + ")");
           uploadBtn.disabled = false;
-          setStatus("Fel vid uppladdning: " + err.message);
+          return;
         }
+
+        const publicUrl = `${SB_URL}/storage/v1/object/public/${BUCKET}/${FOLDER}/${filename}`;
+
+        setStatus("uppladdad ✅");
+        resultEl.innerHTML =
+          `Inspelning uppladdad.<br>` +
+          `Delbar länk: <a href="${publicUrl}" target="_blank">${publicUrl}</a>` +
+          `<span class="tag">public</span>`;
+      } catch (err) {
+        console.error(err);
+        setStatus("oväntat fel vid uppladdning");
+        uploadBtn.disabled = false;
       }
-
-      // Init-knappar
-      stopBtn.disabled = true;
-      uploadBtn.disabled = true;
-      setStatus("Redo. Klicka ”Starta inspelning”.");
-
-      recordBtn.addEventListener("click", startRecording);
-      stopBtn.addEventListener("click", stopRecording);
-      uploadBtn.addEventListener("click", uploadRecording);
-    })();
+    });
   </script>
 </body>
 </html>
