@@ -5,21 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kenai Recorder</title>
 
-  <!-- BYT BARA DESSA TVÅ RADER TILL DINA RIKTIGA VÄRDEN -->
-  <meta name='https://hywwzzzxgagqhlxooekz.supabase.co';
-  <meta name='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
-  <!-- SLUTA RÖR HÄR 😄 -->
-
   <style>
-    :root {
-      --kenai-bg-top: #020617;
-      --kenai-bg-mid: #020e2b;
-      --kenai-bg-bottom: #000000;
-      --kenai-card: rgba(15, 23, 42, 0.96);
-      --kenai-border: rgba(148, 163, 184, 0.35);
-      --kenai-accent: #f97316;
-    }
-
     * {
       box-sizing: border-box;
       margin: 0;
@@ -29,8 +15,7 @@
     body {
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
       min-height: 100vh;
-      background:
-        radial-gradient(circle at top, var(--kenai-bg-mid) 0, var(--kenai-bg-top) 40%, var(--kenai-bg-bottom) 100%);
+      background: radial-gradient(circle at top, #021024 0%, #020617 40%, #000000 100%);
       color: #e5e7eb;
       display: flex;
       justify-content: center;
@@ -40,128 +25,241 @@
 
     .page {
       width: 100%;
-      max-width: 640px;
+      max-width: 520px;
     }
 
     .card {
-      background: var(--kenai-card);
-      border-radius: 20px;
+      background: rgba(15, 23, 42, 0.96);
+      border-radius: 24px;
       padding: 24px 20px 22px;
-      border: 1px solid var(--kenai-border);
-      box-shadow: 0 26px 90px rgba(0, 0, 0, 0.75);
+      box-shadow:
+        0 24px 60px rgba(0, 0, 0, 0.75),
+        0 0 0 1px rgba(148, 163, 184, 0.15);
+      border: 1px solid rgba(148, 163, 184, 0.25);
     }
 
     h1 {
-      font-size: 24px;
-      letter-spacing: 0.02em;
-      margin-bottom: 4px;
+      font-size: 1.6rem;
+      letter-spacing: 0.03em;
+      margin-bottom: 6px;
     }
 
-    .subtitle {
-      font-size: 13px;
+    .sub {
+      font-size: 0.9rem;
       color: #9ca3af;
-      margin-bottom: 18px;
+      line-height: 1.5;
+      margin-bottom: 14px;
     }
 
-    .link-row {
-      font-size: 12px;
-      margin-bottom: 18px;
-      color: #9ca3af;
-    }
-
-    .link-row a {
-      color: #38bdf8;
+    .pill-link {
+      font-size: 0.8rem;
+      color: #a5b4fc;
       text-decoration: none;
     }
-
-    .link-row a:hover {
+    .pill-link:hover {
       text-decoration: underline;
+    }
+
+    .pill-link span {
+      opacity: 0.7;
     }
 
     .controls-row {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      align-items: center;
-      margin-bottom: 12px;
+      margin-top: 16px;
+      margin-bottom: 6px;
     }
 
-    button {
+    .btn {
       border: none;
-      outline: none;
       border-radius: 999px;
-      padding: 8px 16px;
-      font-size: 14px;
+      padding: 10px 16px;
+      font-size: 0.95rem;
+      font-weight: 500;
       cursor: pointer;
-      background: #111827;
-      color: #e5e7eb;
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.55);
-      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+      transition: transform 0.07s ease, box-shadow 0.07s ease, opacity 0.15s ease;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      justify-content: center;
+      white-space: nowrap;
     }
 
-    button span.dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: #22c55e;
-    }
-
-    button:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.8);
-    }
-
-    button:active:not(:disabled) {
-      transform: translateY(0);
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7);
-    }
-
-    #startBtn {
-      background: linear-gradient(135deg, #22c55e, #16a34a);
-    }
-
-    #stopBtn {
-      background: linear-gradient(135deg, #f97316, #fb923c);
-    }
-
-    #uploadBtn {
-      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
-    }
-
-    button:disabled {
-      opacity: 0.32;
-      box-shadow: none;
+    .btn:disabled {
+      opacity: 0.5;
       cursor: default;
+      transform: none;
+      box-shadow: none;
     }
 
-    #status {
-      font-size: 12px;
+    .btn-primary {
+      background: linear-gradient(135deg, #38bdf8, #3b82f6);
+      color: #0b1220;
+      box-shadow: 0 14px 30px rgba(56, 189, 248, 0.45);
+    }
+    .btn-primary:not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 40px rgba(56, 189, 248, 0.55);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #f97373, #ef4444);
+      color: #fee2e2;
+      box-shadow: 0 14px 30px rgba(248, 113, 113, 0.45);
+    }
+    .btn-danger:not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 40px rgba(248, 113, 113, 0.55);
+    }
+
+    .btn-outline {
+      background: rgba(15, 23, 42, 0.7);
+      color: #e5e7eb;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+    }
+    .btn-outline:not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 26px rgba(15, 23, 42, 0.8);
+    }
+
+    .status-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
       color: #9ca3af;
+      gap: 6px;
+      margin: 10px 0 4px;
+    }
+
+    .status-pill {
+      border-radius: 999px;
+      padding: 3px 10px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: rgba(15, 23, 42, 0.8);
+      color: #e5e7eb;
+      font-size: 0.78rem;
+    }
+
+    .status-pill.recording {
+      border-color: rgba(248, 113, 113, 0.8);
+      color: #fecaca;
+    }
+
+    .time-label {
+      opacity: 0.8;
     }
 
     audio {
       width: 100%;
-      margin-top: 10px;
+      margin: 8px 0 6px;
+      filter: drop-shadow(0 6px 16px rgba(15, 23, 42, 0.8));
     }
 
-    .result {
-      margin-top: 12px;
-      font-size: 12px;
+    .time-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
       color: #9ca3af;
-      word-break: break-all;
+      margin-bottom: 4px;
     }
 
-    .tag {
-      display: inline-block;
-      padding: 2px 8px;
+    .time-row span {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .autostop {
+      margin-top: 6px;
+      font-size: 0.8rem;
+      color: #9ca3af;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .autostop input {
+      width: 70px;
+      padding: 4px 6px;
       border-radius: 999px;
-      font-size: 11px;
-      background: rgba(15, 118, 110, 0.2);
-      color: #6ee7b7;
-      margin-left: 6px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      font-size: 0.8rem;
+      text-align: center;
+    }
+
+    .upload-box {
+      margin-top: 14px;
+      padding: 10px 10px 8px;
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px dashed rgba(148, 163, 184, 0.45);
+      font-size: 0.82rem;
+    }
+
+    .upload-status {
+      margin-bottom: 6px;
+    }
+
+    .upload-status strong {
+      color: #bbf7d0;
+    }
+
+    .share-url {
+      width: 100%;
+      margin-top: 6px;
+      padding: 7px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      font-size: 0.8rem;
+      background: rgba(15, 23, 42, 0.95);
+      color: #e5e7eb;
+    }
+
+    .share-actions {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .share-actions .btn {
+      padding: 7px 12px;
+      font-size: 0.8rem;
+    }
+
+    .share-helper {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+
+    .footer {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    .footer strong {
+      color: #e5e7eb;
+      font-weight: 500;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 20px 10px;
+      }
+      .card {
+        padding: 20px 16px 18px;
+      }
+      h1 {
+        font-size: 1.4rem;
+      }
+      .controls-row {
+        gap: 6px;
+      }
     }
   </style>
 </head>
@@ -169,175 +267,347 @@
   <div class="page">
     <div class="card">
       <h1>Kenai Recorder</h1>
-      <p class="subtitle">
-        Spela in en kort röst-note och ladda upp till Kenai. Perfekt för podd-recensioner, idéer och snabb feedback.
+      <p class="sub">
+        Spela in en kort röst-note och ladda upp till Kenai. Perfekt för podd-recensioner,
+        idéer och snabb feedback.
       </p>
 
-      <div class="link-row">
-        Testa även <a href="/reels.html">AI Reels Maker</a> – ladda upp klipp och låt Kenai bygga en reel-plan.
-      </div>
+      <a href="reels.html" class="pill-link">
+        <span>Nyfiken på video?</span> Testa även <strong>AI Reels Maker</strong>.
+      </a>
 
       <div class="controls-row">
-        <button id="startBtn">
-          <span class="dot"></span>
-          Starta inspelning
-        </button>
-        <button id="stopBtn" disabled>Stoppa</button>
-        <button id="uploadBtn" disabled>Upload &amp; kopiera länk</button>
-        <span id="status">status: idle</span>
+        <button id="startBtn" class="btn btn-primary">Starta inspelning</button>
+        <button id="stopBtn" class="btn btn-danger" disabled>Stoppa</button>
+        <button id="downloadBtn" class="btn btn-outline" disabled>Ladda ner WAV</button>
+        <button id="uploadBtn" class="btn btn-outline" disabled>Upload &amp; kopiera länk</button>
+      </div>
+
+      <div class="status-row">
+        <div class="status-pill" id="statusPill">status: idle</div>
+        <div class="time-label">Inspelningstid: <span id="recTime">00:00</span></div>
+      </div>
+
+      <div class="autostop">
+        <span>Auto-stop (sek):</span>
+        <input type="number" id="autoStop" min="5" max="300" step="5" value="120" />
+        <span style="opacity:.7;">(max 5 min)</span>
       </div>
 
       <audio id="player" controls></audio>
 
-      <div id="result" class="result">
-        Inget uppladdat ännu.
+      <div class="upload-box">
+        <div class="upload-status" id="uploadStatus">
+          Inget uppladdat ännu. Spela in och ladda upp när du är nöjd.
+        </div>
+
+        <input id="shareUrl" class="share-url" type="text" readonly value="" placeholder="Delbar länk visas här när ljudet är sparat." />
+
+        <div class="share-actions">
+          <button id="openLinkBtn" class="btn btn-outline" disabled>Öppna länk</button>
+          <button id="copyLinkBtn" class="btn btn-outline" disabled>Kopiera länk</button>
+        </div>
+
+        <div class="share-helper">
+          Länken går direkt till din ljudfil i Supabase (public bucket <code>audio/reviews</code>).
+        </div>
+      </div>
+
+      <div class="footer">
+        <strong>Kenai</strong> · app.kenai.technology · ingen inloggning
       </div>
     </div>
   </div>
 
   <script>
-    // ==== Supabase config ====
-    const SB_URL =
-      document.querySelector('meta[name="supabase-url"]')?.content.trim() || "";
-    const SB_KEY =
-      document.querySelector('meta[name="supabase-key"]')?.content.trim() || "";
+    // ====== Supabase – FYLL I DINA VÄRDEN HÄR ======
+    // Byt ut värdena nedan mot dina riktiga (samma som du använder i reels.html):
+    const SB_URL  ='https://hywwzzzxgagqhlxooekz.supabase.co';     // <-- BYT
+    const SB_ANON ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';                 // <-- BYT
+    const BUCKET  = "audio";
+    const FOLDER  = "reviews";
 
-    const BUCKET = "audio";
-    const FOLDER = "reviews";
-
-    if (!SB_URL || !SB_KEY) {
-      console.warn("Supabase-konfig saknas – upload inaktiveras.");
-    }
-
-    // ==== DOM ====
-    const startBtn = document.getElementById("startBtn");
-    const stopBtn = document.getElementById("stopBtn");
-    const uploadBtn = document.getElementById("uploadBtn");
-    const statusEl = document.getElementById("status");
-    const player = document.getElementById("player");
-    const resultEl = document.getElementById("result");
-
-    // ==== Recording state ====
-    let mediaRecorder = null;
-    let chunks = [];
+    // ====== Recorder-state ======
+    let audioCtx = null;
+    let mediaStream = null;
+    let scriptNode = null;
+    let recording = false;
+    let leftChannel = [];
+    let recordingLength = 0;
+    let sampleRate = 44100;
     let audioBlob = null;
+    let recStart = 0;
+    let timerHandle = null;
 
-    function setStatus(text) {
-      statusEl.textContent = "status: " + text;
+    const startBtn       = document.getElementById("startBtn");
+    const stopBtn        = document.getElementById("stopBtn");
+    const downloadBtn    = document.getElementById("downloadBtn");
+    const uploadBtn      = document.getElementById("uploadBtn");
+    const statusPill     = document.getElementById("statusPill");
+    const recTimeLabel   = document.getElementById("recTime");
+    const autoStopInput  = document.getElementById("autoStop");
+    const player         = document.getElementById("player");
+    const uploadStatus   = document.getElementById("uploadStatus");
+    const shareUrlInput  = document.getElementById("shareUrl");
+    const openLinkBtn    = document.getElementById("openLinkBtn");
+    const copyLinkBtn    = document.getElementById("copyLinkBtn");
+
+    function setStatus(text, mode) {
+      statusPill.textContent = "status: " + text;
+      statusPill.classList.remove("recording");
+      if (mode === "rec") {
+        statusPill.classList.add("recording");
+      }
     }
 
-    function resetRecording() {
-      chunks = [];
-      audioBlob = null;
-      player.src = "";
-      uploadBtn.disabled = true;
+    function formatTime(ms) {
+      const totalSec = Math.floor(ms / 1000);
+      const m = String(Math.floor(totalSec / 60)).padStart(2, "0");
+      const s = String(totalSec % 60).padStart(2, "0");
+      return m + ":" + s;
     }
 
-    // ==== Start recording ====
-    startBtn.addEventListener("click", async () => {
+    function startTimer() {
+      recStart = performance.now();
+      if (timerHandle) clearInterval(timerHandle);
+      timerHandle = setInterval(() => {
+        const now = performance.now();
+        recTimeLabel.textContent = formatTime(now - recStart);
+      }, 250);
+    }
+
+    function stopTimer(reset = false) {
+      if (timerHandle) {
+        clearInterval(timerHandle);
+        timerHandle = null;
+      }
+      if (reset) {
+        recTimeLabel.textContent = "00:00";
+      }
+    }
+
+    async function startRecording() {
+      if (recording) return;
+
       try {
-        resetRecording();
-        setStatus("begär mikrofon...");
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+        }
+        sampleRate = audioCtx.sampleRate;
+
+        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const source = audioCtx.createMediaStreamSource(mediaStream);
+
+        scriptNode = audioCtx.createScriptProcessor(4096, 1, 1);
+        leftChannel = [];
+        recordingLength = 0;
+
+        scriptNode.onaudioprocess = (e) => {
+          if (!recording) return;
+          const data = e.inputBuffer.getChannelData(0);
+          leftChannel.push(new Float32Array(data));
+          recordingLength += data.length;
+        };
+
+        source.connect(scriptNode);
+        scriptNode.connect(audioCtx.destination);
+
+        recording = true;
+        setStatus("spelar in...", "rec");
         startBtn.disabled = true;
         stopBtn.disabled = false;
+        downloadBtn.disabled = true;
+        uploadBtn.disabled = true;
+        uploadStatus.innerHTML = "Spelar in... klicka <strong>Stoppa</strong> när du är klar.";
+        audioBlob = null;
+        player.src = "";
+        shareUrlInput.value = "";
+        openLinkBtn.disabled = true;
+        copyLinkBtn.disabled = true;
 
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
+        startTimer();
 
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data && e.data.size > 0) {
-            chunks.push(e.data);
-          }
-        };
-
-        mediaRecorder.onstop = () => {
-          const type = chunks[0]?.type || "audio/webm";
-          audioBlob = new Blob(chunks, { type });
-          player.src = URL.createObjectURL(audioBlob);
-          uploadBtn.disabled = !SB_URL || !SB_KEY;
-          setStatus("klar att ladda upp");
-        };
-
-        mediaRecorder.start();
-        setStatus("spelar in...");
+        // Auto-stop
+        const autoSec = parseInt(autoStopInput.value, 10);
+        if (autoSec && autoSec > 0) {
+          setTimeout(() => {
+            if (recording) {
+              stopRecording();
+            }
+          }, autoSec * 1000);
+        }
       } catch (err) {
-        console.error(err);
-        setStatus("kunde inte starta inspelning (mic-åtkomst?)");
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
+        console.error("startRecording error", err);
+        setStatus("kunde inte starta mic", null);
+        uploadStatus.textContent = "Kunde inte få åtkomst till mikrofonen.";
       }
-    });
+    }
 
-    // ==== Stop recording ====
-    stopBtn.addEventListener("click", () => {
-      if (mediaRecorder && mediaRecorder.state === "recording") {
-        mediaRecorder.stop();
-        mediaRecorder.stream.getTracks().forEach((t) => t.stop());
-        stopBtn.disabled = true;
-        startBtn.disabled = false;
-        setStatus("stoppar...");
-      }
-    });
-
-    // ==== Upload to Supabase ====
-    uploadBtn.addEventListener("click", async () => {
-      if (!audioBlob) {
-        setStatus("ingen inspelning att ladda upp");
-        return;
-      }
-      if (!SB_URL || !SB_KEY) {
-        setStatus("Supabase saknas – kolla meta-taggarna");
-        return;
-      }
+    function stopRecording() {
+      if (!recording) return;
+      recording = false;
+      stopTimer();
 
       try {
-        setStatus("laddar upp...");
-        uploadBtn.disabled = true;
+        if (scriptNode) {
+          scriptNode.disconnect();
+          scriptNode.onaudioprocess = null;
+          scriptNode = null;
+        }
+        if (mediaStream) {
+          mediaStream.getTracks().forEach(t => t.stop());
+          mediaStream = null;
+        }
+      } catch (err) {
+        console.warn("stopRecording cleanup error", err);
+      }
 
-        const ext = audioBlob.type.includes("webm")
-          ? "webm"
-          : audioBlob.type.includes("ogg")
-          ? "ogg"
-          : "m4a";
-        const filename = `rec_${Date.now()}.${ext}`;
-        const path = `${BUCKET}/${FOLDER}/${filename}`;
+      const buffer = mergeBuffers(leftChannel, recordingLength);
+      const wavBlob = encodeWAV(buffer, sampleRate);
+      audioBlob = wavBlob;
 
-        const uploadUrl = `${SB_URL}/storage/v1/object/${encodeURIComponent(
-          path
-        )}`;
+      const url = URL.createObjectURL(wavBlob);
+      player.src = url;
 
-        const resp = await fetch(uploadUrl, {
+      setStatus("klar – lyssna eller ladda upp", null);
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      downloadBtn.disabled = false;
+      uploadBtn.disabled = false;
+      uploadStatus.textContent = "Inspelning klar. Du kan nu ladda ner WAV eller ladda upp till Kenai.";
+    }
+
+    function mergeBuffers(channelBuffer, recLength) {
+      const result = new Float32Array(recLength);
+      let offset = 0;
+      for (let i = 0; i < channelBuffer.length; i++) {
+        result.set(channelBuffer[i], offset);
+        offset += channelBuffer[i].length;
+      }
+      return result;
+    }
+
+    function encodeWAV(samples, rate) {
+      const buffer = new ArrayBuffer(44 + samples.length * 2);
+      const view = new DataView(buffer);
+
+      function writeString(view, offset, string) {
+        for (let i = 0; i < string.length; i++) {
+          view.setUint8(offset + i, string.charCodeAt(i));
+        }
+      }
+
+      const length = samples.length * 2;
+
+      writeString(view, 0, "RIFF");
+      view.setUint32(4, 36 + length, true);
+      writeString(view, 8, "WAVE");
+      writeString(view, 12, "fmt ");
+      view.setUint32(16, 16, true);        // Subchunk1Size
+      view.setUint16(20, 1, true);         // PCM
+      view.setUint16(22, 1, true);         // mono
+      view.setUint32(24, rate, true);      // sampleRate
+      view.setUint32(28, rate * 2, true);  // byteRate (sampleRate * numChannels * 2)
+      view.setUint16(32, 2, true);         // blockAlign (numChannels * 2)
+      view.setUint16(34, 16, true);        // bitsPerSample
+      writeString(view, 36, "data");
+      view.setUint32(40, length, true);
+
+      let offset = 44;
+      for (let i = 0; i < samples.length; i++, offset += 2) {
+        let s = Math.max(-1, Math.min(1, samples[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+      }
+
+      return new Blob([view], { type: "audio/wav" });
+    }
+
+    function downloadWav() {
+      if (!audioBlob) return;
+      const url = URL.createObjectURL(audioBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "kenai-recorder.wav";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    async function uploadToSupabase() {
+      if (!audioBlob) {
+        uploadStatus.textContent = "Ingen inspelning att ladda upp.";
+        return;
+      }
+      if (!SB_URL || !SB_ANON || SB_URL.includes("DIN-PROJEKTID")) {
+        uploadStatus.textContent = "Supabase-konfig saknas. Fyll i SB_URL och SB_ANON i koden.";
+        return;
+      }
+
+      uploadBtn.disabled = true;
+      uploadStatus.innerHTML = "Laddar upp till Supabase...";
+      setStatus("laddar upp...", null);
+
+      const ts = Date.now();
+      const fileName = `ken-ai-${ts}.wav`;
+      const fullPath = `${FOLDER}/${fileName}`;
+      const uploadUrl = `${SB_URL}/storage/v1/object/${BUCKET}/${fullPath}`;
+      const publicUrl = `${SB_URL}/storage/v1/object/public/${BUCKET}/${fullPath}`;
+
+      try {
+        const res = await fetch(uploadUrl, {
           method: "POST",
           headers: {
-            apikey: SB_KEY,
-            Authorization: `Bearer ${SB_KEY}`,
-            "Content-Type": audioBlob.type || "audio/webm",
+            "Content-Type": "audio/wav",
             "x-upsert": "true",
+            "apikey": SB_ANON,
+            "Authorization": "Bearer " + SB_ANON
           },
-          body: audioBlob,
+          body: audioBlob
         });
 
-        if (!resp.ok) {
-          const errText = await resp.text();
-          console.error("Upload error", resp.status, errText);
-          setStatus("fel vid uppladdning (" + resp.status + ")");
-          uploadBtn.disabled = false;
-          return;
+        if (!res.ok) {
+          throw new Error("Supabase svarade " + res.status);
         }
 
-        const publicUrl = `${SB_URL}/storage/v1/object/public/${BUCKET}/${FOLDER}/${filename}`;
-
-        setStatus("uppladdad ✅");
-        resultEl.innerHTML =
-          `Inspelning uppladdad.<br>` +
-          `Delbar länk: <a href="${publicUrl}" target="_blank">${publicUrl}</a>` +
-          `<span class="tag">public</span>`;
+        uploadStatus.innerHTML =
+          "<strong>Klar!</strong> Ljudet är sparat &amp; länken redo.";
+        setStatus("uppladdat", null);
+        shareUrlInput.value = publicUrl;
+        openLinkBtn.disabled = false;
+        copyLinkBtn.disabled = false;
       } catch (err) {
-        console.error(err);
-        setStatus("oväntat fel vid uppladdning");
+        console.error("Supabase upload error", err);
+        uploadStatus.textContent = "Något gick fel vid uppladdning: " + err.message;
+        setStatus("fel vid uppladdning", null);
         uploadBtn.disabled = false;
       }
-    });
+    }
+
+    function openLink() {
+      const url = shareUrlInput.value.trim();
+      if (!url) return;
+      window.open(url, "_blank");
+    }
+
+    async function copyLink() {
+      const url = shareUrlInput.value.trim();
+      if (!url) return;
+      try {
+        await navigator.clipboard.writeText(url);
+        uploadStatus.innerHTML = "<strong>Länk kopierad!</strong> Klistra in där du vill dela den.";
+      } catch (err) {
+        console.warn("clipboard error", err);
+      }
+    }
+
+    // ====== Event-koppling ======
+    startBtn.addEventListener("click", startRecording);
+    stopBtn.addEventListener("click", stopRecording);
+    downloadBtn.addEventListener("click", downloadWav);
+    uploadBtn.addEventListener("click", uploadToSupabase);
+    openLinkBtn.addEventListener("click", openLink);
+    copyLinkBtn.addEventListener("click", copyLink);
   </script>
 </body>
 </html>
