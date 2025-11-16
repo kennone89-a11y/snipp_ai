@@ -2,614 +2,370 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <title>Kenai Recorder</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kenai Tools – Allt du behöver</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    :root {
-      color-scheme: dark;
-      --bg: #020617;
-      --bg2: #020617;
-      --card: #020617;
-      --accent: #2563eb;
-      --accent-soft: rgba(37, 99, 235, 0.16); 
-      --danger: #ef4444;
-      --text: #e5e7eb;
-      --muted: #9ca3af;
-      --border: #1f2937;
-      --radius: 18px;
-      --shadow: 0 24px 55px rgba(15, 23, 42, 0.8);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-        "Segoe UI", sans-serif;
-    }
     * {
       box-sizing: border-box;
-    }
-    body {
       margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1a1a2e 0, #050509 45%, #000000 100%);
+      color: #f9fafb;
       min-height: 100vh;
-      background:
-        radial-gradient(circle at top left, #0b1120 0, #020617 52%),
-        radial-gradient(circle at bottom right, #020617 0, #000 60%);
-      color: var(--text);
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
-      padding: 24px;
+      padding: 40px 16px;
     }
-    .shell {
+
+    .page {
+      max-width: 1120px;
       width: 100%;
-      max-width: 720px;
-      background: radial-gradient(circle at top left, #111827 0, #020617 60%);
-      border-radius: 28px;
-      padding: 24px 22px 20px;
-      box-shadow: var(--shadow);
-      border: 1px solid rgba(148, 163, 184, 0.3);
     }
-    h1 {
-      margin: 0 0 4px;
-      font-size: 1.4rem;
-      letter-spacing: 0.04em;
-    }
-    .sub {
-      margin: 0 0 16px;
-      font-size: 0.86rem;
-      color: var(--muted);
-    }
-    .row {
+
+    .nav {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 10px 12px;
-      margin-bottom: 14px;
+      margin-bottom: 40px;
     }
-    label {
-      font-size: 0.8rem;
-      color: var(--muted);
+
+    .logo {
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      font-size: 14px;
+      text-transform: uppercase;
+      color: #a5b4fc;
     }
-    input[type="number"] {
-      width: 80px;
-      padding: 4px 6px;
+
+    .nav-actions a {
+      text-decoration: none;
+      font-size: 14px;
+      padding: 8px 14px;
       border-radius: 999px;
-      border: 1px solid var(--border);
-      background: #020617;
-      color: var(--text);
-      font-size: 0.85rem;
-      outline: none;
+      border: 1px solid #27272f;
+      color: #e5e7eb;
+      margin-left: 8px;
+      transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
     }
-    input[type="number"]:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.4);
+
+    .nav-actions a.primary {
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      border-color: transparent;
     }
-    .btn {
-      padding: 8px 15px;
-      border-radius: 999px;
-      border: none;
-      font-size: 0.86rem;
-      font-weight: 500;
-      cursor: pointer;
+
+    .nav-actions a:hover {
+      background: #111827;
+      border-color: #4b5563;
+      transform: translateY(-1px);
+    }
+
+    .nav-actions a.primary:hover {
+      background: linear-gradient(135deg, #4f46e5, #9333ea);
+      transform: translateY(-1px);
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .hero-label {
       display: inline-flex;
       align-items: center;
-      justify-content: center;
-      gap: 6px;
-      transition: transform 0.08s ease-out, box-shadow 0.08s ease-out,
-        background 0.15s ease-out;
-    }
-    .btn-primary {
-      background: linear-gradient(135deg, #2563eb, #38bdf8);
-      color: white;
-      box-shadow: 0 16px 36px rgba(37, 99, 235, 0.65);
-    }
-    .btn-primary:active {
-      transform: translateY(1px) scale(0.99);
-      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.5);
-    }
-    .btn-danger {
-      background: rgba(248, 113, 113, 0.08);
-      color: #fecaca;
-      border: 1px solid rgba(248, 113, 113, 0.5);
-    }
-    .btn-danger:active {
-      transform: translateY(1px) scale(0.99);
-    }
-    .btn-ghost {
-      background: transparent;
-      color: var(--muted);
-      border: 1px solid var(--border);
-    }
-    .btn-ghost:active {
-      transform: translateY(1px) scale(0.99);
-    }
-    audio {
-      width: 100%;
-      margin: 6px 0 2px;
-    }
-    #rec-timer {
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
-    #status-wrap {
-      margin-top: 10px;
-      display: flex;
-      align-items: center;
       gap: 8px;
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
-    #status-pill {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
       padding: 4px 10px;
       border-radius: 999px;
-      border: 1px solid var(--border);
-      background: rgba(15, 23, 42, 0.9);
+      background: rgba(31, 41, 55, 0.7);
+      border: 1px solid rgba(75, 85, 99, 0.7);
+      color: #9ca3af;
+      margin-bottom: 16px;
     }
-    #status-pill.ok {
-      border-color: rgba(34, 197, 94, 0.8);
-      color: #bbf7d0;
+
+    .hero-label span.dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.9);
     }
-    #status-pill.warn {
-      border-color: rgba(234, 179, 8, 0.8);
-      color: #facc15;
+
+    .hero h1 {
+      font-size: clamp(32px, 5vw, 44px);
+      margin-bottom: 12px;
     }
-    #status-pill.err {
-      border-color: rgba(248, 113, 113, 0.9);
-      color: #fecaca;
+
+    .hero p {
+      max-width: 560px;
+      margin: 0 auto;
+      color: #9ca3af;
+      font-size: 15px;
+      line-height: 1.6;
     }
-    #uploadArea {
-      margin-top: 16px;
-      padding: 12px 12px 10px;
-      border-radius: 16px;
-      background: radial-gradient(circle at top left, #020617, #020617);
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      display: none;
-      font-size: 0.82rem;
-    }
-    #publicUrl {
-      margin-top: 4px;
-      font-size: 0.8rem;
-      word-break: break-all;
-      padding: 6px 8px;
-      border-radius: 10px;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid var(--border);
-    }
-    .upload-row {
+
+    .hero-actions {
+      margin-top: 22px;
       display: flex;
+      justify-content: center;
+      gap: 12px;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 10px;
     }
-    #meta {
-      margin-top: 8px;
-      font-size: 0.7rem;
-      color: var(--muted);
-      opacity: 0.8;
+
+    .hero-actions a {
+      text-decoration: none;
+      font-size: 14px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: 1px solid #4b5563;
+      color: #e5e7eb;
+      transition: background 0.18s ease, transform 0.12s ease, border-color 0.18s ease;
     }
-    @media (max-width: 640px) {
-      .shell {
-        padding: 20px 16px 18px;
-        border-radius: 22px;
+
+    .hero-actions a.primary {
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      border-color: transparent;
+    }
+
+    .hero-actions a.secondary {
+      background: rgba(15, 23, 42, 0.8);
+    }
+
+    .hero-actions a:hover {
+      transform: translateY(-1px);
+      border-color: #6b7280;
+      background: #020617;
+    }
+
+    .hero-actions a.primary:hover {
+      background: linear-gradient(135deg, #4f46e5, #9333ea);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 36px;
+    }
+
+    @media (max-width: 960px) {
+      .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
-      .row {
+    }
+
+    @media (max-width: 720px) {
+      body {
+        padding: 24px 12px;
+      }
+      .nav {
         flex-direction: column;
         align-items: flex-start;
+        gap: 10px;
       }
-      .upload-row {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      .btn {
-        width: 100%;
-        justify-content: center;
+      .grid {
+        grid-template-columns: 1fr;
       }
     }
+
+    .card {
+      position: relative;
+      padding: 18px 16px 18px 16px;
+      border-radius: 18px;
+      background: radial-gradient(circle at top left, rgba(94, 234, 212, 0.15), transparent 45%),
+                  radial-gradient(circle at bottom right, rgba(129, 140, 248, 0.18), #020617);
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.75);
+      overflow: hidden;
+      transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 22px 50px rgba(0, 0, 0, 0.85);
+      border-color: rgba(129, 140, 248, 0.9);
+      background: radial-gradient(circle at top left, rgba(94, 234, 212, 0.24), transparent 45%),
+                  radial-gradient(circle at bottom right, rgba(129, 140, 248, 0.24), #020617);
+    }
+
+    .card-tag {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: #a5b4fc;
+      margin-bottom: 6px;
+    }
+
+    .card h3 {
+      font-size: 16px;
+      margin-bottom: 6px;
+    }
+
+    .card p {
+      font-size: 13px;
+      line-height: 1.5;
+      color: #9ca3af;
+      margin-bottom: 10px;
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      background: rgba(15, 23, 42, 0.95);
+      font-size: 11px;
+      color: #d1d5db;
+    }
+
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #22c55e;
+    }
+
+    .pill-orange { background: rgba(30, 64, 175, 0.8); border-color: rgba(251, 146, 60, 0.9); }
+    .pill-purple { background: rgba(76, 29, 149, 0.9); border-color: rgba(192, 132, 252, 0.9); }
+    .pill-blue   { background: rgba(15, 23, 42, 0.9); border-color: rgba(59, 130, 246, 0.9); }
   </style>
 </head>
 <body>
-  <div class="shell">
-    <h1>Kenai Recorder</h1>
-    <p class="sub">
-  Spela in korta röster och få en delbar länk – direkt i webbläsaren.
-</p>
-
-
-    <div class="row">
-      <button id="btnStart" class="btn btn-primary">Starta inspelning</button>
-      <button id="btnStop" class="btn btn-danger" disabled>Stoppa</button>
-      <button id="btnDownload" class="btn btn-ghost" disabled>Ladda ner WAV</button>
-    </div>
-
-    <div class="row">
-  <label>
-    Auto-stop (sek):
-    <input id="autoSeconds" type="number" min="5" max="600" step="5" value="120" />
-  </label>
-</div>
-
-
-    <audio id="player" controls></audio>
-    <small id="rec-timer">Inspelningstid: 00:00</small>
-
-    <div id="status-wrap">
-      <span style="opacity:0.8;">Status:</span>
-      <span id="status-pill">Idle</span>
-    </div>
-
-    <div id="uploadArea">
-      <div><strong>Ljudet är sparat ✔</strong></div>
-      <div>Delbar länk:</div>
-      <div id="publicUrl"></div>
-      <div class="upload-row">
-        <button id="btnOpen" class="btn btn-primary" disabled>Öppna länk</button>
-        <button id="btnCopy" class="btn btn-ghost" disabled>Kopiera länk</button>
+  <div class="page">
+    <!-- Top navigation -->
+    <header class="nav">
+      <div class="logo">K E N A I</div>
+      <div class="nav-actions">
+        <a href="#tools">Verktyg</a>
+        <a href="recorder.html" class="primary">Öppna inspelaren</a>
       </div>
-    </div>
+    </header>
 
-        <div id="meta">
-      Kenai · app.kenai.technology · ingen inloggning.
-    </div>
+    <!-- Hero section -->
+    <main>
+      <section class="hero">
+        <div class="hero-label">
+          <span class="dot"></span>
+          <span>Byggt för creators</span>
+        </div>
+        <h1>Allt du behöver för ljud, video &amp; AI</h1>
+        <p>
+          Kenai samlar smarta verktyg för att spela in, sammanfatta och skapa
+          reels – så du kan fokusera på idéerna, inte tekniken.
+        </p>
+        <div class="hero-actions">
+          <a href="recorder.html" class="primary">Testa röstinspelning</a>
+          <a href="#tools" class="secondary">Utforska alla verktyg</a>
+        </div>
+      </section>
+
+      <!-- Tools grid -->
+      <section id="tools" class="grid">
+        <!-- Card 1: Recorder -->
+        <article class="card">
+          <div class="card-tag">Röst &amp; delning</div>
+          <h3>Kenai Recorder</h3>
+          <p>
+            Spela in på några sekunder och få en delbar länk direkt. Perfekt för
+            podd-recensioner, röstmeddelanden eller snabba idéer.
+          </p>
+          <div class="card-footer">
+            <span class="pill">
+              <span class="pill-dot"></span>
+              Live på app.kenai.technology
+            </span>
+            <span>WAV • iPhone &amp; desktop</span>
+          </div>
+        </article>
+
+        <!-- Card 2: Möten -->
+        <article class="card">
+          <div class="card-tag">Möten &amp; anteckningar</div>
+          <h3>AI-mötes­sammanfattning</h3>
+          <p>
+            Ladda upp ett mötesklipp så skriver AI tydliga anteckningar,
+            highlights och nästa steg åt dig – på svenska.
+          </p>
+          <div class="card-footer">
+            <span class="pill pill-blue">Snart</span>
+            <span>Ljud → text &amp; sammanfattning</span>
+          </div>
+        </article>
+
+        <!-- Card 3: YouTube/podd -->
+        <article class="card">
+          <div class="card-tag">Länkar &amp; klipp</div>
+          <h3>YouTube &amp; podd-sammanfattning</h3>
+          <p>
+            Klistra in en länk till ett klipp eller en podd och få en kort,
+            tydlig överblick med de viktigaste poängerna.
+          </p>
+          <div class="card-footer">
+            <span class="pill pill-blue">Snart</span>
+            <span>URL → smart översikt</span>
+          </div>
+        </article>
+
+        <!-- Card 4: Reels -->
+        <article class="card">
+          <div class="card-tag">Video &amp; reels</div>
+          <h3>AI Reels Maker</h3>
+          <p>
+            Ladda upp bilder och klipp – Kenai klipper automatiskt ihop en
+            snygg, vertikal reel som du kan ladda ner och posta på Instagram.
+          </p>
+          <div class="card-footer">
+            <span class="pill pill-purple">Planeras</span>
+            <span>Auto-klippning &amp; tempo</span>
+          </div>
+        </article>
+
+        <!-- Card 5: Trender & hashtags -->
+        <article class="card">
+          <div class="card-tag">Tillväxt &amp; reach</div>
+          <h3>Trend &amp; hashtag-coach</h3>
+          <p>
+            Efter din reel är klar föreslår AI trendande hashtags och vinklar
+            som passar ditt innehåll för att hjälpa dig nå fler.
+          </p>
+          <div class="card-footer">
+            <span class="pill pill-orange">Idé</span>
+            <span>Instagram • TikTok • Shorts</span>
+          </div>
+        </article>
+
+        <!-- Card 6: Kommande / Open AI hub -->
+        <article class="card">
+          <div class="card-tag">Kenai Labs</div>
+          <h3>Fler AI-verktyg på väg</h3>
+          <p>
+            Kenai byggs som en svensk AI-hubb för creators: text-till-röst,
+            bild-till-beskrivning, fler sammanfattare och mycket mer.
+          </p>
+          <div class="card-footer">
+            <span class="pill">Byggs steg för steg</span>
+            <span>Feedback välkommen</span>
+          </div>
+        </article>
+      </section>
+    </main>
   </div>
-
-  <script>
-    "use strict";
-
-    // ====== SUPABASE – BYT BARA HÄR ======
-    // Project URL, t.ex. https://dittprojekt.supabase.co
-    const SB_URL = 'https://hywwzzzxgagqhlxooekz.supabase.co';
-    // Anon public key (EN rad)
-    const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
-
-    const BUCKET = "audio";
-    const BASE_PATH = "reviews";
-
-    // ====== UI refs ======
-    const playerEl = document.getElementById("player");
-    const autoSecEl = document.getElementById("autoSeconds");
-    const btnStart = document.getElementById("btnStart");
-    const btnStop = document.getElementById("btnStop");
-    const btnDl = document.getElementById("btnDownload");
-    const btnOpen = document.getElementById("btnOpen");
-    const btnCopy = document.getElementById("btnCopy");
-    const uploadArea = document.getElementById("uploadArea");
-    const publicUrlEl = document.getElementById("publicUrl");
-    const timerEl = document.getElementById("rec-timer");
-    const statusPill = document.getElementById("status-pill");
-
-    // ====== Status / log (EN rad, ingen logghistorik) ======
-    function setStatus(msg, type) {
-      statusPill.textContent = msg;
-      statusPill.classList.remove("ok", "warn", "err");
-      if (type) statusPill.classList.add(type);
-    }
-    function log(msg, type) {
-      setStatus(msg, type);
-      console.log("[Kenai]", msg);
-    }
-
-    // ====== Timer ======
-    let recTimerId = null;
-    let recStartedAt = 0;
-
-    function formatTime(sec) {
-      sec = Math.max(0, Math.floor(sec));
-      const m = String(Math.floor(sec / 60)).padStart(2, "0");
-      const s = String(sec % 60).padStart(2, "0");
-      return `${m}:${s}`;
-    }
-
-    function startTimer() {
-      recStartedAt = Date.now();
-      if (recTimerId) {
-        clearInterval(recTimerId);
-        recTimerId = null;
-      }
-      timerEl.textContent = "Inspelningstid: 00:00";
-      recTimerId = setInterval(() => {
-        if (state !== "recording") {
-          clearInterval(recTimerId);
-          recTimerId = null;
-          return;
-        }
-        const elapsedSec = (Date.now() - recStartedAt) / 1000;
-        timerEl.textContent =
-          "Inspelningstid: " + formatTime(elapsedSec || 0);
-      }, 200);
-    }
-
-    function stopTimer() {
-      if (recTimerId) {
-        clearInterval(recTimerId);
-        recTimerId = null;
-      }
-    }
-
-    // ====== WAV encoder (44.1k mono, 16-bit) ======
-    function floatTo16BitPCM(float32) {
-      const len = float32.length;
-      const buf = new Int16Array(len);
-      for (let i = 0; i < len; i++) {
-        let s = Math.max(-1, Math.min(1, float32[i]));
-        buf[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-      }
-      return buf;
-    }
-
-    function writeWavHeader(view, sampleRate, numSamples) {
-      let offset = 0;
-      const writeString = (s) => {
-        for (let i = 0; i < s.length; i++) {
-          view.setUint8(offset++, s.charCodeAt(i));
-        }
-      };
-
-      const numChannels = 1;
-      const bitsPerSample = 16;
-      const blockAlign = (numChannels * bitsPerSample) / 8;
-      const byteRate = sampleRate * blockAlign;
-      const dataSize = numSamples * blockAlign;
-
-      writeString("RIFF");
-      view.setUint32(offset, 36 + dataSize, true);
-      offset += 4;
-      writeString("WAVE");
-      writeString("fmt ");
-      view.setUint32(offset, 16, true);
-      offset += 4;
-      view.setUint16(offset, 1, true);
-      offset += 2;
-      view.setUint16(offset, numChannels, true);
-      offset += 2;
-      view.setUint32(offset, sampleRate, true);
-      offset += 4;
-      view.setUint32(offset, byteRate, true);
-      offset += 4;
-      view.setUint16(offset, blockAlign, true);
-      offset += 2;
-      view.setUint16(offset, bitsPerSample, true);
-      offset += 2;
-      writeString("data");
-      view.setUint32(offset, dataSize, true);
-    }
-
-    function encodeWav(chunks, sampleRate) {
-      const length = chunks.reduce((acc, cur) => acc + cur.length, 0);
-      const pcm = new Int16Array(length);
-      let offset = 0;
-      for (const chunk of chunks) {
-        pcm.set(floatTo16BitPCM(chunk), offset);
-        offset += chunk.length;
-      }
-      const buffer = new ArrayBuffer(44 + pcm.length * 2);
-      const view = new DataView(buffer);
-      writeWavHeader(view, sampleRate, pcm.length);
-      let pos = 44;
-      for (let i = 0; i < pcm.length; i++, pos += 2) {
-        view.setInt16(pos, pcm[i], true);
-      }
-      return new Blob([view], { type: "audio/wav" });
-    }
-
-    // ====== Recorder state ======
-    let audioCtx = null;
-    let mediaStream = null;
-    let sourceNode = null;
-    let scriptNode = null;
-    let chunks = [];
-    let sampleRate = 44100;
-    let autoStopId = null;
-    let state = "idle";
-    let lastBlob = null;
-    let lastPublicUrl = "";
-
-    async function startRec() {
-      if (state === "recording") return;
-      try {
-        const maxSeconds = Math.max(
-          5,
-          Math.min(600, parseInt(autoSecEl.value, 10) || 120)
-        );
-
-        chunks = [];
-        lastBlob = null;
-        lastPublicUrl = "";
-        uploadArea.style.display = "none";
-        publicUrlEl.textContent = "";
-        btnDl.disabled = true;
-        btnOpen.disabled = true;
-        btnCopy.disabled = true;
-
-        log("Ber om mikrofonåtkomst...", "warn");
-
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: false,
-        });
-
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)({
-          sampleRate: 44100,
-        });
-        sampleRate = audioCtx.sampleRate;
-
-        sourceNode = audioCtx.createMediaStreamSource(mediaStream);
-        scriptNode = audioCtx.createScriptProcessor(4096, 1, 1);
-
-        scriptNode.onaudioprocess = (e) => {
-          if (state !== "recording") return;
-          const input = e.inputBuffer.getChannelData(0);
-          chunks.push(new Float32Array(input));
-        };
-
-        sourceNode.connect(scriptNode);
-        scriptNode.connect(audioCtx.destination);
-
-        state = "recording";
-        btnStart.disabled = true;
-        btnStop.disabled = false;
-
-        log("Spelar in... auto-stop om " + maxSeconds + " sek", "ok");
-        startTimer();
-
-        if (autoStopId) clearTimeout(autoStopId);
-        autoStopId = setTimeout(() => {
-          if (state === "recording") {
-            log("Auto-stop: stoppar inspelning", "warn");
-            stopRec();
-          }
-        }, maxSeconds * 1000);
-      } catch (err) {
-        console.error(err);
-        log("Kunde inte starta inspelning: " + err.message, "err");
-        cleanupAudio();
-        state = "idle";
-        btnStart.disabled = false;
-        btnStop.disabled = true;
-        stopTimer();
-      }
-    }
-
-    function cleanupAudio() {
-      if (autoStopId) {
-        clearTimeout(autoStopId);
-        autoStopId = null;
-      }
-      if (scriptNode) {
-        scriptNode.disconnect();
-        scriptNode.onaudioprocess = null;
-        scriptNode = null;
-      }
-      if (sourceNode) {
-        sourceNode.disconnect();
-        sourceNode = null;
-      }
-      if (mediaStream) {
-        mediaStream.getTracks().forEach((t) => t.stop());
-        mediaStream = null;
-      }
-      if (audioCtx) {
-        audioCtx.close();
-        audioCtx = null;
-      }
-    }
-
-    async function stopRec() {
-      if (state !== "recording") return;
-      state = "stopping";
-      btnStop.disabled = true;
-      stopTimer();
-      log("Stoppar inspelning...", "warn");
-
-      cleanupAudio();
-
-      try {
-        if (!chunks.length) {
-          log("Inga ljuddata inspelade.", "err");
-          state = "idle";
-          btnStart.disabled = false;
-          return;
-        }
-        const wavBlob = encodeWav(chunks, sampleRate);
-        lastBlob = wavBlob;
-
-        const url = URL.createObjectURL(wavBlob);
-        playerEl.src = url;
-        btnDl.disabled = false;
-
-        log("Inspelning klar – laddar upp...", "ok");
-
-        state = "done";
-        btnStart.disabled = false;
-
-        // direkt upload
-        uploadArea.style.display = "block";
-        const publicUrl = await uploadToSupabase(wavBlob);
-        if (publicUrl) {
-          lastPublicUrl = publicUrl;
-          publicUrlEl.textContent = publicUrl;
-          btnOpen.disabled = false;
-          btnCopy.disabled = false;
-          log("Klar! Ljudet är sparat & länken redo.", "ok");
-        } else {
-          log("Upload misslyckades.", "err");
-        }
-      } catch (err) {
-        console.error(err);
-        log("Fel vid stopp/kodning: " + err.message, "err");
-        state = "idle";
-        btnStart.disabled = false;
-      }
-    }
-
-    // ====== Supabase upload ======
-    async function uploadToSupabase(blob) {
-      try {
-        const ts = Date.now();
-        const filename = `kenai-${ts}.wav`;
-        const objectPath = `${BASE_PATH}/${filename}`;
-
-        // Upload-URL: bucket + path
-        const uploadUrl = `${SB_URL}/storage/v1/object/${BUCKET}/${objectPath}`;
-
-        const res = await fetch(uploadUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "audio/wav",
-            "x-upsert": "true",
-            apikey: SB_ANON,
-            Authorization: "Bearer " + SB_ANON,
-          },
-          body: blob,
-        });
-
-        if (!res.ok) {
-          const text = await res.text().catch(() => "");
-          console.error("Upload fel:", res.status, res.statusText, text);
-          return "";
-        }
-
-        const publicUrl = `${SB_URL}/storage/v1/object/public/${BUCKET}/${objectPath}`;
-        return publicUrl;
-      } catch (err) {
-        console.error("Upload exception:", err);
-        return "";
-      }
-    }
-
-    // ====== Buttons ======
-    btnStart.addEventListener("click", () => {
-      startRec();
-    });
-
-    btnStop.addEventListener("click", () => {
-      stopRec();
-    });
-
-    btnDl.addEventListener("click", () => {
-      if (!lastBlob) return;
-      const url = URL.createObjectURL(lastBlob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "kenai-" + Date.now() + ".wav";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 2000);
-    });
-
-    btnOpen.addEventListener("click", () => {
-      if (!lastPublicUrl) return;
-      window.open(lastPublicUrl, "_blank");
-    });
-
-    btnCopy.addEventListener("click", async () => {
-      if (!lastPublicUrl) return;
-      try {
-        await navigator.clipboard.writeText(lastPublicUrl);
-        log("Länk kopierad till urklipp.", "ok");
-      } catch (err) {
-        log("Kunde inte kopiera länk.", "err");
-      }
-    });
-
-    // Init
-    setStatus("Idle", null);
-  </script>
 </body>
 </html>
