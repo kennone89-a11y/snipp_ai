@@ -1,126 +1,320 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Kenai – Recorder (Fresh)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kenai Recorder</title>
 
-  <!-- 🔑 BYT TILL DINA EGNA VÄRDEN -->
-  <meta name="supabase-url" content="https://hywwzzzxgagqhlxooekz.supabase.co;>
-  <meta name="supabase-key" content="sb_publishable_fLQC4d675JKhsc-QXj2oGw_BGIfI87Z';>
-  <meta name="supabase-url" content='https://hywwzzzxgagqhlxooekz.supabase.co'; 
-  <meta name="supabase-key" content='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
+  <!-- BYT TILL DINA EGNA SUPABASE-VÄRDEN (utan extra mellanslag!) -->
+  <meta name='https://hywwzzzxgagqhlxooekz.supabase.co';
+  <meta name='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
 
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 18px; }
-    small code { background:#f2f2f2; padding:2px 6px; border-radius:6px; }
-    button { margin-right: 8px; }
-    .muted { opacity:.65 }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: radial-gradient(circle at top, #092061 0, #020617 45%, #000000 100%);
+      color: #e5e7eb;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 640px;
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.92);
+      border-radius: 18px;
+      padding: 24px 22px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(56, 189, 248, 0.14);
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #f9fafb;
+      margin-bottom: 4px;
+    }
+
+    .sub {
+      font-size: 0.85rem;
+      color: #9ca3af;
+      margin-bottom: 16px;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    button {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: none;
+      font-size: 0.9rem;
+      cursor: pointer;
+      background: linear-gradient(135deg, #f97316, #ec4899);
+      color: #0b1020;
+      font-weight: 600;
+      box-shadow: 0 8px 20px rgba(236, 72, 153, 0.45);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+    }
+
+    button.secondary {
+      background: #0b1120;
+      color: #e5e7eb;
+      box-shadow: 0 0 0 rgba(0, 0, 0, 0.0);
+      border: 1px solid rgba(148, 163, 184, 0.5);
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: default;
+      transform: none;
+      box-shadow: none;
+    }
+
+    button:not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 26px rgba(236, 72, 153, 0.65);
+    }
+
+    .status {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-top: 4px;
+      min-height: 1.2em;
+    }
+
+    audio {
+      width: 100%;
+      margin-top: 12px;
+      border-radius: 999px;
+      background-color: #020617;
+    }
+
+    .link-wrap {
+      margin-top: 14px;
+      font-size: 0.8rem;
+    }
+
+    .link-wrap label {
+      display: block;
+      margin-bottom: 4px;
+      color: #9ca3af;
+    }
+
+    #shareLink {
+      width: 100%;
+      padding: 6px 10px;
+      border-radius: 10px;
+      border: 1px solid #1f2937;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 0.8rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      display: none;
+    }
+
+    .hint {
+      margin-top: 10px;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    .top-link {
+      font-size: 0.75rem;
+      margin-bottom: 8px;
+    }
+
+    .top-link a {
+      color: #38bdf8;
+      text-decoration: none;
+    }
+
+    .top-link a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
- <h1>Kenai Recorder</h1>
-<p style="margin-top:8px; font-size:13px; color:#9ca3af;">
-  Nytt: Testa även
-  <a href="/reels.html" style="color:#38bdf8; text-decoration:none;">
-    AI Reels Maker (tidig test)
-  </a>
-  för att ladda upp bilder & klipp och få en första reel-plan (max 90 sek).
-</p>
+  <div class="page">
+    <div class="card">
+      <div class="top-link">
+        Nytt: <a href="reels.html">Testa Kenai Reels (tidig test)</a>
+      </div>
 
-  <div id="controls">
-    <button id="startBtn">Starta inspelning</button>
-    <button id="stopBtn" disabled>Stoppa</button>
-    <button id="uploadBtn">Upload till Supabase</button>
-    <button id="testBtn">Testa Supabase</button>
-    <span id="state" class="muted">status: idle</span>
+      <h1>Kenai Recorder</h1>
+      <div class="sub">Snabb röstinspelning med delbar länk (Supabase).</div>
+
+      <div class="row">
+        <button id="recordBtn">🎙️ Starta inspelning</button>
+        <button id="stopBtn" class="secondary">⏹️ Stoppa</button>
+        <button id="uploadBtn" class="secondary">☁️ Ladda upp</button>
+      </div>
+
+      <div id="status" class="status">Redo. Klicka ”Starta inspelning”.</div>
+
+      <audio id="player" controls></audio>
+
+      <div class="link-wrap">
+        <label for="shareLink">Delbar länk (Supabase):</label>
+        <input id="shareLink" type="text" readonly />
+      </div>
+
+      <div class="hint">
+        Tips: Spela in korta klipp (t.ex. podd-recensioner), ladda upp, och klistra in länken där du vill dela.
+      </div>
+    </div>
   </div>
 
-  <p style="margin-top:10px">
-    <audio id="player" controls></audio>
-  </p>
-
   <script>
-    // ---------- KONFIG ----------
-    const getMeta = (name) =>
-      document.querySelector(`meta[name="${name}"]`)?.content?.trim() || '';
+    (function () {
+      const SB_URL_META = document.querySelector('meta[name="supabase-url"]');
+      const SB_KEY_META = document.querySelector('meta[name="supabase-key"]');
+      const SB_URL = SB_URL_META ? SB_URL_META.content.trim() : "";
+      const SB_KEY = SB_KEY_META ? SB_KEY_META.content.trim() : "";
 
-    const SUPABASE_URL = getMeta('supabase-url');
-    const SUPABASE_KEY = getMeta('supabase-key');
+      const recordBtn = document.getElementById("recordBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const uploadBtn = document.getElementById("uploadBtn");
+      const statusEl = document.getElementById("status");
+      const audioEl = document.getElementById("player");
+      const linkEl = document.getElementById("shareLink");
 
-    console.log('Supabase config:', {
-      SUPABASE_URL,
-      SUPABASE_KEY: SUPABASE_KEY ? SUPABASE_KEY.slice(0, 6) + '…' : ''
-    });
+      let mediaRecorder = null;
+      let chunks = [];
+      let currentBlob = null;
+      let currentFilename = null;
 
-    // ---------- UI ----------
-    const startBtn  = document.getElementById('startBtn');
-    const stopBtn   = document.getElementById('stopBtn');
-    const uploadBtn = document.getElementById('uploadBtn');
-    const testBtn   = document.getElementById('testBtn');
-    const stateEl   = document.getElementById('state');
-    const player    = document.getElementById('player');
-
-    document.querySelectorAll('button').forEach(b=>{
-      b.addEventListener('click', ()=>console.log('clicked:', b.id || b.textContent.trim()));
-    });
-
-    if (!SUPABASE_URL || !SUPABASE_KEY) {
-      [uploadBtn, testBtn].forEach(b => {
-        if (b) { b.disabled = true; b.title = 'Saknar Supabase-konfig i <meta>'; }
-      });
-      console.warn('Supabase-konfig saknas – upload/test inaktiverat.');
-    }
-
-    // ---------- Enkel inspelning (stub) ----------
-    let mediaRecorder, chunks = [], stream = null;
-
-    async function startRec(){
-      try {
-        stateEl.textContent = 'status: begär mikrofon…';
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
-        chunks = [];
-        mediaRecorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(chunks, { type: 'audio/webm' });
-          player.src = URL.createObjectURL(blob);
-          stateEl.textContent = 'status: klar – förhandslyssna eller ladda upp';
-        };
-        mediaRecorder.start();
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-        stateEl.textContent = 'status: recording…';
-      } catch (err) {
-        console.error(err);
-        stateEl.textContent = 'status: fel – kunde inte starta inspelning';
+      function setStatus(msg) {
+        statusEl.textContent = msg;
       }
-    }
 
-    function stopRec(){
-      try {
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-        if (stream) stream.getTracks().forEach(t=>t.stop());
-      } finally {
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
+      async function startRecording() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setStatus("Din webbläsare stödjer tyvärr inte inspelning.");
+          return;
+        }
+
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+          chunks = [];
+          mediaRecorder = new MediaRecorder(stream);
+
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) {
+              chunks.push(e.data);
+            }
+          };
+
+          mediaRecorder.onstop = () => {
+            const blob = new Blob(chunks, { type: "audio/webm" });
+            currentBlob = blob;
+            currentFilename = "rec_" + Date.now() + ".webm";
+
+            audioEl.src = URL.createObjectURL(blob);
+            audioEl.play().catch(() => {});
+
+            uploadBtn.disabled = false;
+            setStatus("Inspelning klar. Spela upp eller klicka ”Ladda upp”.");
+          };
+
+          mediaRecorder.start();
+
+          recordBtn.disabled = true;
+          stopBtn.disabled = false;
+          uploadBtn.disabled = true;
+          linkEl.style.display = "none";
+          setStatus("Spelar in...");
+        } catch (err) {
+          console.error(err);
+          setStatus("Kunde inte starta inspelning: " + err.message);
+        }
       }
-    }
 
-    startBtn.addEventListener('click', startRec);
-    stopBtn.addEventListener('click', stopRec);
+      function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+          mediaRecorder.stop();
+          recordBtn.disabled = false;
+          stopBtn.disabled = true;
+          setStatus("Stoppar inspelning...");
+        }
+      }
 
-    // ---------- Supabase-stubbar ----------
-    testBtn?.addEventListener('click', async () => {
-      if (!SUPABASE_URL || !SUPABASE_KEY) return alert('Sätt Supabase-<meta> först.');
-      alert('Supabase-test: OK (konfig finns).');
-    });
+      async function uploadRecording() {
+        if (!currentBlob) {
+          setStatus("Ingen inspelning att ladda upp.");
+          return;
+        }
+        if (!SB_URL || !SB_KEY) {
+          setStatus("Supabase URL eller key saknas i &lt;meta&gt;-taggarna.");
+          return;
+        }
 
-    uploadBtn?.addEventListener('click', async () => {
-      if (!SUPABASE_URL || !SUPABASE_KEY) return alert('Sätt Supabase-<meta> först.');
-      if (!player.src) return alert('Ingen inspelning att ladda upp.');
-      alert('Upload stub: OK (implementera riktiga API-anrop sen).');
-    });
+        const bucketPath = "audio/reviews/" + currentFilename;
+        const base = SB_URL.replace(/\/+$/, "");
+        const uploadUrl = base + "/storage/v1/object/" + bucketPath;
+
+        setStatus("Laddar upp till Supabase...");
+        uploadBtn.disabled = true;
+
+        try {
+          const resp = await fetch(uploadUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": currentBlob.type || "audio/webm",
+              Authorization: "Bearer " + SB_KEY,
+              apikey: SB_KEY,
+              "x-upsert": "true",
+            },
+            body: currentBlob,
+          });
+
+          if (!resp.ok) {
+            const text = await resp.text();
+            console.error("Upload error", resp.status, text);
+            throw new Error("Supabase " + resp.status);
+          }
+
+          const publicBase = base + "/storage/v1/object/public/";
+          const publicUrl = publicBase + bucketPath;
+
+          linkEl.value = publicUrl;
+          linkEl.style.display = "block";
+          setStatus("Uppladdning klar ✅ Länken är redo att kopieras.");
+        } catch (err) {
+          console.error(err);
+          uploadBtn.disabled = false;
+          setStatus("Fel vid uppladdning: " + err.message);
+        }
+      }
+
+      // Init-knappar
+      stopBtn.disabled = true;
+      uploadBtn.disabled = true;
+      setStatus("Redo. Klicka ”Starta inspelning”.");
+
+      recordBtn.addEventListener("click", startRecording);
+      stopBtn.addEventListener("click", stopRecording);
+      uploadBtn.addEventListener("click", uploadRecording);
+    })();
   </script>
 </body>
 </html>
