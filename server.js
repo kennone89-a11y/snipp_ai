@@ -44,19 +44,16 @@ async function fetchJson(url) {
   return res.json();
 }
 
-// Ladda ned ett klipp till fil
+// Ladda ned ett klipp till fil (utan .pipe, funkar i Node 22)
 async function downloadToFile(url, localPath) {
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`Failed to download ${url} (${res.status})`);
   }
 
-  await new Promise((resolve, reject) => {
-    const fileStream = fs.createWriteStream(localPath);
-    res.body.pipe(fileStream);
-    res.body.on("error", reject);
-    fileStream.on("finish", resolve);
-  });
+  const arrayBuffer = await res.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  await fs.promises.writeFile(localPath, buffer);
 }
 
 // Ladda upp fil till Supabase-bucketen via HTTP
