@@ -1,188 +1,185 @@
-// server.js - Kenai backend: health + build-reel (plan + enkel video v1)
+// server.js – Kenai backend (Recorder + Reels + AI)
 
+// --- Imports ---
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-const fs = require("fs");
 const ffmpeg = require("fluent-ffmpeg");
 const ffmpegPath = require("ffmpeg-static");
 
+const OpenAI = require("openai");
+const { toFile } = require("openai/uploads");
+
+// --- Setup ---
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ----- Environment vars (Supabase) -----
-// Vi accepterar både SB_* och SBL_* för säkerhets skull
-const SB_URL = process.env.SB_URL || process.env.SBL_URL;
-const SB_ANON = process.env.SB_ANON || process.env.SBL_ANON;
-const BUCKET = "audio";
-
-// Env-debug i loggarna
-console.log("ENV DEBUG SB_URL:", SB_URL ? "SET" : "MISSING");
-console.log("ENV DEBUG SB_ANON:", SB_ANON ? "SET" : "MISSING");
-
 app.use(cors());
 app.use(express.json());
+app.use(express.static("public"));
 
-// Statisk frontend (public-mappen)
-const publicDir = path.join(__dirname, "public");
-app.use(express.static(publicDir));
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(publicDir, "index.html"));
+// --- OpenAI-klient ---
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-// ----- Hjälpfunktioner -----
-
-// Läs JSON via fetch (Node 22 har global fetch)
-async function fetchJson(url) {
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch JSON ${url} (${res.status})`);
-  }
-  return res.json();
-}
-
-// Ladda ned ett klipp till fil (utan .pipe, funkar i Node 22)
-async function downloadToFile(url, localPath) {
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Failed to download ${url} (${res.status})`);
-  }
-
-  const arrayBuffer = await res.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  await fs.promises.writeFile(localPath, buffer);
-}
-
-// Ladda upp fil till Supabase-bucketen via HTTP
-async function uploadToSupabase(pathRelative, buffer, contentType) {
-  if (!SB_URL || !SB_ANON) {
-    throw new Error("SB_URL / SB_ANON saknas – kan inte ladda upp till Supabase");
-  }
-
-  const url = `${SB_URL}/storage/v1/object/${encodeURIComponent(
-    BUCKET
-  )}/${encodeURIComponent(pathRelative)}`;
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      apikey: SB_ANON,
-      authorization: `Bearer ${SB_ANON}`,
-      "content-type": contentType,
-      "x-upsert": "true"
-    },
-    body: buffer
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Supabase upload failed (${res.status}) ${text}`);
-  }
-}
-
-// ----- Health-check -----
-app.get("/api/health", (req, res) => {
-  res.json({
-    ok: true,
-    message: "Kenai backend env-debug ✅",
-    SB_URL_present: !!SB_URL,
-    SB_ANON_present: !!SB_ANON
-  });
+// --- En enkel health-check (valfritt men bra att ha) ---
+app.get("/health", (req, res) => {
+  res.json({ ok: true });
 });
 
-/**
- * POST /api/build-reel
- * Body: { sessionId: "..." }
- *
- * v2:
- *  1) Läser plan.json
- *  2) Bygger en enkel reel-video av FÖRSTA klippet i planen
- *  3) Laddar upp output.mp4 till Supabase och skickar outputUrl tillbaka
- */
+// ---------------------------------------------------------
+//  REELS: enkel /api/build-reel som läser plan.json från Supabase
+// ---------------------------------------------------------
+
+// Den här endpointen förväntar sig antingen:
+//  - body: { planUrl: "https://..." }
+//  eller
+//  - body: { sessionId: "abc123" }  → då bygger vi en URL till plan.json
+//
+// plan.json antas ligga i bucket "audio", path: reels/<sessionId>/plan.json
+
 app.post("/api/build-reel", async (req, res) => {
   try {
-    const { sessionId } = req.body || {};
+    const { planUrl, sessionId } = req.body || {};
 
-    if (!sessionId) {
-      return res.status(400).json({ ok: false, error: "sessionId saknas" });
+    const SB_URL = process.env.SB_URL;
+    const SB_ANON = process.env.SB_ANON;
+
+    let url = planUrl;
+
+    if (!url) {
+      if (!SB_URL || !SB_ANON) {
+        return res
+          .status(500)
+          .json({ error: "SB_URL eller SB_ANON saknas i environment" });
+      }
+      if (!sessionId) {
+        return res
+          .status(400)
+          .json({ error: "Saknar sessionId eller planUrl i body" });
+      }
+
+      // Antagen plats för plan.json i Supabase
+      url = `${SB_URL}/storage/v1/object/public/audio/reels/${sessionId}/plan.json`;
     }
 
-    if (!SB_URL) {
-      return res.status(500).json({
-        ok: false,
-        error:
-          "SB_URL/SBL_URL saknas på servern (kolla environment vars i Render)"
-      });
-    }
-
-    // Bas-URL till public bucket: audio/reels/<sessionId>/...
-    const basePublic = `${SB_URL}/storage/v1/object/public/${BUCKET}/reels/${sessionId}`;
-
-    // 1. Hämta plan.json
-    const planUrl = `${basePublic}/plan.json`;
-    let plan;
-    try {
-      plan = await fetchJson(planUrl);
-    } catch (err) {
-      console.error("Kunde inte läsa plan.json:", err.message);
-      return res.status(404).json({
-        ok: false,
-        error: "plan.json hittades inte eller gick inte att läsa",
-        url: planUrl
-      });
-    }
-
-    const clips = Array.isArray(plan.clips) ? plan.clips : [];
-    if (!clips.length) {
-      return res.status(400).json({
-        ok: false,
-        error: "Planen innehåller inga klipp."
-      });
-    }
-
-    // Bygg lista med klipp + total längd
-    let totalDuration = 0;
-    const files = clips.map((clip, index) => {
-      const name =
-        clip.file || clip.path || clip.name || clip.filename || `clip-${index}`;
-      const dur = Number(clip.duration) || 0;
-      totalDuration += dur;
-
-      return {
-        index,
-        type: clip.type || "unknown",
-        file: name,
-        url: `${basePublic}/${name}`,
-        duration: dur || null
-      };
+    const planResp = await fetch(url, {
+      headers: {
+        apikey: SB_ANON,
+      },
     });
+
+    if (!planResp.ok) {
+      return res
+        .status(400)
+        .json({ error: "Kunde inte hämta plan.json från Supabase" });
+    }
+
+    const plan = await planResp.json();
+    const clips = Array.isArray(plan.clips) ? plan.clips : [];
+
+    const totalDuration = clips.reduce(
+      (sum, c) => sum + (Number(c.duration) || 0),
+      0
+    );
 
     return res.json({
       ok: true,
-      sessionId,
-      basePublic,
-      plan,
-      files,
+      sourceUrl: url,
+      clipCount: clips.length,
       totalDuration,
-      videoBuildEnabled: false,
-      message:
-        "Videobygge med ffmpeg är AVSTÄNGT i denna testversion (gratis Render-minne). Planen funkar och kan användas i t.ex. CapCut."
+      targetDuration: plan.targetDuration || null,
+      plan,
     });
   } catch (err) {
     console.error("build-reel error:", err);
+    return res
+      .status(500)
+      .json({ error: "Något gick fel i /api/build-reel" });
+  }
+});
+
+// ---------------------------------------------------------
+//  AI för Kenai Recorder: /api/ai-review
+// ---------------------------------------------------------
+
+// Tar emot { audioUrl } (publik Supabase-länk till ljudfilen),
+// transkriberar den (svenska) och gör en kort sammanfattning.
+
+app.post("/api/ai-review", async (req, res) => {
+  try {
+    const { audioUrl } = req.body || {};
+
+    if (!audioUrl) {
+      return res.status(400).json({ error: "Saknar audioUrl" });
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res
+        .status(500)
+        .json({ error: "OPENAI_API_KEY saknas i environment" });
+    }
+
+    // 1) Hämta ljudfilen
+    const resp = await fetch(audioUrl);
+    if (!resp.ok) {
+      return res
+        .status(400)
+        .json({ error: "Kunde inte hämta ljudfil från Supabase" });
+    }
+
+    const arrayBuffer = await resp.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // TODO: om du i framtiden sparar WAV istället, ändra mime-typ + filnamn
+    const file = await toFile(buffer, "recording.webm", {
+      type: "audio/webm",
+    });
+
+    // 2) Transkribera på svenska
+    const transcription = await openai.audio.transcriptions.create({
+      model: "gpt-4o-mini-transcribe",
+      file,
+      language: "sv",
+    });
+
+    const transcriptText = transcription.text || "";
+
+    // 3) Sammanfatta kort på svenska
+    const summaryResponse = await openai.responses.create({
+      model: "gpt-4o-mini",
+      input:
+        "Sammanfatta följande svenska röst-recension i 2–3 meningar på svenska:\n\n" +
+        transcriptText,
+    });
+
+    const summary =
+      summaryResponse.output_text ||
+      (summaryResponse.output &&
+        summaryResponse.output[0] &&
+        summaryResponse.output[0].content &&
+        summaryResponse.output[0].content[0] &&
+        summaryResponse.output[0].content[0].text) ||
+      "";
+
+    return res.json({
+      transcript: transcriptText,
+      summary,
+    });
+  } catch (err) {
+    console.error("AI-review error:", err);
     return res.status(500).json({
-      ok: false,
-      error: "Något gick fel i /api/build-reel",
-      details: err.message
+      error: "Något gick fel med AI:n",
     });
   }
 });
 
-
-// ----- Starta servern -----
+// ---------------------------------------------------------
+//  Starta servern
+// ---------------------------------------------------------
 app.listen(PORT, () => {
   console.log(`Kenai backend lyssnar på port ${PORT}`);
 });
