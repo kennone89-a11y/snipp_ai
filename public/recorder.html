@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
-  <title>Kenai Recorder</title>
+  <title>Kenai Recorder + AI</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
@@ -169,9 +169,10 @@
 
   <script>
     // ========= SUPABASE-inställningar =========
-    // Byt ut mot dina riktiga värden
-    const SB_URL ='https://hywwzzzxgagqhlxooekz.supabase.co';  // t.ex. https://xxxxx.supabase.co
-    const SB_ANON ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA'; // din publika anon key
+    // Byt ut mot dina riktiga värden (samma som du använt tidigare)
+    const SB_URL ='https://hywwzzzxgagqhlxooekz.supabase.co';    // t.ex. https://xxxxxx.supabase.co
+    const SB_ANON ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
+ // din publika anon key
     const BUCKET = "audio";
     const FOLDER = "reviews";
 
@@ -290,7 +291,8 @@
 
         const ts = Date.now();
         const fileName = `kenai_${ts}.webm`;
-        const uploadUrl = `${SB_URL}/storage/v1/object/${BUCKET}/${FOLDER}/${fileName}`;
+        const objectPath = `${BUCKET}/reviews/${fileName}`; // för display
+        const uploadUrl = `${SB_URL}/storage/v1/object/${BUCKET}/reviews/${fileName}`;
 
         const res = await fetch(uploadUrl, {
           method: "POST",
@@ -311,7 +313,7 @@
           return;
         }
 
-        const publicUrl = `${SB_URL}/storage/v1/object/public/${BUCKET}/${FOLDER}/${fileName}`;
+        const publicUrl = `${SB_URL}/storage/v1/object/public/${BUCKET}/reviews/${fileName}`;
 
         publicLinkEl.href = publicUrl;
         publicLinkEl.textContent = publicUrl;
