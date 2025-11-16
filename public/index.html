@@ -2,55 +2,68 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <title>Kenai Tools – Allt du behöver</title>
+  <title>Kenai – Inspelning, Reels & delning</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: radial-gradient(circle at top, #1a1a2e 0, #050509 45%, #000000 100%);
+      background: radial-gradient(circle at top, #111827 0, #020617 45%, #000000 100%);
       color: #f9fafb;
       min-height: 100vh;
+      padding: 32px 16px 48px;
       display: flex;
-      align-items: flex-start;
       justify-content: center;
-      padding: 40px 16px;
     }
 
     .page {
-      max-width: 1120px;
       width: 100%;
+      max-width: 1120px;
     }
 
+    /* Top nav */
     .nav {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 40px;
+      margin-bottom: 32px;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
 
     .logo {
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
+      font-size: 14px;
       color: #a5b4fc;
+    }
+
+    .brand small {
+      font-size: 11px;
+      color: #6b7280;
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
     }
 
     .nav-actions a {
       text-decoration: none;
-      font-size: 14px;
-      padding: 8px 14px;
+      font-size: 13px;
+      padding: 7px 14px;
       border-radius: 999px;
-      border: 1px solid #27272f;
+      border: 1px solid #374151;
       color: #e5e7eb;
-      margin-left: 8px;
-      transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+      background: rgba(15, 23, 42, 0.9);
+      transition: background 0.16s ease, border-color 0.16s ease, transform 0.12s ease;
     }
 
     .nav-actions a.primary {
@@ -59,73 +72,104 @@
     }
 
     .nav-actions a:hover {
-      background: #111827;
-      border-color: #4b5563;
+      background: #020617;
+      border-color: #6b7280;
       transform: translateY(-1px);
     }
 
     .nav-actions a.primary:hover {
       background: linear-gradient(135deg, #4f46e5, #9333ea);
-      transform: translateY(-1px);
     }
 
-    .hero {
-      text-align: center;
-      margin-bottom: 36px;
+    /* Layout */
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.8fr);
+      gap: 32px;
+      align-items: flex-start;
     }
 
-    .hero-label {
+    @media (max-width: 880px) {
+      body { padding: 20px 12px 32px; }
+      .layout { grid-template-columns: 1fr; }
+      .nav { flex-direction: column; align-items: flex-start; gap: 10px; }
+    }
+
+    /* Hero */
+    .hero label {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      font-size: 12px;
+      font-size: 11px;
       text-transform: uppercase;
-      letter-spacing: 0.12em;
-      padding: 4px 10px;
+      letter-spacing: 0.16em;
+      padding: 4px 9px;
       border-radius: 999px;
-      background: rgba(31, 41, 55, 0.7);
-      border: 1px solid rgba(75, 85, 99, 0.7);
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      background: rgba(15, 23, 42, 0.9);
       color: #9ca3af;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
-    .hero-label span.dot {
+    .hero label span.dot {
       width: 8px;
       height: 8px;
       border-radius: 999px;
       background: #22c55e;
-      box-shadow: 0 0 12px rgba(34, 197, 94, 0.9);
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.9);
     }
 
     .hero h1 {
-      font-size: clamp(32px, 5vw, 44px);
-      margin-bottom: 12px;
+      font-size: clamp(30px, 4.4vw, 42px);
+      margin-bottom: 10px;
     }
 
     .hero p {
-      max-width: 560px;
-      margin: 0 auto;
+      font-size: 14px;
       color: #9ca3af;
-      font-size: 15px;
+      max-width: 480px;
       line-height: 1.6;
+      margin-bottom: 18px;
+    }
+
+    .hero-list {
+      margin-top: 10px;
+      margin-bottom: 18px;
+      list-style: none;
+    }
+
+    .hero-list li {
+      font-size: 13px;
+      color: #d1d5db;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .hero-list span.bullet {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #6366f1;
     }
 
     .hero-actions {
-      margin-top: 22px;
       display: flex;
-      justify-content: center;
-      gap: 12px;
       flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
     }
 
     .hero-actions a {
       text-decoration: none;
-      font-size: 14px;
-      padding: 10px 18px;
+      font-size: 13px;
+      padding: 9px 16px;
       border-radius: 999px;
-      border: 1px solid #4b5563;
+      border: 1px solid #374151;
       color: #e5e7eb;
-      transition: background 0.18s ease, transform 0.12s ease, border-color 0.18s ease;
+      background: rgba(15, 23, 42, 0.9);
+      transition: background 0.16s ease, border-color 0.16s ease, transform 0.12s ease;
     }
 
     .hero-actions a.primary {
@@ -133,235 +177,240 @@
       border-color: transparent;
     }
 
-    .hero-actions a.secondary {
-      background: rgba(15, 23, 42, 0.8);
-    }
-
     .hero-actions a:hover {
-      transform: translateY(-1px);
-      border-color: #6b7280;
       background: #020617;
+      border-color: #6b7280;
+      transform: translateY(-1px);
     }
 
     .hero-actions a.primary:hover {
       background: linear-gradient(135deg, #4f46e5, #9333ea);
     }
 
-    .grid {
+    .hero-footnote {
+      margin-top: 14px;
+      font-size: 11px;
+      color: #6b7280;
+    }
+
+    /* Cards */
+    .cards {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: 1fr 1fr;
       gap: 18px;
-      margin-top: 36px;
     }
 
-    @media (max-width: 960px) {
-      .grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-    }
-
-    @media (max-width: 720px) {
-      body {
-        padding: 24px 12px;
-      }
-      .nav {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-      }
-      .grid {
-        grid-template-columns: 1fr;
-      }
+    @media (max-width: 640px) {
+      .cards { grid-template-columns: 1fr; }
     }
 
     .card {
       position: relative;
-      padding: 18px 16px 18px 16px;
+      padding: 16px 15px 18px;
       border-radius: 18px;
-      background: radial-gradient(circle at top left, rgba(94, 234, 212, 0.15), transparent 45%),
-                  radial-gradient(circle at bottom right, rgba(129, 140, 248, 0.18), #020617);
-      border: 1px solid rgba(55, 65, 81, 0.9);
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.75);
+      background: radial-gradient(circle at top left, rgba(129, 140, 248, 0.18), transparent 45%),
+                  radial-gradient(circle at bottom right, rgba(15, 23, 42, 0.9), #020617);
+      border: 1px solid rgba(55, 65, 81, 0.95);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
       overflow: hidden;
-      transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+      transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+      cursor: pointer;
     }
 
     .card:hover {
       transform: translateY(-4px);
-      box-shadow: 0 22px 50px rgba(0, 0, 0, 0.85);
-      border-color: rgba(129, 140, 248, 0.9);
-      background: radial-gradient(circle at top left, rgba(94, 234, 212, 0.24), transparent 45%),
-                  radial-gradient(circle at bottom right, rgba(129, 140, 248, 0.24), #020617);
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.85);
+      border-color: rgba(129, 140, 248, 0.95);
+      background: radial-gradient(circle at top left, rgba(129, 140, 248, 0.26), transparent 45%),
+                  radial-gradient(circle at bottom right, rgba(15, 23, 42, 0.98), #020617);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
     }
 
     .card-tag {
       font-size: 11px;
       text-transform: uppercase;
-      letter-spacing: 0.14em;
-      color: #a5b4fc;
-      margin-bottom: 6px;
+      letter-spacing: 0.16em;
+      color: #9ca3af;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
 
-    .card h3 {
+    .card-tag span.icon {
       font-size: 16px;
-      margin-bottom: 6px;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      background: rgba(15, 23, 42, 0.9);
+      color: #d1d5db;
+    }
+
+    .badge-live { border-color: #22c55e; color: #bbf7d0; }
+    .badge-beta { border-color: #60a5fa; color: #bfdbfe; }
+    .badge-soon { border-color: #fb923c; color: #fed7aa; }
+
+    .card h3 {
+      font-size: 15px;
+      margin-bottom: 4px;
     }
 
     .card p {
       font-size: 13px;
-      line-height: 1.5;
       color: #9ca3af;
+      line-height: 1.6;
       margin-bottom: 10px;
     }
 
     .card-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
       font-size: 11px;
       color: #6b7280;
-      margin-top: 4px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
     }
 
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 9px;
-      border-radius: 999px;
-      border: 1px solid rgba(55, 65, 81, 0.9);
-      background: rgba(15, 23, 42, 0.95);
-      font-size: 11px;
-      color: #d1d5db;
+    .card-footer span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-
-    .pill-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 999px;
-      background: #22c55e;
-    }
-
-    .pill-orange { background: rgba(30, 64, 175, 0.8); border-color: rgba(251, 146, 60, 0.9); }
-    .pill-purple { background: rgba(76, 29, 149, 0.9); border-color: rgba(192, 132, 252, 0.9); }
-    .pill-blue   { background: rgba(15, 23, 42, 0.9); border-color: rgba(59, 130, 246, 0.9); }
   </style>
 </head>
 <body>
   <div class="page">
     <!-- Top navigation -->
     <header class="nav">
-      <div class="logo">K E N A I</div>
+      <div class="brand">
+        <div class="logo">K E N A I</div>
+        <small>Inspelning, reels & delning – allt på ett ställe.</small>
+      </div>
       <div class="nav-actions">
-        <a href="#tools">Verktyg</a>
+        <a href="#verktyg">Verktyg</a>
         <a href="recorder.html" class="primary">Öppna inspelaren</a>
       </div>
     </header>
 
-    <!-- Hero section -->
-    <main>
+    <main class="layout">
+      <!-- Left: hero -->
       <section class="hero">
-        <div class="hero-label">
+        <label>
           <span class="dot"></span>
-          <span>Byggt för creators</span>
-        </div>
-        <h1>Allt du behöver för ljud, video &amp; AI</h1>
+          <span>Dina verktyg, live</span>
+        </label>
+
+        <h1>Spela in, klipp reels och dela – direkt i Kenai.</h1>
         <p>
-          Kenai samlar smarta verktyg för att spela in, sammanfatta och skapa
-          reels – så du kan fokusera på idéerna, inte tekniken.
+          Just nu kan du spela in röster, bygga upp ett reels-underlag och dela
+          dina inspelningar via länk. Allt körs direkt i webbläsaren.
         </p>
+
+        <ul class="hero-list">
+          <li><span class="bullet"></span> 🎙 Stabil röstinspelning (Kenai Recorder).</li>
+          <li><span class="bullet"></span> 🎬 Reels-plan & uppladdning av bilder/klipp.</li>
+          <li><span class="bullet"></span> 🔗 Delningssida för att skicka klipp till andra.</li>
+        </ul>
+
         <div class="hero-actions">
-          <a href="recorder.html" class="primary">Testa röstinspelning</a>
-          <a href="#tools" class="secondary">Utforska alla verktyg</a>
+          <a href="recorder.html" class="primary">🎙 Börja spela in</a>
+          <a href="reels.html">🎬 Gå till Reels</a>
+          <a href="share.html">🔗 Testa delningssidan</a>
+        </div>
+
+        <div class="hero-footnote">
+          Fler AI-funktioner (sammanfattning, trender &amp; hashtags) byggs ovanpå
+          de här verktygen senare.
         </div>
       </section>
 
-      <!-- Tools grid -->
-      <section id="tools" class="grid">
-        <!-- Card 1: Recorder -->
-        <article class="card">
-          <div class="card-tag">Röst &amp; delning</div>
+      <!-- Right: cards that highlight what you have -->
+      <section id="verktyg" class="cards">
+        <!-- Recorder -->
+        <article class="card" onclick="location.href='recorder.html'">
+          <div class="card-header">
+            <div class="card-tag">
+              <span class="icon">🎙</span>
+              <span>Röstinspelning</span>
+            </div>
+            <span class="badge badge-live">Live</span>
+          </div>
           <h3>Kenai Recorder</h3>
           <p>
-            Spela in på några sekunder och få en delbar länk direkt. Perfekt för
-            podd-recensioner, röstmeddelanden eller snabba idéer.
+            Din kärnfunktion: spela in röst, auto-stop, ladda upp och få en
+            delbar länk. Optimerad för både dator och iPhone.
           </p>
           <div class="card-footer">
-            <span class="pill">
-              <span class="pill-dot"></span>
-              Live på app.kenai.technology
-            </span>
-            <span>WAV • iPhone &amp; desktop</span>
+            <span>WAV • 44.1 kHz mono</span>
+            <span>app.kenai.technology/recorder.html</span>
           </div>
         </article>
 
-        <!-- Card 2: Möten -->
-        <article class="card">
-          <div class="card-tag">Möten &amp; anteckningar</div>
-          <h3>AI-mötes­sammanfattning</h3>
+        <!-- Reels -->
+        <article class="card" onclick="location.href='reels.html'">
+          <div class="card-header">
+            <div class="card-tag">
+              <span class="icon">🎬</span>
+              <span>Reels-bygge</span>
+            </div>
+            <span class="badge badge-beta">Beta</span>
+          </div>
+          <h3>Kenai Reels Maker v1</h3>
           <p>
-            Ladda upp ett mötesklipp så skriver AI tydliga anteckningar,
-            highlights och nästa steg åt dig – på svenska.
+            Ladda upp bilder och videoklipp, välj längd och skapa en plan för
+            din reel. Allt sparas i Supabase redo för AI-klippning.
           </p>
           <div class="card-footer">
-            <span class="pill pill-blue">Snart</span>
-            <span>Ljud → text &amp; sammanfattning</span>
+            <span>Upload → plan.json</span>
+            <span>Prefix: reels/&lt;sessionId&gt;/</span>
           </div>
         </article>
 
-        <!-- Card 3: YouTube/podd -->
-        <article class="card">
-          <div class="card-tag">Länkar &amp; klipp</div>
-          <h3>YouTube &amp; podd-sammanfattning</h3>
+        <!-- Delningssida -->
+        <article class="card" onclick="location.href='share.html'">
+          <div class="card-header">
+            <div class="card-tag">
+              <span class="icon">🔗</span>
+              <span>Delning</span>
+            </div>
+            <span class="badge badge-live">Live</span>
+          </div>
+          <h3>Delningssida för klipp</h3>
           <p>
-            Klistra in en länk till ett klipp eller en podd och få en kort,
-            tydlig överblick med de viktigaste poängerna.
+            Visa upp inspelningar via en enkel share-sida. Perfekt när du vill
+            skicka en länk till vänner eller testa flödet.
           </p>
           <div class="card-footer">
-            <span class="pill pill-blue">Snart</span>
-            <span>URL → smart översikt</span>
+            <span>Whatsapp / Telegram / copy</span>
+            <span>app.kenai.technology/share.html</span>
           </div>
         </article>
 
-        <!-- Card 4: Reels -->
+        <!-- Kommande AI-grejer -->
         <article class="card">
-          <div class="card-tag">Video &amp; reels</div>
-          <h3>AI Reels Maker</h3>
-          <p>
-            Ladda upp bilder och klipp – Kenai klipper automatiskt ihop en
-            snygg, vertikal reel som du kan ladda ner och posta på Instagram.
-          </p>
-          <div class="card-footer">
-            <span class="pill pill-purple">Planeras</span>
-            <span>Auto-klippning &amp; tempo</span>
+          <div class="card-header">
+            <div class="card-tag">
+              <span class="icon">🧠</span>
+              <span>Kommande AI</span>
+            </div>
+            <span class="badge badge-soon">Snart</span>
           </div>
-        </article>
-
-        <!-- Card 5: Trender & hashtags -->
-        <article class="card">
-          <div class="card-tag">Tillväxt &amp; reach</div>
-          <h3>Trend &amp; hashtag-coach</h3>
+          <h3>AI-sammanfattning &amp; trend-boost</h3>
           <p>
-            Efter din reel är klar föreslår AI trendande hashtags och vinklar
-            som passar ditt innehåll för att hjälpa dig nå fler.
+            Nästa steg: AI som sammanfattar klipp &amp; möten, bygger färdiga
+            reels och föreslår trendande hashtags för fler visningar.
           </p>
           <div class="card-footer">
-            <span class="pill pill-orange">Idé</span>
-            <span>Instagram • TikTok • Shorts</span>
-          </div>
-        </article>
-
-        <!-- Card 6: Kommande / Open AI hub -->
-        <article class="card">
-          <div class="card-tag">Kenai Labs</div>
-          <h3>Fler AI-verktyg på väg</h3>
-          <p>
-            Kenai byggs som en svensk AI-hubb för creators: text-till-röst,
-            bild-till-beskrivning, fler sammanfattare och mycket mer.
-          </p>
-          <div class="card-footer">
-            <span class="pill">Byggs steg för steg</span>
-            <span>Feedback välkommen</span>
+            <span>Byggs ovanpå dagens verktyg</span>
+            <span>Kenai Labs</span>
           </div>
         </article>
       </section>
