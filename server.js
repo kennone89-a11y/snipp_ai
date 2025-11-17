@@ -103,6 +103,72 @@ app.post("/api/build-reel", async (req, res) => {
       .json({ error: "Något gick fel i /api/build-reel" });
   }
 });
+// --- AI-sammanfattning av inspelning ---
+app.post("/api/summarize", async (req, res) => {
+  try {
+    const { url } = req.body || {};
+
+    if (!url) {
+      return res.status(400).json({ error: "Ingen url skickades in." });
+    }
+
+    // 1) Hämta ljudfilen från Supabase (den publika länken)
+    const fileResponse = await fetch(url);
+    if (!fileResponse.ok) {
+      throw new Error(`Kunde inte hämta filen (${fileResponse.status})`);
+    }
+    const arrayBuffer = await fileResponse.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // 2) Spara temporärt på disk (Render -> /tmp funkar)
+    const tmpFilePath = path.join(
+      os.tmpdir(),
+      `kenai-audio-${Date.now()}.webm`
+    );
+    await fs.promises.writeFile(tmpFilePath, buffer);
+
+    // 3) Skicka till OpenAI för transkribering (svenska)
+    const transcription = await openai.audio.transcriptions.create({
+      model: "gpt-4o-mini-transcribe",
+      file: fs.createReadStream(tmpFilePath),
+      language: "sv",
+    });
+
+    const transcriptText = transcription.text || "";
+
+    // 4) Sammanfatta texten med OpenAI
+    const summaryResponse = await openai.responses.create({
+      model: "gpt-4o-mini",
+      input: [
+        {
+          role: "system",
+          content:
+            "Du är en rak och tydlig svensk assistent som skriver korta sammanfattningar av röstmemon.",
+        },
+        {
+          role: "user",
+          content:
+            "Sammanfatta den här talade recensionen på max 5 meningar. Ta med syfte, ton och eventuella rekommendationer:\n\n" +
+            transcriptText,
+        },
+      ],
+    });
+
+    const summary =
+      summaryResponse.output?.[0]?.content?.[0]?.text ??
+      "Kunde inte läsa sammanfattningen från modellen.";
+
+    res.json({
+      summary,
+      transcript: transcriptText,
+    });
+  } catch (err) {
+    console.error("Summarize error:", err);
+    res
+      .status(500)
+      .json({ error: "Sammanfattning misslyckades.", details: String(err) });
+  }
+});
 
 // ---------------------------------------------------------
 //  AI för Kenai Recorder: /api/ai-review
