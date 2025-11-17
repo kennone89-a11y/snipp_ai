@@ -1,779 +1,741 @@
 <!DOCTYPE html>
 <html lang="sv">
-<head>
-  <meta charset="UTF-8" />
-  <title>Kenai Recorder</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <head>
+    <meta charset="UTF-8" />
+    <title>Kenai Recorder</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+    />
 
-  <!-- ===== Supabase config (BYT TILL DINA RIKTIGA VÄRDEN) ===== -->
-  <script>
-    const SB_URL ='https://hywwzzzxgagqhlxooekz.supabase.co';   // t.ex. https://hywzzz...supabase.co
-    const SB_KEY ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA'; // din anon key (eyJ...)
-    const SB_BUCKET = "kenai-audio";
-    const SB_PREFIX = "reviews"; // mappen i bucketen
-  </script>
+    <!-- ===== Supabase config (BYT TILL DINA RIKTIGA VÄRDEN) ===== -->
+    <script>
+      const SB_URL ='https://hywwzzzxgagqhlxooekz.supabase.co'; 
+      const SB_KEY ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
+      const SB_BUCKET = "kenai-audio"; // <--- din bucket
+      const SB_PREFIX = "reviews"; // undermapp i bucketen
+    </script>
 
-  <style>
-    :root {
-      --bg-1: #020617;
-      --bg-2: #02061f;
-      --accent: #38bdf8;
-      --accent-soft: rgba(56, 189, 248, 0.12);
-      --danger: #f97373;
-      --text-main: #e5e7eb;
-      --text-soft: #9ca3af;
-      --border-soft: rgba(148, 163, 184, 0.4);
-      --card-bg: rgba(15, 23, 42, 0.95);
-      --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.85);
-      --radius-xl: 24px;
-    }
+    <style>
+      :root {
+        --bg-1: #020617;
+        --bg-2: #020617;
+        --accent: #38bdf8;
+        --accent-soft: rgba(56, 189, 248, 0.12);
+        --danger: #f97373;
+        --text-main: #e5e7eb;
+        --text-soft: #9ca3af;
+        --border-soft: rgba(148, 163, 184, 0.4);
+        --card-bg: rgba(15, 23, 42, 0.96);
+        --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.85);
+        --radius-xl: 24px;
+      }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
 
-    body {
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      min-height: 100vh;
-      background:
-        radial-gradient(circle at top left, #1f2937 0, #020617 45%, #000 100%);
-      color: var(--text-main);
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 32px 16px;
-    }
-
-    .page {
-      width: 100%;
-      max-width: 1120px;
-    }
-
-    .recorder-card {
-      width: 100%;
-      max-width: 520px;
-      margin: 0 auto;
-      background: var(--card-bg);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-soft);
-      padding: 28px 26px 24px;
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .recorder-card::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at top right,
-                  rgba(56, 189, 248, 0.18), transparent 65%);
-      opacity: 0.7;
-      pointer-events: none;
-    }
-
-    .recorder-inner {
-      position: relative;
-      z-index: 1;
-    }
-
-    h1 {
-      font-size: 1.4rem;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-
-    .subtitle {
-      font-size: 0.9rem;
-      color: var(--text-soft);
-      margin-bottom: 10px;
-    }
-
-    .link-small {
-      font-size: 0.8rem;
-      color: #e5e7eb;
-    }
-
-    .link-small a {
-      color: var(--accent);
-      text-decoration: none;
-    }
-
-    .link-small a:hover {
-      text-decoration: underline;
-    }
-
-    hr {
-      border: none;
-      border-top: 1px solid rgba(148, 163, 184, 0.22);
-      margin: 14px 0;
-    }
-
-    .controls-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-    }
-
-    button {
-      border: none;
-      border-radius: 999px;
-      padding: 10px 18px;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: transform 0.12s ease, box-shadow 0.12s ease,
-                  background-color 0.12s ease, opacity 0.12s ease;
-      white-space: nowrap;
-    }
-
-    button:active {
-      transform: translateY(1px) scale(0.99);
-    }
-
-    button:disabled {
-      opacity: 0.4;
-      cursor: default;
-      box-shadow: none;
-    }
-
-    .btn-main {
-      background: linear-gradient(135deg, #0ea5e9, #38bdf8);
-      color: white;
-      box-shadow: 0 12px 30px rgba(56, 189, 248, 0.45);
-    }
-
-    .btn-main:hover:not(:disabled) {
-      box-shadow: 0 16px 38px rgba(56, 189, 248, 0.55);
-    }
-
-    .btn-danger {
-      background: linear-gradient(135deg, #f97316, #fb7185);
-      color: white;
-    }
-
-    .btn-soft {
-      background: rgba(15, 23, 42, 0.9);
-      color: var(--text-soft);
-      border: 1px solid rgba(148, 163, 184, 0.5);
-    }
-
-    .pill {
-      font-size: 0.75rem;
-      padding: 3px 9px;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.45);
-      color: var(--text-soft);
-    }
-
-    .pill strong {
-      color: #e5e7eb;
-    }
-
-    .timer-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 8px;
-      margin-top: 2px;
-    }
-
-    .timer-label {
-      font-size: 0.78rem;
-      color: var(--text-soft);
-    }
-
-    .timer-value {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-        "Liberation Mono", "Courier New", monospace;
-      font-size: 0.82rem;
-      letter-spacing: 0.08em;
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid rgba(148, 163, 184, 0.4);
-    }
-
-    .timer-value.recording {
-      border-color: rgba(56, 189, 248, 0.95);
-      background: rgba(15, 23, 42, 0.9);
-      color: #e0f2fe;
-    }
-
-    .timer-value.playing {
-      border-color: rgba(248, 250, 252, 0.5);
-    }
-
-    .auto-stop-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 8px;
-      font-size: 0.78rem;
-      color: var(--text-soft);
-    }
-
-    .auto-stop-row input {
-      width: 72px;
-      padding: 5px 8px;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.5);
-      background: rgba(15, 23, 42, 0.9);
-      color: var(--text-main);
-      font-size: 0.8rem;
-      text-align: center;
-    }
-
-    .audio-wrap {
-      margin: 10px 0 4px;
-      background: rgba(15, 23, 42, 0.9);
-      padding: 10px 10px 8px;
-      border-radius: 18px;
-      border: 1px solid rgba(148, 163, 184, 0.5);
-    }
-
-    audio {
-      width: 100%;
-    }
-
-    .playtime {
-      font-size: 0.75rem;
-      color: var(--text-soft);
-      text-align: right;
-      margin-top: 4px;
-    }
-
-    .status-line {
-      margin-top: 6px;
-      font-size: 0.8rem;
-      color: var(--text-soft);
-    }
-
-    .status-text {
-      font-weight: 500;
-      color: #bbf7d0;
-    }
-
-    .status-text.error {
-      color: #fecaca;
-    }
-
-    .share-box {
-      margin-top: 12px;
-      padding: 10px 10px 8px;
-      border-radius: 14px;
-      border: 1px solid rgba(148, 163, 184, 0.5);
-      background: rgba(15, 23, 42, 0.85);
-    }
-
-    .share-box-label {
-      font-size: 0.78rem;
-      color: var(--text-soft);
-      margin-bottom: 6px;
-    }
-
-    .share-url-row {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 6px;
-    }
-
-    .share-url-row input {
-      flex: 1;
-      padding: 7px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.6);
-      background: rgba(15, 23, 42, 0.9);
-      color: var(--text-main);
-      font-size: 0.8rem;
-    }
-
-    .share-buttons {
-      display: flex;
-      gap: 6px;
-    }
-
-    .share-buttons button {
-      flex: 1;
-      font-size: 0.8rem;
-      padding: 7px 10px;
-    }
-
-    .footer {
-      margin-top: 10px;
-      font-size: 0.72rem;
-      color: var(--text-soft);
-      text-align: center;
-    }
-
-    @media (max-width: 600px) {
       body {
-        padding: 16px 8px;
+        min-height: 100vh;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+          sans-serif;
+        color: var(--text-main);
+        background: radial-gradient(
+            circle at top left,
+            rgba(37, 99, 235, 0.45),
+            transparent 55%
+          ),
+          radial-gradient(
+            circle at bottom right,
+            rgba(8, 47, 73, 0.6),
+            transparent 55%
+          ),
+          #020617;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
       }
+
+      .page {
+        width: 100%;
+        max-width: 920px;
+        display: flex;
+        justify-content: center;
+      }
+
       .recorder-card {
-        padding: 22px 18px 18px;
+        width: 100%;
+        max-width: 520px;
+        background: var(--card-bg);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-soft);
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        padding: 22px 16px 16px;
+        backdrop-filter: blur(18px);
       }
-    }
-    body {
-  margin: 0;
-  padding: 0;
-}
 
-.recorder-card {
-  padding: 22px 16px 16px;
-}
+      @media (min-width: 640px) {
+        .recorder-card {
+          padding: 26px 24px 20px;
+        }
+      }
 
-/* ===== AI-sammanfattning – START ===== */
-.ai-summary-box {
-  margin-top: 24px;
-  padding: 16px 18px;
-  border-radius: 16px;
-  background: rgba(12, 22, 40, 0.9);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03);
-}
+      .recorder-inner {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
 
-.ai-summary-box h3 {
-  margin: 0 0 6px;
-  font-size: 14px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #9fb4ff;
-}
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: #c4d1ff;
+        background: rgba(15, 23, 42, 0.9);
+        border-radius: 999px;
+        padding: 5px 10px;
+        border: 1px solid rgba(148, 163, 184, 0.6);
+      }
 
-.ai-summary-box p {
-  margin: 0 0 10px;
-  font-size: 13px;
-  color: #b6c4e5;
-}
+      .badge-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.25);
+      }
 
-.ai-summary-box textarea {
-  width: 100%;
-  box-sizing: border-box;
-  min-height: 110px;
-  resize: vertical;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(4, 10, 24, 0.95);
-  color: #eaf0ff;
-  font-size: 13px;
-  line-height: 1.4;
-  margin-top: 8px;
-}
+      .title {
+        margin-top: 6px;
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+      }
 
-.ai-summary-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
-  align-items: center;
-}
+      .subtitle {
+        margin-top: 4px;
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--text-soft);
+      }
 
-.ai-summary-status {
-  font-size: 12px;
-  color: #8ea4ff;
-}
+      .link-small {
+        font-size: 12px;
+        color: #93c5fd;
+        text-decoration: none;
+      }
 
-button.ai-primary {
-  padding: 8px 14px;
-  border-radius: 999px;
-  border: none;
-  background: linear-gradient(135deg, #4f46e5, #06b6d4);
-  color: #f9fafb;
-  font-weight: 500;
-  cursor: pointer;
-  font-size: 13px;
-}
+      .link-small:hover {
+        text-decoration: underline;
+      }
 
-button.ai-secondary {
-  padding: 6px 11px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  background: transparent;
-  color: #e5e7eb;
-  font-size: 12px;
-  cursor: pointer;
-}
+      .hr {
+        height: 1px;
+        background: radial-gradient(
+          circle,
+          rgba(148, 163, 184, 0.9),
+          transparent
+        );
+        opacity: 0.4;
+        margin: 2px 0 4px;
+      }
 
-button.ai-primary:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-/* ===== AI-sammanfattning – SLUT ===== */
-</style>
-</head>
-<body>
-  <div class="page">
-    <div class="recorder-card">
-      <div class="recorder-inner">
-        <h1>Kenai Recorder</h1>
-        <p class="subtitle">
-          Spela in en kort röst-note och få en delbar länk – perfekt för podd-recensioner,
-          idéer och snabb feedback.
-        </p>
-        <p class="link-small">
-          Nyfiken på video? Testa även
-          <a href="reels.html">AI Reels Maker</a>.
-        </p>
+      .controls-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
 
-        <hr />
+      .btn {
+        appearance: none;
+        border: none;
+        border-radius: 999px;
+        padding: 9px 14px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition: transform 0.06s ease, box-shadow 0.06s ease, opacity 0.1s;
+        white-space: nowrap;
+      }
 
-        <div class="controls-row">
-          <button id="startBtn" class="btn-main">Starta inspelning</button>
-          <button id="stopBtn" class="btn-danger" disabled>Stoppa</button>
-          <button id="uploadBtn" class="btn-soft" disabled>Ladda upp</button>
-        </div>
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: default;
+        transform: none;
+        box-shadow: none;
+      }
 
-        <div class="auto-stop-row">
-          <span>Auto-stop (sek):</span>
-          <input id="autoStop" type="number" min="5" max="300" value="120" />
-          <span class="pill">
-            Inspelningen stoppas automatiskt.
-          </span>
-        </div>
+      .btn-main {
+        background: linear-gradient(135deg, #4f46e5, #06b6d4);
+        color: #f9fafb;
+        box-shadow: 0 10px 28px rgba(56, 189, 248, 0.55);
+      }
 
-        <div class="timer-row">
-          <div class="timer-label">Inspelningstid</div>
-          <div id="recordTimer" class="timer-value">00:00</div>
-        </div>
+      .btn-main:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 36px rgba(56, 189, 248, 0.7);
+      }
 
-        <div class="audio-wrap">
-          <audio id="player" controls></audio>
-          <div class="playtime">
-            Uppspelning:
-            <span id="playTime">00:00 / 00:00</span>
+      .btn-danger {
+        background: rgba(239, 68, 68, 0.08);
+        color: #fecaca;
+        border: 1px solid rgba(239, 68, 68, 0.6);
+      }
+
+      .btn-danger:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 24px rgba(239, 68, 68, 0.6);
+      }
+
+      .btn-soft {
+        background: rgba(15, 23, 42, 0.9);
+        color: #e5e7eb;
+        border: 1px solid rgba(148, 163, 184, 0.7);
+      }
+
+      .btn-soft:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.9);
+      }
+
+      .auto-stop-row {
+        margin-top: 6px;
+        font-size: 12px;
+        color: var(--text-soft);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .auto-stop-row input[type="number"] {
+        width: 70px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.7);
+        background: rgba(15, 23, 42, 0.9);
+        color: var(--text-main);
+        font-size: 12px;
+      }
+
+      .timer-row {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 10px;
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+
+      .player-row {
+        margin-top: 8px;
+      }
+
+      .player-row audio {
+        width: 100%;
+      }
+
+      .status-row {
+        margin-top: 10px;
+        font-size: 12px;
+        color: #a5b4fc;
+      }
+
+      .status-row .label {
+        color: var(--text-soft);
+      }
+
+      .link-row {
+        margin-top: 12px;
+        font-size: 12px;
+      }
+
+      .link-row label {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--text-soft);
+      }
+
+      .link-row input {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid var(--border-soft);
+        background: rgba(15, 23, 42, 0.96);
+        color: var(--text-main);
+        font-size: 12px;
+      }
+
+      .link-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .help-text {
+        margin-top: 6px;
+        font-size: 11px;
+        color: var(--text-soft);
+        text-align: center;
+      }
+
+      .ai-summary-box {
+        margin-top: 20px;
+        padding: 16px 18px;
+        border-radius: 16px;
+        background: rgba(12, 22, 40, 0.9);
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03);
+      }
+
+      .ai-summary-box h3 {
+        margin: 0 0 6px;
+        font-size: 14px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #9fb4ff;
+      }
+
+      .ai-summary-box p {
+        margin: 0 0 10px;
+        font-size: 13px;
+        color: #b6c4e5;
+      }
+
+      .ai-summary-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .ai-summary-status {
+        font-size: 12px;
+        color: #8ea4ff;
+      }
+
+      .ai-summary-box textarea {
+        width: 100%;
+        box-sizing: border-box;
+        min-height: 110px;
+        resize: vertical;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        background: rgba(4, 10, 24, 0.95);
+        color: #eaf0ff;
+        font-size: 13px;
+        line-height: 1.4;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="page">
+      <div class="recorder-card">
+        <div class="recorder-inner">
+          <div>
+            <div class="badge">
+              <span class="badge-dot"></span>
+              <span>Kenai Recorder</span>
+            </div>
+            <div class="title">KENAI RECORDER</div>
+            <div class="subtitle">
+              Spela in en kort röst-note och få en delbar länk – perfekt för
+              podd-recensioner, idéer och snabb feedback.
+            </div>
+            <div style="margin-top: 4px">
+              <a
+                class="link-small"
+                href="/reels.html"
+                style="text-decoration: underline"
+                >Nyfiken på video? Testa även AI Reels Maker.</a
+              >
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="controls-row">
+            <button id="startBtn" class="btn btn-main">Starta inspelning</button>
+            <button id="stopBtn" class="btn btn-danger" disabled>Stoppa</button>
+            <button id="uploadBtn" class="btn btn-soft" disabled>
+              Ladda upp
+            </button>
+          </div>
+
+          <div class="auto-stop-row">
+            <span>Auto-stop (sek):</span>
+            <input
+              id="autoStopInput"
+              type="number"
+              min="10"
+              max="600"
+              step="5"
+              value="120"
+            />
+            <span>Inspelningen stoppas automatiskt.</span>
+          </div>
+
+          <div class="timer-row">
+            <div>
+              <span class="label">Inspelningstid:</span>
+              <span id="recordTimer">00:00</span>
+            </div>
+            <div>
+              <span class="label">Uppspelning:</span>
+              <span id="playbackTimer">00:00</span>
+              <span class="label">/</span>
+              <span id="playbackTotal">00:00</span>
+            </div>
+          </div>
+
+          <div class="player-row">
+            <audio id="player" controls></audio>
+          </div>
+
+          <div class="status-row">
+            <span class="label">Status:</span>
+            <span id="statusText">Redo. Spela in när du är redo.</span>
+          </div>
+
+          <div class="link-row">
+            <label for="publicUrlInput"
+              >Delbar länk (visas här när ljudet är sparat):</label
+            >
+            <input
+              id="publicUrlInput"
+              type="text"
+              placeholder="Ingen länk ännu."
+              readonly
+            />
+            <div class="link-actions">
+              <button id="openLinkBtn" class="btn btn-soft" style="flex: 1">
+                Öppna länk
+              </button>
+              <button id="copyLinkBtn" class="btn btn-soft" style="flex: 1">
+                Kopiera länk
+              </button>
+            </div>
+          </div>
+
+          <div class="ai-summary-box">
+            <h3>AI-SAMMANFATTNING</h3>
+            <p>
+              När din inspelning är uppladdad kan du låta AI lyssna och skriva
+              en kort sammanfattning på svenska.
+            </p>
+
+            <div class="ai-summary-actions">
+              <button id="summarizeBtn" class="btn btn-main" type="button">
+                AI-sammanfatta inspelningen
+              </button>
+              <button
+                id="copySummaryBtn"
+                class="btn btn-soft"
+                type="button"
+                style="padding: 6px 12px; font-size: 12px"
+              >
+                Kopiera sammanfattning
+              </button>
+              <span id="summaryStatus" class="ai-summary-status"></span>
+            </div>
+
+            <textarea
+              id="summaryOutput"
+              placeholder="Sammanfattningen dyker upp här..."
+              readonly
+            ></textarea>
+          </div>
+
+          <div class="help-text">
+            Länken går direkt till din inspelning i Supabase (public bucket
+            <code id="bucketNameLabel">kenai-audio/reviews</code>), ingen
+            inloggning behövs.
           </div>
         </div>
-
-        <div class="status-line">
-          Status:
-          <span id="statusText" class="status-text">Redo. Spela in när du är redo.</span>
-        </div>
-
-        <div class="share-box">
-          <div class="share-box-label">Delbar länk (visas här när ljudet är sparat):</div>
-          <div class="share-url-row">
-            <input id="shareUrl" type="text" readonly placeholder="Ingen länk ännu" />
-          </div>
-          <div class="share-buttons">
-            <button id="openLinkBtn" class="btn-soft" disabled>Öppna länk</button>
-            <button id="copyLinkBtn" class="btn-soft" disabled>Kopiera länk</button>
-          </div>
-        </div>
-        <div class="ai-summary-box">
-  <h3>AI-sammanfattning</h3>
-  <p>
-    När din inspelning är uppladdad kan du låta AI lyssna och skriva en kort
-    sammanfattning på svenska.
-  </p>
-
-  <div class="ai-summary-actions">
-    <button id="summarizeBtn" class="ai-primary">
-      AI-sammanfatta inspelningen
-    </button>
-    <button id="copySummaryBtn" class="ai-secondary">
-      Kopiera sammanfattning
-    </button>
-    <span id="summaryStatus" class="ai-summary-status"></span>
-  </div>
-
-  <textarea
-    id="summaryOutput"
-    placeholder="Sammanfattningen dyker upp här..."
-    readonly
-  ></textarea>
-</div>
-    
-        <p class="footer">
-          Länken går direkt till din inspelning i Supabase (public bucket
-          <code>audio/reviews</code>), ingen inloggning behövs.
-        </p>
       </div>
     </div>
-  </div>
 
-  <script>
-    // ===== Helper: format seconds till mm:ss =====
-    function formatTimeSeconds(sec) {
-      if (!isFinite(sec) || sec < 0) sec = 0;
-      sec = Math.floor(sec);
-      const m = Math.floor(sec / 60);
-      const s = sec % 60;
-      return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
-    }
+    <script>
+      // ===== Helper-funktioner för tid =====
+      function formatTime(sec) {
+        const s = Math.floor(sec % 60)
+          .toString()
+          .padStart(2, "0");
+        const m = Math.floor(sec / 60)
+          .toString()
+          .padStart(2, "0");
+        return `${m}:${s}`;
+      }
 
-    // ===== UI refs =====
-    const startBtn = document.getElementById("startBtn");
-    const stopBtn = document.getElementById("stopBtn");
-    const uploadBtn = document.getElementById("uploadBtn");
-    const autoStopInput = document.getElementById("autoStop");
-    const recordTimerEl = document.getElementById("recordTimer");
-    const statusTextEl = document.getElementById("statusText");
-    const player = document.getElementById("player");
-    const playTimeEl = document.getElementById("playTime");
-    const shareUrlInput = document.getElementById("shareUrl");
-    const openLinkBtn = document.getElementById("openLinkBtn");
-    const copyLinkBtn = document.getElementById("copyLinkBtn");
+      // ===== DOM refs =====
+      const startBtn = document.getElementById("startBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const uploadBtn = document.getElementById("uploadBtn");
+      const autoStopInput = document.getElementById("autoStopInput");
+      const recordTimerEl = document.getElementById("recordTimer");
+      const playbackTimerEl = document.getElementById("playbackTimer");
+      const playbackTotalEl = document.getElementById("playbackTotal");
+      const player = document.getElementById("player");
+      const statusEl = document.getElementById("statusText");
+      const publicUrlInput = document.getElementById("publicUrlInput");
+      const openLinkBtn = document.getElementById("openLinkBtn");
+      const copyLinkBtn = document.getElementById("copyLinkBtn");
+      const bucketLabel = document.getElementById("bucketNameLabel");
 
-    // ===== State =====
-    let mediaRecorder = null;
-    let chunks = [];
-    let recordingStart = 0;
-    let recordTimerHandle = null;
-    let currentBlob = null;
+      if (bucketLabel) {
+        bucketLabel.textContent = `${SB_BUCKET}/${SB_PREFIX}`;
+      }
 
-    // ===== Recording timer =====
-    function startRecordTimer(maxSeconds) {
-      stopRecordTimer();
-      recordingStart = Date.now();
-      recordTimerEl.classList.add("recording");
-      recordTimerHandle = setInterval(() => {
-        const elapsedMs = Date.now() - recordingStart;
-        const elapsedSec = Math.floor(elapsedMs / 1000);
-        recordTimerEl.textContent = formatTimeSeconds(elapsedSec);
+      let mediaRecorder = null;
+      let chunks = [];
+      let recordStartTime = null;
+      let recordTimerId = null;
+      let autoStopTimeoutId = null;
+      let lastBlob = null;
 
-        const max = Number(autoStopInput.value) || maxSeconds;
-        if (elapsedSec >= max && mediaRecorder && mediaRecorder.state === "recording") {
-          stopRecording();
+      // ===== Inspelning =====
+      async function startRecording() {
+        try {
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert("Din webbläsare stödjer tyvärr inte inspelning.");
+            return;
+          }
+
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+          chunks = [];
+          lastBlob = null;
+          mediaRecorder = new MediaRecorder(stream);
+
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) {
+              chunks.push(e.data);
+            }
+          };
+
+          mediaRecorder.onstop = async () => {
+            clearInterval(recordTimerId);
+            recordTimerId = null;
+            const blob = new Blob(chunks, { type: "audio/webm" });
+            lastBlob = blob;
+            const url = URL.createObjectURL(blob);
+            player.src = url;
+
+            const audio = new Audio(url);
+            audio.addEventListener("loadedmetadata", () => {
+              playbackTotalEl.textContent = formatTime(audio.duration || 0);
+            });
+
+            statusEl.textContent = "Inspelning klar. Laddar upp ljudet...";
+            uploadBtn.disabled = false;
+            // Auto-upload direkt:
+            await uploadToSupabase(blob);
+          };
+
+          mediaRecorder.start();
+
+          recordStartTime = Date.now();
+          recordTimerEl.textContent = "00:00";
+          recordTimerId = setInterval(() => {
+            const elapsed = (Date.now() - recordStartTime) / 1000;
+            recordTimerEl.textContent = formatTime(elapsed);
+          }, 500);
+
+          const autoSec = Number(autoStopInput.value) || 0;
+          if (autoSec > 0) {
+            if (autoStopTimeoutId) clearTimeout(autoStopTimeoutId);
+            autoStopTimeoutId = setTimeout(() => {
+              if (mediaRecorder && mediaRecorder.state === "recording") {
+                stopRecording();
+              }
+            }, autoSec * 1000);
+          }
+
+          startBtn.disabled = true;
+          stopBtn.disabled = false;
+          statusEl.textContent = "Spelar in... Tryck Stoppa när du är klar.";
+        } catch (err) {
+          console.error("startRecording error", err);
+          statusEl.textContent = "Kunde inte starta inspelning.";
         }
-      }, 250);
-    }
-
-    function stopRecordTimer(resetToZero = false) {
-      if (recordTimerHandle) {
-        clearInterval(recordTimerHandle);
-        recordTimerHandle = null;
       }
-      recordTimerEl.classList.remove("recording");
-      if (resetToZero) {
-        recordTimerEl.textContent = "00:00";
+
+      function stopRecording() {
+        try {
+          if (autoStopTimeoutId) {
+            clearTimeout(autoStopTimeoutId);
+            autoStopTimeoutId = null;
+          }
+          if (mediaRecorder && mediaRecorder.state === "recording") {
+            mediaRecorder.stop();
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            statusEl.textContent = "Stoppar inspelning...";
+          }
+        } catch (err) {
+          console.error("stopRecording error", err);
+        }
       }
-    }
 
-    // ===== Playback time display =====
-    function updatePlayTime() {
-      const cur = player.currentTime || 0;
-      const dur = player.duration || 0;
-      playTimeEl.textContent =
-        formatTimeSeconds(cur) + " / " + formatTimeSeconds(dur);
-    }
+      // ===== Supabase-upload =====
+      async function uploadToSupabase(blob) {
+        try {
+          if (!SB_URL || !SB_KEY || !SB_BUCKET || !SB_PREFIX) {
+            console.error("Supabase config saknas.");
+            statusEl.textContent = "Supabase-inställningar saknas.";
+            return null;
+          }
 
-    player.addEventListener("timeupdate", updatePlayTime);
-    player.addEventListener("loadedmetadata", updatePlayTime);
-    player.addEventListener("ended", () => {
-      updatePlayTime();
-    });
+          const fileName = `rec-${Date.now()}.webm`;
+          const objectPath = `${SB_PREFIX}/${fileName}`;
 
-    // ===== Status helper =====
-    function setStatus(text, isError = false) {
-      statusTextEl.textContent = text;
-      statusTextEl.classList.toggle("error", !!isError);
-    }
+          const uploadUrl = `${SB_URL}/storage/v1/object/${SB_BUCKET}/${objectPath}`;
 
-    // ===== Recording logic =====
-    async function startRecording() {
-      try {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          setStatus("Din webbläsare stöder inte inspelning.", true);
+          const resp = await fetch(uploadUrl, {
+            method: "POST",
+            headers: {
+              apikey: SB_KEY,
+              authorization: `Bearer ${SB_KEY}`,
+              "content-type": "audio/webm",
+            },
+            body: blob,
+          });
+
+          const respText = await resp.text();
+
+          if (!resp.ok) {
+            console.error("Supabase upload error", resp.status, respText);
+            statusEl.textContent = `Kunde inte ladda upp ljudet (${resp.status}).`;
+            return null;
+          }
+
+          const publicUrl = `${SB_URL}/storage/v1/object/public/${SB_BUCKET}/${objectPath}`;
+
+          if (publicUrlInput) {
+            publicUrlInput.value = publicUrl;
+          }
+          statusEl.textContent = "Klart! Delbar länk sparad.";
+          return publicUrl;
+        } catch (err) {
+          console.error("Supabase upload error", err);
+          statusEl.textContent = "Kunde inte ladda upp ljudet (nätverksfel).";
+          return null;
+        }
+      }
+
+      // ===== AI-sammanfattning (frontend) =====
+      const summarizeBtn = document.getElementById("summarizeBtn");
+      const copySummaryBtn = document.getElementById("copySummaryBtn");
+      const summaryOutput = document.getElementById("summaryOutput");
+      const summaryStatus = document.getElementById("summaryStatus");
+
+      async function callSummarize() {
+        const url = (publicUrlInput?.value || "").trim();
+
+        if (!url || url.toLowerCase().includes("ingen länk")) {
+          summaryStatus.textContent =
+            "Ingen delbar länk ännu. Spela in och ladda upp först.";
           return;
         }
 
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mimeType =
-          MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-            ? "audio/webm;codecs=opus"
-            : "audio/webm";
+        summarizeBtn.disabled = true;
+        summarizeBtn.textContent = "Sammanfattar...";
+        summaryStatus.textContent = "AI lyssnar på din inspelning...";
 
-        mediaRecorder = new MediaRecorder(stream, { mimeType });
-        chunks = [];
-        currentBlob = null;
+        try {
+          const resp = await fetch("/api/summarize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url }),
+          });
 
-        mediaRecorder.addEventListener("dataavailable", (e) => {
-          if (e.data && e.data.size > 0) {
-            chunks.push(e.data);
+          if (!resp.ok) {
+            throw new Error(`Serverfel: ${resp.status}`);
+          }
+
+          const data = await resp.json();
+          summaryOutput.value = data.summary || "(Ingen text från AI)";
+          summaryStatus.textContent = "Klar.";
+        } catch (err) {
+          console.error("Summarize error", err);
+          summaryStatus.textContent = "Fel: " + err.message;
+        } finally {
+          summarizeBtn.disabled = false;
+          summarizeBtn.textContent = "AI-sammanfatta inspelningen";
+        }
+      }
+
+      if (summarizeBtn) {
+        summarizeBtn.addEventListener("click", callSummarize);
+      }
+
+      if (copySummaryBtn) {
+        copySummaryBtn.addEventListener("click", async () => {
+          try {
+            if (!summaryOutput.value.trim()) return;
+            await navigator.clipboard.writeText(summaryOutput.value);
+            summaryStatus.textContent = "Sammanfattning kopierad ✅";
+            setTimeout(() => {
+              summaryStatus.textContent = "";
+            }, 2000);
+          } catch (e) {
+            summaryStatus.textContent = "Kunde inte kopiera.";
           }
         });
+      }
 
-        mediaRecorder.addEventListener("stop", () => {
-          const blob = new Blob(chunks, { type: mimeType });
-          currentBlob = blob;
-          const url = URL.createObjectURL(blob);
-          player.src = url;
-          player.load();
-          uploadBtn.disabled = false;
-          setStatus("Inspelning klar. Lyssna eller ladda upp när du är nöjd.");
-          // Stäng av mic-strömmen
-          stream.getTracks().forEach((t) => t.stop());
+      // ===== Länkknappar =====
+      if (openLinkBtn) {
+        openLinkBtn.addEventListener("click", () => {
+          const url = publicUrlInput.value.trim();
+          if (!url || url.toLowerCase().includes("ingen länk")) return;
+          window.open(url, "_blank");
         });
-
-        mediaRecorder.start();
-        const maxSec = Number(autoStopInput.value) || 120;
-        startRecordTimer(maxSec);
-        setStatus("Spelar in... Klicka 'Stoppa' eller vänta på auto-stop.");
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-        uploadBtn.disabled = true;
-      } catch (err) {
-        console.error("startRecording error", err);
-        setStatus("Kunde inte starta inspelning. Kolla mic-tillstånd.", true);
-      }
-    }
-
-    function stopRecording() {
-      try {
-        if (mediaRecorder && mediaRecorder.state === "recording") {
-          mediaRecorder.stop();
-        }
-      } catch (e) {
-        console.warn("stopRecording error", e);
-      } finally {
-        stopRecordTimer(false);
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
-      }
-    }
-
-    // ===== Upload to Supabase =====
-    async function uploadRecording() {
-      if (!currentBlob) {
-        setStatus("Inget ljud att ladda upp ännu.", true);
-        return;
-      }
-      if (!SB_URL || !SB_KEY) {
-        setStatus("Supabase-inställningar saknas. Lägg in URL & KEY i <head>.", true);
-        return;
       }
 
-      const ts = Date.now();
-      const fileName = `kenai-${ts}.webm`;
-      const path = `${SB_PREFIX}/${fileName}`;
-      const url = `${SB_URL}/storage/v1/object/public/${SB_BUCKET}/${encodeURIComponent(
-        path
-      )}`;
-
-      setStatus("Laddar upp ljud...");
-
-      try {
-        const resp = await fetch(url, {
-          method: "POST",
-          headers: {
-            apikey: SB_KEY,
-            Authorization: "Bearer " + SB_KEY,
-            "Content-Type": currentBlob.type || "audio/webm",
-          },
-          body: currentBlob,
+      if (copyLinkBtn) {
+        copyLinkBtn.addEventListener("click", async () => {
+          try {
+            const url = publicUrlInput.value.trim();
+            if (!url || url.toLowerCase().includes("ingen länk")) return;
+            await navigator.clipboard.writeText(url);
+            statusEl.textContent = "Länk kopierad ✅";
+            setTimeout(() => {
+              statusEl.textContent = "Klart! Delbar länk sparad.";
+            }, 2000);
+          } catch (e) {
+            statusEl.textContent = "Kunde inte kopiera länken.";
+          }
         });
-
-        if (!resp.ok) {
-          const t = await resp.text();
-          console.error("Supabase upload error", resp.status, t);
-          setStatus("Kunde inte ladda upp ljudet. (" + resp.status + ")", true);
-          return;
-        }
-
-        const publicUrl = url; // public bucket → samma url funkar
-        shareUrlInput.value = publicUrl;
-        openLinkBtn.disabled = false;
-        copyLinkBtn.disabled = false;
-        setStatus("Klart! Ljudet är sparat & länken redo.");
-      } catch (err) {
-        console.error("Upload error", err);
-        setStatus("Något gick fel vid uppladdning.", true);
       }
-    }
 
-    async function copyShareUrl() {
-      const url = shareUrlInput.value.trim();
-      if (!url) return;
-      try {
-        await navigator.clipboard.writeText(url);
-        setStatus("Länk kopierad! Klistra in där du vill dela den.");
-      } catch (err) {
-        console.warn("Clipboard error", err);
-      }
-    }
+      // ===== Player-timer =====
+      player.addEventListener("timeupdate", () => {
+        playbackTimerEl.textContent = formatTime(player.currentTime || 0);
+      });
 
-    function openShareUrl() {
-      const url = shareUrlInput.value.trim();
-      if (!url) return;
-      window.open(url, "_blank");
-    }
+      player.addEventListener("loadedmetadata", () => {
+        playbackTotalEl.textContent = formatTime(player.duration || 0);
+      });
 
-    // ===== Hook up events =====
-    startBtn.addEventListener("click", startRecording);
-    stopBtn.addEventListener("click", stopRecording);
-    uploadBtn.addEventListener("click", uploadRecording);
-    copyLinkBtn.addEventListener("click", copyShareUrl);
-    openLinkBtn.addEventListener("click", openShareUrl);
-    // ====== AI-sammanfattning ======
-const summarizeBtn = document.getElementById("summarizeBtn");
-const copySummaryBtn = document.getElementById("copySummaryBtn");
-const summaryOutput = document.getElementById("summaryOutput");
-const summaryStatus = document.getElementById("summaryStatus");
-
-// Försök hitta fältet med den delbara länken
-const shareInput =
-  document.getElementById("share-url") ||
-  document.getElementById("publicUrlInput") ||
-  document.querySelector("input[type='text']");
-
-async function callSummarize() {
-  const url = (shareInput?.value || "").trim();
-
-  if (!url || url.toLowerCase().includes("ingen länk")) {
-    summaryStatus.textContent =
-      "Ingen delbar länk ännu. Spela in och ladda upp först.";
-    return;
-  }
-
-  summarizeBtn.disabled = true;
-  summarizeBtn.textContent = "Sammanfattar...";
-  summaryStatus.textContent = "AI lyssnar på din inspelning...";
-
-  try {
-    const resp = await fetch("/api/summarize", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url }),
-    });
-
-    if (!resp.ok) {
-      throw new Error(`Serverfel: ${resp.status}`);
-    }
-
-    const data = await resp.json();
-    summaryOutput.value = data.summary || "(Ingen text från AI)";
-    summaryStatus.textContent = "Klar.";
-  } catch (err) {
-    console.error("Summarize error:", err);
-    summaryStatus.textContent = "Fel: " + err.message;
-  } finally {
-    summarizeBtn.disabled = false;
-    summarizeBtn.textContent = "AI-sammanfatta inspelningen";
-  }
-}
-
-if (summarizeBtn) {
-  summarizeBtn.addEventListener("click", callSummarize);
-}
-
-if (copySummaryBtn) {
-  copySummaryBtn.addEventListener("click", async () => {
-    try {
-      if (!summaryOutput.value.trim()) return;
-      await navigator.clipboard.writeText(summaryOutput.value);
-      summaryStatus.textContent = "Sammanfattning kopierad ✅";
-      setTimeout(() => {
-        summaryStatus.textContent = "";
-      }, 2000);
-    } catch (e) {
-      summaryStatus.textContent = "Kunde inte kopiera.";
-    }
-  });
-}
-  </script>
-</body>
+      // ===== Knappevents =====
+      startBtn.addEventListener("click", startRecording);
+      stopBtn.addEventListener("click", stopRecording);
+      uploadBtn.addEventListener("click", async () => {
+        if (!lastBlob) return;
+        await uploadToSupabase(lastBlob);
+      });
+    </script>
+  </body>
 </html>
