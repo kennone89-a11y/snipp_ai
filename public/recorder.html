@@ -10,8 +10,8 @@
 
     <!-- ===== Supabase config (BYT TILL DINA RIKTIGA VÄRDEN) ===== -->
     <script>
-      const SB_URL ='https://hywwzzzxgagqhlxooekz.supabase.co'; 
-      const SB_KEY ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
+      const SB_URL = "https://YOUR-PROJECT-ID.supabase.co";
+      const SB_KEY = "YOUR_SUPABASE_ANON_KEY";
       const SB_BUCKET = "kenai-audio"; // <--- din bucket
       const SB_PREFIX = "reviews"; // undermapp i bucketen
     </script>
@@ -208,25 +208,6 @@
         box-shadow: 0 10px 28px rgba(15, 23, 42, 0.9);
       }
 
-      .auto-stop-row {
-        margin-top: 6px;
-        font-size: 12px;
-        color: var(--text-soft);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .auto-stop-row input[type="number"] {
-        width: 70px;
-        padding: 4px 8px;
-        border-radius: 999px;
-        border: 1px solid rgba(148, 163, 184, 0.7);
-        background: rgba(15, 23, 42, 0.9);
-        color: var(--text-main);
-        font-size: 12px;
-      }
-
       .timer-row {
         display: flex;
         justify-content: space-between;
@@ -373,19 +354,6 @@
             </button>
           </div>
 
-          <div class="auto-stop-row">
-            <span>Auto-stop (sek):</span>
-            <input
-              id="autoStopInput"
-              type="number"
-              min="10"
-              max="600"
-              step="5"
-              value="120"
-            />
-            <span>Inspelningen stoppas automatiskt.</span>
-          </div>
-
           <div class="timer-row">
             <div>
               <span class="label">Inspelningstid:</span>
@@ -482,7 +450,6 @@
       const startBtn = document.getElementById("startBtn");
       const stopBtn = document.getElementById("stopBtn");
       const uploadBtn = document.getElementById("uploadBtn");
-      const autoStopInput = document.getElementById("autoStopInput");
       const recordTimerEl = document.getElementById("recordTimer");
       const playbackTimerEl = document.getElementById("playbackTimer");
       const playbackTotalEl = document.getElementById("playbackTotal");
@@ -501,7 +468,6 @@
       let chunks = [];
       let recordStartTime = null;
       let recordTimerId = null;
-      let autoStopTimeoutId = null;
       let lastBlob = null;
 
       // ===== Inspelning =====
@@ -537,10 +503,9 @@
               playbackTotalEl.textContent = formatTime(audio.duration || 0);
             });
 
-            statusEl.textContent = "Inspelning klar. Laddar upp ljudet...";
+            statusEl.textContent =
+              "Inspelning klar. Tryck 'Ladda upp' när du är redo att spara ljudet.";
             uploadBtn.disabled = false;
-            // Auto-upload direkt:
-            await uploadToSupabase(blob);
           };
 
           mediaRecorder.start();
@@ -551,16 +516,6 @@
             const elapsed = (Date.now() - recordStartTime) / 1000;
             recordTimerEl.textContent = formatTime(elapsed);
           }, 500);
-
-          const autoSec = Number(autoStopInput.value) || 0;
-          if (autoSec > 0) {
-            if (autoStopTimeoutId) clearTimeout(autoStopTimeoutId);
-            autoStopTimeoutId = setTimeout(() => {
-              if (mediaRecorder && mediaRecorder.state === "recording") {
-                stopRecording();
-              }
-            }, autoSec * 1000);
-          }
 
           startBtn.disabled = true;
           stopBtn.disabled = false;
@@ -573,10 +528,6 @@
 
       function stopRecording() {
         try {
-          if (autoStopTimeoutId) {
-            clearTimeout(autoStopTimeoutId);
-            autoStopTimeoutId = null;
-          }
           if (mediaRecorder && mediaRecorder.state === "recording") {
             mediaRecorder.stop();
             startBtn.disabled = false;
@@ -645,7 +596,7 @@
 
         if (!url || url.toLowerCase().includes("ingen länk")) {
           summaryStatus.textContent =
-            "Ingen delbar länk ännu. Spela in och ladda upp först.";
+            "Ingen delbar länk ännu. Spela in, ladda upp och försök igen.";
           return;
         }
 
@@ -734,6 +685,7 @@
       stopBtn.addEventListener("click", stopRecording);
       uploadBtn.addEventListener("click", async () => {
         if (!lastBlob) return;
+        statusEl.textContent = "Laddar upp ljudet...";
         await uploadToSupabase(lastBlob);
       });
     </script>
