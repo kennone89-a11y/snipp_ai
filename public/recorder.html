@@ -463,7 +463,30 @@ button.ai-primary:disabled {
             <button id="copyLinkBtn" class="btn-soft" disabled>Kopiera länk</button>
           </div>
         </div>
+        <div class="ai-summary-box">
+  <h3>AI-sammanfattning</h3>
+  <p>
+    När din inspelning är uppladdad kan du låta AI lyssna och skriva en kort
+    sammanfattning på svenska.
+  </p>
 
+  <div class="ai-summary-actions">
+    <button id="summarizeBtn" class="ai-primary">
+      AI-sammanfatta inspelningen
+    </button>
+    <button id="copySummaryBtn" class="ai-secondary">
+      Kopiera sammanfattning
+    </button>
+    <span id="summaryStatus" class="ai-summary-status"></span>
+  </div>
+
+  <textarea
+    id="summaryOutput"
+    placeholder="Sammanfattningen dyker upp här..."
+    readonly
+  ></textarea>
+</div>
+    
         <p class="footer">
           Länken går direkt till din inspelning i Supabase (public bucket
           <code>audio/reviews</code>), ingen inloggning behövs.
@@ -685,6 +708,72 @@ button.ai-primary:disabled {
     uploadBtn.addEventListener("click", uploadRecording);
     copyLinkBtn.addEventListener("click", copyShareUrl);
     openLinkBtn.addEventListener("click", openShareUrl);
+    // ====== AI-sammanfattning ======
+const summarizeBtn = document.getElementById("summarizeBtn");
+const copySummaryBtn = document.getElementById("copySummaryBtn");
+const summaryOutput = document.getElementById("summaryOutput");
+const summaryStatus = document.getElementById("summaryStatus");
+
+// Försök hitta fältet med den delbara länken
+const shareInput =
+  document.getElementById("share-url") ||
+  document.getElementById("publicUrlInput") ||
+  document.querySelector("input[type='text']");
+
+async function callSummarize() {
+  const url = (shareInput?.value || "").trim();
+
+  if (!url || url.toLowerCase().includes("ingen länk")) {
+    summaryStatus.textContent =
+      "Ingen delbar länk ännu. Spela in och ladda upp först.";
+    return;
+  }
+
+  summarizeBtn.disabled = true;
+  summarizeBtn.textContent = "Sammanfattar...";
+  summaryStatus.textContent = "AI lyssnar på din inspelning...";
+
+  try {
+    const resp = await fetch("/api/summarize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+
+    if (!resp.ok) {
+      throw new Error(`Serverfel: ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    summaryOutput.value = data.summary || "(Ingen text från AI)";
+    summaryStatus.textContent = "Klar.";
+  } catch (err) {
+    console.error("Summarize error:", err);
+    summaryStatus.textContent = "Fel: " + err.message;
+  } finally {
+    summarizeBtn.disabled = false;
+    summarizeBtn.textContent = "AI-sammanfatta inspelningen";
+  }
+}
+
+if (summarizeBtn) {
+  summarizeBtn.addEventListener("click", callSummarize);
+}
+
+if (copySummaryBtn) {
+  copySummaryBtn.addEventListener("click", async () => {
+    try {
+      if (!summaryOutput.value.trim()) return;
+      await navigator.clipboard.writeText(summaryOutput.value);
+      summaryStatus.textContent = "Sammanfattning kopierad ✅";
+      setTimeout(() => {
+        summaryStatus.textContent = "";
+      }, 2000);
+    } catch (e) {
+      summaryStatus.textContent = "Kunde inte kopiera.";
+    }
+  });
+});
   </script>
 </body>
 </html>
