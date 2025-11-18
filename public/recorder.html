@@ -730,21 +730,7 @@
         statusEl.textContent = "Laddar upp ljudet...";
         await uploadToSupabase(lastBlob);
       });
-        async function aiTranscribe() {
-    const urlInput = document.getElementById("audioUrlInput");
-    const resultBox = document.getElementById("aiResult");
-    const audioUrl = urlInput.value.trim();
-
-    if (!audioUrl) {
-      alert("Klistra in Supabase-länken först.");
-      return;
-    }
-
-    resultBox.value = "AI jobbar... (transkriberar & sammanfattar)";
-
-    try {
-      async function aiTranscribe() {
-          async function aiTranscribe() {
+     async function aiTranscribe() {
     const urlInput = document.getElementById("audioUrlInput");
     const resultBox = document.getElementById("aiResult");
     const audioUrl = urlInput.value.trim();
@@ -789,5 +775,3 @@
 </script>
 </body>
 </html>
-
- 
