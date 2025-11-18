@@ -5,9 +5,9 @@
   <title>Kenai Recorder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Supabase config – BYT TILL DINA VÄRDEN -->
+  <!-- Supabase config – ÄNDRA BARA DENNA RAD: supabase-key -->
   <meta name="supabase-url" content='https://hywwzzzxgagqhlxooekz.supabase.co';
-  <meta name="supabase-key" content=';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';  
+  <meta name="supabase-key" content='sk-proj-7h7p2OQFfplo8NMUg-hWlcXns1GmGOhu54VVWO6umz6ky9MnMDPsco5f4ZQyOLwo665BzlYsKIT3BlbkFJbBBBNkZDkIMYtuaeWiVg6sxSWZtXfwK59j4bXK0t75hVrPmMUIEAmS2ZUdsr-TkLkFzKDJTxkAco';
 
   <style>
     body {
@@ -84,7 +84,7 @@
 <body>
   <h1>Kenai Recorder</h1>
   <p>
-    Nytt: Testa även <a href="/reels.html">AI Reels Maker</a> (tidig test) för att ladda upp bilder & klipp och få en första reel-plan.
+    Nytt: Testa även <a href="/reels.html">AI Reels Maker</a> (tidig test) för att ladda upp bilder &amp; klipp och få en första reel-plan.
   </p>
 
   <div class="controls-row">
@@ -104,12 +104,12 @@
       placeholder="Här hamnar länken efter upload – eller klistra in manuellt..."
     />
     <button type="button" id="aiBtn" onclick="aiTranscribe()" disabled>
-      AI-transkribera & sammanfatta
+      AI-transkribera &amp; sammanfatta
     </button>
   </div>
 
   <div class="field-row">
-    <label for="aiResult">AI-transkribering & sammanfattning:</label><br />
+    <label for="aiResult">AI-transkribering &amp; sammanfattning:</label><br />
     <textarea
       id="aiResult"
       rows="10"
@@ -131,11 +131,9 @@
       console.warn("Supabase-konfig saknas – upload/test inaktiverat.");
     }
 
-    // Justera dessa om du vill använda annat bucket/prefix
     const SUPABASE_BUCKET = "kenai-audio";
-    const SUPABASE_PREFIX = "reviews"; // filerna hamnar under: kenai-audio/reviews/...
+    const SUPABASE_PREFIX = "reviews";
 
-    // --- Recorder state ---
     let mediaRecorder = null;
     let mediaStream = null;
     let chunks = [];
@@ -154,14 +152,13 @@
       statusEl.textContent = "status: " + text;
     }
 
-    function setButtons(recording) {
+    function updateButtons(recording) {
       startBtn.disabled = recording;
       stopBtn.disabled = !recording;
       uploadBtn.disabled = !recordedBlob || !SUPABASE_URL || !SUPABASE_KEY;
       aiBtn.disabled = !audioUrlInput.value.trim();
     }
 
-    // --- Start recording ---
     startBtn.addEventListener("click", async () => {
       try {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -187,7 +184,7 @@
           const url = URL.createObjectURL(recordedBlob);
           player.src = url;
           setStatus("klar – förhandslyssna eller ladda upp");
-          setButtons(false);
+          updateButtons(false);
           if (SUPABASE_URL && SUPABASE_KEY) {
             uploadBtn.disabled = false;
           }
@@ -195,15 +192,13 @@
 
         mediaRecorder.start();
         setStatus("spelar in...");
-        setButtons(true);
-        console.log("Inspelning startad");
+        updateButtons(true);
       } catch (err) {
         console.error("Kunde inte starta inspelning:", err);
         alert("Kunde inte starta inspelning. Kolla mic-behörighet.");
       }
     });
 
-    // --- Stop recording ---
     stopBtn.addEventListener("click", () => {
       try {
         if (mediaRecorder && mediaRecorder.state === "recording") {
@@ -218,7 +213,6 @@
       }
     });
 
-    // --- Upload till Supabase ---
     uploadBtn.addEventListener("click", async () => {
       if (!recordedBlob) {
         alert("Spela in något först.");
@@ -235,13 +229,9 @@
 
         const fileExt = "webm";
         const fileName =
-          "rec_" +
-          new Date().toISOString().replace(/[:.]/g, "-") +
-          "." +
-          fileExt;
+          "rec_" + new Date().toISOString().replace(/[:.]/g, "-") + "." + fileExt;
 
         const objectPath = `${SUPABASE_BUCKET}/${SUPABASE_PREFIX}/${fileName}`;
-
         const uploadUrl =
           SUPABASE_URL + "/storage/v1/object/" + encodeURIComponent(objectPath);
 
@@ -265,7 +255,6 @@
           return;
         }
 
-        // Public URL (bucket måste vara PUBLIC i Supabase)
         const publicUrl =
           SUPABASE_URL +
           "/storage/v1/object/public/" +
@@ -284,12 +273,10 @@
       }
     });
 
-    // Aktivera AI-knappen om användaren klistrar in länk manuellt
     audioUrlInput.addEventListener("input", () => {
       aiBtn.disabled = !audioUrlInput.value.trim();
     });
 
-    // --- AI-transkribering + sammanfattning ---
     async function aiTranscribe() {
       const audioUrl = audioUrlInput.value.trim();
       if (!audioUrl) {
@@ -302,16 +289,14 @@
       try {
         const resp = await fetch("/api/summarize", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ audioUrl }),
         });
 
         const data = await resp.json();
 
         if (!resp.ok || !data.ok) {
-          console.error("Fel från /api/sammanfatta:", data);
+          console.error("Fel från /api/summarize:", data);
           resultBox.value =
             "Något gick fel med AI-sammanfattningen.\n\n" +
             (data.error ? "Fel: " + data.error : "");
