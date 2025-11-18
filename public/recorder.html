@@ -5,472 +5,330 @@
   <title>Kenai Recorder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Supabase config -->
-  <meta name="supabase-url" content='https://hywwzzzxgagqhlxooekz.supabase.co'; 
+  <!-- Supabase config – BYT TILL DINA VÄRDEN -->
+  <meta name="supabase-url" content='https://hywwzzzxgagqhlxooekz.supabase.co';
   <meta name="supabase-key" content='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
 
-
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 18px; }
-    small code { background:#f2f2f2; padding:2px 6px; border-radius:6px; }
-    button { margin-right: 5px; }
-    .muted { opacity: .65; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      padding: 18px;
+      margin: 0;
+      background-color: #ffffff;
+      color: #111827;
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    small code {
+      background: #f2f2f2;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    button {
+      margin-right: 5px;
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+      background: #f9fafb;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .muted {
+      opacity: 0.65;
+    }
+
+    .controls-row {
+      margin: 12px 0;
+    }
+
+    .field-row {
+      margin: 10px 0;
+    }
+
+    input[type="text"] {
+      padding: 6px 8px;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+      width: 60%;
+      max-width: 520px;
+    }
+
+    textarea {
+      margin-top: 6px;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+
+    audio {
+      margin-top: 10px;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    #status {
+      margin-left: 8px;
+    }
   </style>
 </head>
 <body>
+  <h1>Kenai Recorder</h1>
+  <p>
+    Nytt: Testa även <a href="/reels.html">AI Reels Maker</a> (tidig test) för att ladda upp bilder & klipp och få en första reel-plan.
+  </p>
 
+  <div class="controls-row">
+    <button id="startBtn">Starta inspelning</button>
+    <button id="stopBtn" disabled>Stoppa</button>
+    <button id="uploadBtn" disabled>Upload till Supabase</button>
+    <small id="status" class="muted">status: idle</small>
+  </div>
 
-    <div class="page">
-      <div class="recorder-card">
-        <div class="recorder-inner">
-          <div>
-            <div class="badge">
-              <span class="badge-dot"></span>
-              <span>Kenai Recorder</span>
-            </div>
-            <div class="title">KENAI RECORDER</div>
-            <div class="subtitle">
-              Spela in en kort röst-note och få en delbar länk – perfekt för
-              podd-recensioner, idéer och snabb feedback.
-            </div>
-            <div style="margin-top: 4px">
-              <a
-                class="link-small"
-                href="/reels.html"
-                style="text-decoration: underline"
-                >Nyfiken på video? Testa även AI Reels Maker.</a
-              >
-            </div>
-          </div>
+  <audio id="player" controls></audio>
 
-          <div class="hr"></div>
+  <div class="field-row">
+    <label for="audioUrlInput">Länk till ljudfil (Supabase URL):</label><br />
+    <input
+      id="audioUrlInput"
+      type="text"
+      placeholder="Här hamnar länken efter upload – eller klistra in manuellt..."
+    />
+    <button type="button" id="aiBtn" onclick="aiTranscribe()" disabled>
+      AI-transkribera & sammanfatta
+    </button>
+  </div>
 
-          <div class="controls-row">
-            <button id="startBtn" class="btn btn-main">Starta inspelning</button>
-            <button id="stopBtn" class="btn btn-danger" disabled>Stoppa</button>
-            <button id="uploadBtn" class="btn btn-soft" disabled>
-              <div style="margin-top: 10px;">
-  <label for="audioUrlInput">
-    Länk till ljudfil (Supabase URL):
-  </label>
-  <input
-    id="audioUrlInput"
-    type="text"
-    style="width: 60%;"
-    placeholder="Klistra in din Supabase-länk här..."
-  />
-  <button type="button" onclick="aiTranscribe()">
-    AI-transkribera & sammanfatta
-  </button>
-</div>
+  <div class="field-row">
+    <label for="aiResult">AI-transkribering & sammanfattning:</label><br />
+    <textarea
+      id="aiResult"
+      rows="10"
+      style="width: 80%; max-width: 720px;"
+      placeholder="Här kommer transkriberingen och sammanfattningen..."
+    ></textarea>
+  </div>
 
-<div style="margin-top: 10px;">
-  <label for="audioUrlInput">
-    Länk till ljudfil (Supabase URL):
-  </label>
-  <input
-    id="audioUrlInput"
-    type="text"
-    style="width: 60%;"
-    placeholder="Klistra in din Supabase-länk här..."
-  />
-  <button type="button" onclick="aiTranscribe()">
-    AI-transkribera & sammanfatta
-  </button>
-</div>
+  <script>
+    // --- Supabase config från <meta> ---
+    const SUPABASE_URL =
+      document.querySelector('meta[name="supabase-url"]')?.content || "";
+    const SUPABASE_KEY =
+      document.querySelector('meta[name="supabase-key"]')?.content || "";
 
-<div style="margin-top: 10px;">
-  <label for="aiResult">AI-transkribering & sammanfattning:</label><br />
-  <textarea
-    id="aiResult"
-    rows="10"
-    style="width: 80%;"
-    placeholder="Här kommer transkriberingen och sammanfattningen..."
-  ></textarea>
-</div>
+    console.log("Supabase config:", { SUPABASE_URL, SUPABASE_KEY });
 
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      console.warn("Supabase-konfig saknas – upload/test inaktiverat.");
+    }
 
-          
-              Ladda upp
-            </button>
-          </div>
+    // Justera dessa om du vill använda annat bucket/prefix
+    const SUPABASE_BUCKET = "kenai-audio";
+    const SUPABASE_PREFIX = "reviews"; // filerna hamnar under: kenai-audio/reviews/...
 
-          <div class="timer-row">
-            <div>
-              <span class="label">Inspelningstid:</span>
-              <span id="recordTimer">00:00</span>
-            </div>
-            <div>
-              <span class="label">Uppspelning:</span>
-              <span id="playbackTimer">00:00</span>
-              <span class="label">/</span>
-              <span id="playbackTotal">00:00</span>
-            </div>
-          </div>
+    // --- Recorder state ---
+    let mediaRecorder = null;
+    let mediaStream = null;
+    let chunks = [];
+    let recordedBlob = null;
 
-          <div class="player-row">
-            <audio id="player" controls></audio>
-          </div>
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const statusEl = document.getElementById("status");
+    const player = document.getElementById("player");
+    const audioUrlInput = document.getElementById("audioUrlInput");
+    const aiBtn = document.getElementById("aiBtn");
+    const resultBox = document.getElementById("aiResult");
 
-          <div class="status-row">
-            <span class="label">Status:</span>
-            <span id="statusText">Redo. Spela in när du är redo.</span>
-          </div>
+    function setStatus(text) {
+      statusEl.textContent = "status: " + text;
+    }
 
-          <div class="link-row">
-            <label for="publicUrlInput"
-              >Delbar länk (visas här när ljudet är sparat):</label
-            >
-            <input
-              id="publicUrlInput"
-              type="text"
-              placeholder="Ingen länk ännu."
-              readonly
-            />
-            <div class="link-actions">
-              <button id="openLinkBtn" class="btn btn-soft" style="flex: 1">
-                Öppna länk
-              </button>
-              <button id="copyLinkBtn" class="btn btn-soft" style="flex: 1">
-                Kopiera länk
-              </button>
-            </div>
-          </div>
+    function setButtons(recording) {
+      startBtn.disabled = recording;
+      stopBtn.disabled = !recording;
+      uploadBtn.disabled = !recordedBlob || !SUPABASE_URL || !SUPABASE_KEY;
+      aiBtn.disabled = !audioUrlInput.value.trim();
+    }
 
-          <div class="ai-summary-box">
-            <h3>AI-SAMMANFATTNING</h3>
-            <p>
-              När din inspelning är uppladdad kan du låta AI lyssna och skriva
-              en kort sammanfattning på svenska.
-            </p>
-
-            <div class="ai-summary-actions">
-              <button id="summarizeBtn" class="btn btn-main" type="button">
-                AI-sammanfatta inspelningen
-              </button>
-              <button
-                id="copySummaryBtn"
-                class="btn btn-soft"
-                type="button"
-                style="padding: 6px 12px; font-size: 12px"
-              >
-                Kopiera sammanfattning
-              </button>
-              <span id="summaryStatus" class="ai-summary-status"></span>
-            </div>
-
-            <textarea
-              id="summaryOutput"
-              placeholder="Sammanfattningen dyker upp här..."
-              readonly
-            ></textarea>
-          </div>
-
-          <div class="help-text">
-            Länken går direkt till din inspelning i Supabase (public bucket
-            <code id="bucketNameLabel">kenai-audio/reviews</code>), ingen
-            inloggning behövs.
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <script>
-      // ===== Helper-funktioner för tid =====
-      function formatTime(sec) {
-        const s = Math.floor(sec % 60)
-          .toString()
-          .padStart(2, "0");
-        const m = Math.floor(sec / 60)
-          .toString()
-          .padStart(2, "0");
-        return `${m}:${s}`;
-      }
-
-      // ===== DOM refs =====
-      const startBtn = document.getElementById("startBtn");
-      const stopBtn = document.getElementById("stopBtn");
-      const uploadBtn = document.getElementById("uploadBtn");
-      const recordTimerEl = document.getElementById("recordTimer");
-      const playbackTimerEl = document.getElementById("playbackTimer");
-      const playbackTotalEl = document.getElementById("playbackTotal");
-      const player = document.getElementById("player");
-      const statusEl = document.getElementById("statusText");
-      const publicUrlInput = document.getElementById("publicUrlInput");
-      const openLinkBtn = document.getElementById("openLinkBtn");
-      const copyLinkBtn = document.getElementById("copyLinkBtn");
-      const bucketLabel = document.getElementById("bucketNameLabel");
-
-      if (bucketLabel) {
-        bucketLabel.textContent = `${SB_BUCKET}/${SB_PREFIX}`;
-      }
-
-      let mediaRecorder = null;
-      let chunks = [];
-      let recordStartTime = null;
-      let recordTimerId = null;
-      let lastBlob = null;
-
-      // ===== Inspelning =====
-      async function startRecording() {
-        try {
-          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            alert("Din webbläsare stödjer tyvärr inte inspelning.");
-            return;
-          }
-
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-          chunks = [];
-          lastBlob = null;
-          mediaRecorder = new MediaRecorder(stream);
-
-          mediaRecorder.ondataavailable = (e) => {
-            if (e.data && e.data.size > 0) {
-              chunks.push(e.data);
-            }
-          };
-
-          mediaRecorder.onstop = async () => {
-            clearInterval(recordTimerId);
-            recordTimerId = null;
-            const blob = new Blob(chunks, { type: "audio/webm" });
-            lastBlob = blob;
-            const url = URL.createObjectURL(blob);
-            player.src = url;
-
-            const audio = new Audio(url);
-            audio.addEventListener("loadedmetadata", () => {
-              playbackTotalEl.textContent = formatTime(audio.duration || 0);
-            });
-
-            statusEl.textContent =
-              "Inspelning klar. Tryck 'Ladda upp' när du är redo att spara ljudet.";
-            uploadBtn.disabled = false;
-          };
-
-          mediaRecorder.start();
-
-          recordStartTime = Date.now();
-          recordTimerEl.textContent = "00:00";
-          recordTimerId = setInterval(() => {
-            const elapsed = (Date.now() - recordStartTime) / 1000;
-            recordTimerEl.textContent = formatTime(elapsed);
-          }, 500);
-
-          startBtn.disabled = true;
-          stopBtn.disabled = false;
-          statusEl.textContent = "Spelar in... Tryck Stoppa när du är klar.";
-        } catch (err) {
-          console.error("startRecording error", err);
-          statusEl.textContent = "Kunde inte starta inspelning.";
-        }
-      }
-
-      function stopRecording() {
-        try {
-          if (mediaRecorder && mediaRecorder.state === "recording") {
-            mediaRecorder.stop();
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-            statusEl.textContent = "Stoppar inspelning...";
-          }
-        } catch (err) {
-          console.error("stopRecording error", err);
-        }
-      }
-
-      // ===== Supabase-upload =====
-      async function uploadToSupabase(blob) {
-        try {
-          if (!SB_URL || !SB_KEY || !SB_BUCKET || !SB_PREFIX) {
-            console.error("Supabase config saknas.");
-            statusEl.textContent = "Supabase-inställningar saknas.";
-            return null;
-          }
-
-          const fileName = `rec-${Date.now()}.webm`;
-          const objectPath = `${SB_PREFIX}/${fileName}`;
-
-          const uploadUrl = `${SB_URL}/storage/v1/object/${SB_BUCKET}/${objectPath}`;
-
-          const resp = await fetch(uploadUrl, {
-            method: "POST",
-            headers: {
-              apikey: SB_KEY,
-              authorization: `Bearer ${SB_KEY}`,
-              "content-type": "audio/webm",
-            },
-            body: blob,
-          });
-
-          const respText = await resp.text();
-
-          if (!resp.ok) {
-            console.error("Supabase upload error", resp.status, respText);
-            statusEl.textContent = `Kunde inte ladda upp ljudet (${resp.status}).`;
-            return null;
-          }
-
-          const publicUrl = `${SB_URL}/storage/v1/object/public/${SB_BUCKET}/${objectPath}`;
-
-          if (publicUrlInput) {
-            publicUrlInput.value = publicUrl;
-          }
-          statusEl.textContent = "Klart! Delbar länk sparad.";
-          return publicUrl;
-        } catch (err) {
-          console.error("Supabase upload error", err);
-          statusEl.textContent = "Kunde inte ladda upp ljudet (nätverksfel).";
-          return null;
-        }
-      }
-
-      // ===== AI-sammanfattning (frontend) =====
-      const summarizeBtn = document.getElementById("summarizeBtn");
-      const copySummaryBtn = document.getElementById("copySummaryBtn");
-      const summaryOutput = document.getElementById("summaryOutput");
-      const summaryStatus = document.getElementById("summaryStatus");
-
-      async function callSummarize() {
-        const url = (publicUrlInput?.value || "").trim();
-
-        if (!url || url.toLowerCase().includes("ingen länk")) {
-          summaryStatus.textContent =
-            "Ingen delbar länk ännu. Spela in, ladda upp och försök igen.";
+    // --- Start recording ---
+    startBtn.addEventListener("click", async () => {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          alert("Din webbläsare stödjer inte inspelning.");
           return;
         }
 
-        summarizeBtn.disabled = true;
-        summarizeBtn.textContent = "Sammanfattar...";
-        summaryStatus.textContent = "AI lyssnar på din inspelning...";
+        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        chunks = [];
 
-        try {
-          const resp = await fetch("/api/summarize", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url }),
-          });
+        mediaRecorder = new MediaRecorder(mediaStream, {
+          mimeType: "audio/webm",
+        });
 
-          if (!resp.ok) {
-            throw new Error(`Serverfel: ${resp.status}`);
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            chunks.push(e.data);
           }
+        };
 
-          const data = await resp.json();
-          summaryOutput.value = data.summary || "(Ingen text från AI)";
-          summaryStatus.textContent = "Klar.";
-        } catch (err) {
-          console.error("Summarize error", err);
-          summaryStatus.textContent = "Fel: " + err.message;
-        } finally {
-          summarizeBtn.disabled = false;
-          summarizeBtn.textContent = "AI-sammanfatta inspelningen";
+        mediaRecorder.onstop = () => {
+          recordedBlob = new Blob(chunks, { type: "audio/webm" });
+          const url = URL.createObjectURL(recordedBlob);
+          player.src = url;
+          setStatus("klar – förhandslyssna eller ladda upp");
+          setButtons(false);
+          if (SUPABASE_URL && SUPABASE_KEY) {
+            uploadBtn.disabled = false;
+          }
+        };
+
+        mediaRecorder.start();
+        setStatus("spelar in...");
+        setButtons(true);
+        console.log("Inspelning startad");
+      } catch (err) {
+        console.error("Kunde inte starta inspelning:", err);
+        alert("Kunde inte starta inspelning. Kolla mic-behörighet.");
+      }
+    });
+
+    // --- Stop recording ---
+    stopBtn.addEventListener("click", () => {
+      try {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+          mediaRecorder.stop();
         }
+        if (mediaStream) {
+          mediaStream.getTracks().forEach((t) => t.stop());
+        }
+        setStatus("stoppar inspelning...");
+      } catch (err) {
+        console.error("Fel vid stop:", err);
       }
+    });
 
-      if (summarizeBtn) {
-        summarizeBtn.addEventListener("click", callSummarize);
+    // --- Upload till Supabase ---
+    uploadBtn.addEventListener("click", async () => {
+      if (!recordedBlob) {
+        alert("Spela in något först.");
+        return;
       }
-
-      if (copySummaryBtn) {
-        copySummaryBtn.addEventListener("click", async () => {
-          try {
-            if (!summaryOutput.value.trim()) return;
-            await navigator.clipboard.writeText(summaryOutput.value);
-            summaryStatus.textContent = "Sammanfattning kopierad ✅";
-            setTimeout(() => {
-              summaryStatus.textContent = "";
-            }, 2000);
-          } catch (e) {
-            summaryStatus.textContent = "Kunde inte kopiera.";
-          }
-        });
-      }
-
-      // ===== Länkknappar =====
-      if (openLinkBtn) {
-        openLinkBtn.addEventListener("click", () => {
-          const url = publicUrlInput.value.trim();
-          if (!url || url.toLowerCase().includes("ingen länk")) return;
-          window.open(url, "_blank");
-        });
-      }
-
-      if (copyLinkBtn) {
-        copyLinkBtn.addEventListener("click", async () => {
-          try {
-            const url = publicUrlInput.value.trim();
-            if (!url || url.toLowerCase().includes("ingen länk")) return;
-            await navigator.clipboard.writeText(url);
-            statusEl.textContent = "Länk kopierad ✅";
-            setTimeout(() => {
-              statusEl.textContent = "Klart! Delbar länk sparad.";
-            }, 2000);
-          } catch (e) {
-            statusEl.textContent = "Kunde inte kopiera länken.";
-          }
-        });
-      }
-
-      // ===== Player-timer =====
-      player.addEventListener("timeupdate", () => {
-        playbackTimerEl.textContent = formatTime(player.currentTime || 0);
-      });
-
-      player.addEventListener("loadedmetadata", () => {
-        playbackTotalEl.textContent = formatTime(player.duration || 0);
-      });
-
-      // ===== Knappevents =====
-      startBtn.addEventListener("click", startRecording);
-      stopBtn.addEventListener("click", stopRecording);
-      uploadBtn.addEventListener("click", async () => {
-        if (!lastBlob) return;
-        statusEl.textContent = "Laddar upp ljudet...";
-        await uploadToSupabase(lastBlob);
-      });
-     async function aiTranscribe() {
-    const urlInput = document.getElementById("audioUrlInput");
-    const resultBox = document.getElementById("aiResult");
-    const audioUrl = urlInput.value.trim();
-
-    if (!audioUrl) {
-      alert("Klistra in Supabase-länken först.");
-      return;
-    }
-
-    resultBox.value = "AI jobbar... (transkriberar & sammanfattar)";
-
-    try {
-      const resp = await fetch("/api/summarize", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ audioUrl }),
-      });
-
-      const data = await resp.json();
-
-      if (!resp.ok || !data.ok) {
-        console.error("Fel från /api/summarize:", data);
-        resultBox.value =
-          "Något gick fel med AI-sammanfattningen.\n\n" +
-          (data.error ? "Fel: " + data.error : "");
+      if (!SUPABASE_URL || !SUPABASE_KEY) {
+        alert("Supabase-konfig saknas. Kolla meta-taggarna i <head>.");
         return;
       }
 
-      resultBox.value =
-        "=== SAMMANFATTNING ===\n" +
-        data.summary +
-        "\n\n=== TRANSKRIBERING ===\n" +
-        data.transcript;
-    } catch (err) {
-      console.error(err);
-      resultBox.value =
-        "Tekniskt fel när vi pratade med servern. Kolla konsolen i devtools.";
+      try {
+        setStatus("laddar upp till Supabase...");
+        uploadBtn.disabled = true;
+
+        const fileExt = "webm";
+        const fileName =
+          "rec_" +
+          new Date().toISOString().replace(/[:.]/g, "-") +
+          "." +
+          fileExt;
+
+        const objectPath = `${SUPABASE_BUCKET}/${SUPABASE_PREFIX}/${fileName}`;
+
+        const uploadUrl =
+          SUPABASE_URL + "/storage/v1/object/" + encodeURIComponent(objectPath);
+
+        const resp = await fetch(uploadUrl, {
+          method: "POST",
+          headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: "Bearer " + SUPABASE_KEY,
+            "Content-Type": recordedBlob.type,
+            "x-upsert": "true",
+          },
+          body: recordedBlob,
+        });
+
+        if (!resp.ok) {
+          const text = await resp.text();
+          console.error("Supabase upload fail:", resp.status, text);
+          setStatus("upload misslyckades");
+          alert("Upload misslyckades. Se konsolen för detaljer.");
+          uploadBtn.disabled = false;
+          return;
+        }
+
+        // Public URL (bucket måste vara PUBLIC i Supabase)
+        const publicUrl =
+          SUPABASE_URL +
+          "/storage/v1/object/public/" +
+          encodeURIComponent(objectPath);
+
+        audioUrlInput.value = publicUrl;
+        aiBtn.disabled = false;
+
+        setStatus("uppladdad ✅ – länk kopierad till fältet");
+        console.log("Public URL:", publicUrl);
+      } catch (err) {
+        console.error("Upload error:", err);
+        setStatus("upload-fel");
+        alert("Tekniskt fel vid upload. Se konsolen.");
+        uploadBtn.disabled = false;
+      }
+    });
+
+    // Aktivera AI-knappen om användaren klistrar in länk manuellt
+    audioUrlInput.addEventListener("input", () => {
+      aiBtn.disabled = !audioUrlInput.value.trim();
+    });
+
+    // --- AI-transkribering + sammanfattning ---
+    async function aiTranscribe() {
+      const audioUrl = audioUrlInput.value.trim();
+      if (!audioUrl) {
+        alert("Klistra in Supabase-länken först.");
+        return;
+      }
+
+      resultBox.value = "AI jobbar... (transkriberar & sammanfattar)";
+
+      try {
+        const resp = await fetch("/api/summarize", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ audioUrl }),
+        });
+
+        const data = await resp.json();
+
+        if (!resp.ok || !data.ok) {
+          console.error("Fel från /api/sammanfatta:", data);
+          resultBox.value =
+            "Något gick fel med AI-sammanfattningen.\n\n" +
+            (data.error ? "Fel: " + data.error : "");
+          return;
+        }
+
+        resultBox.value =
+          "=== SAMMANFATTNING ===\n" +
+          data.summary +
+          "\n\n=== TRANSKRIBERING ===\n" +
+          data.transcript;
+      } catch (err) {
+        console.error("AI error:", err);
+        resultBox.value =
+          "Tekniskt fel när vi pratade med servern. Kolla konsolen i devtools.";
+      }
     }
-  }
-</script>
+  </script>
 </body>
 </html>
