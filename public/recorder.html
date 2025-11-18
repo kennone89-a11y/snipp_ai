@@ -743,35 +743,48 @@
     resultBox.value = "AI jobbar... (transkriberar & sammanfattar)";
 
     try {
-      const resp = await fetch("/api/summarize", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ audioUrl }),
-      });
+      async function aiTranscribe() {
+  const urlInput = document.getElementById("audioUrlInput");
+  const resultBox = document.getElementById("aiResult");
+  const audioUrl = urlInput.value.trim();
 
-      const data = await resp.json();
-
-      if (!resp.ok || !data.ok) {
-        console.error("Fel från /api/summarize:", data);
-        resultBox.value =
-          "Något gick fel med AI-sammanfattningen.\n\n" +
-          (data.error ? "Fel: " + data.error : "");
-        return;
-      }
-
-      resultBox.value =
-        "=== SAMMANFATTNING ===\n" +
-        data.summary +
-        "\n\n=== TRANSKRIBERING ===\n" +
-        data.transcript;
-    } catch (err) {
-      console.error(err);
-      resultBox.value =
-        "Tekniskt fel när vi pratade med servern. Kolla konsolen i devtools.";
-    }
+  if (!audioUrl) {
+    alert("Klistra in Supabase-länken först.");
+    return;
   }
+
+  resultBox.value = "AI jobbar... (transkriberar & sammanfattar)";
+
+  try {
+    const resp = await fetch("/api/summarize", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ audioUrl }),
+    });
+
+    const data = await resp.json();
+
+    if (!resp.ok || !data.ok) {
+      console.error("Fel från /api/summarize:", data);
+      resultBox.value =
+        "Något gick fel med AI-sammanfattningen.\n\n" +
+        (data.error ? "Fel: " + data.error : "");
+      return;
+    }
+
+    resultBox.value =
+      "=== SAMMANFATTNING ===\n" +
+      data.summary +
+      "\n\n=== TRANSKRIBERING ===\n" +
+      data.transcript;
+  } catch (err) {
+    console.error(err);
+    resultBox.value =
+      "Tekniskt fel när vi pratade med servern. Kolla konsolen i devtools.";
+  }
+}
 
     </script>
   </body>
