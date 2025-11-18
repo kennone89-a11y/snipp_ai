@@ -5,10 +5,6 @@
   <title>Kenai Recorder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Supabase config – byt endast nyckeln här -->
-  <meta name="supabase-url" content='https://hywwzzzxgagqhlxooekz.supabase.co';  
-  <meta name="supabase-key" content='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
-
   <style>
     body {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
@@ -119,17 +115,12 @@
   </div>
 
   <script>
-    // --- Supabase config från <meta> ---
-    const SUPABASE_URL =
-      document.querySelector('meta[name="supabase-url"]')?.content || "";
-    const SUPABASE_KEY =
-      document.querySelector('meta[name="supabase-key"]')?.content || "";
+    // --- Supabase config: BYT ENDAST SUPABASE_KEY HÄR ---
+    const SUPABASE_URL ='https://hywwzzzxgagqhlxooekz.supabase.co';  
+    const SUPABASE_KEY ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
+ // <--- klistra in ANON PUBLIC här
 
     console.log("Supabase config:", { SUPABASE_URL, SUPABASE_KEY });
-
-    if (!SUPABASE_URL || !SUPABASE_KEY) {
-      console.warn("Supabase-konfig saknas – upload/test inaktiverat.");
-    }
 
     const SUPABASE_BUCKET = "kenai-audio";
     const SUPABASE_PREFIX = "reviews";
@@ -219,7 +210,7 @@
         return;
       }
       if (!SUPABASE_URL || !SUPABASE_KEY) {
-        alert("Supabase-konfig saknas. Kolla meta-taggarna i <head>.");
+        alert("Supabase-konfig saknas (SUPABASE_KEY tom).");
         return;
       }
 
