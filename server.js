@@ -1,5 +1,4 @@
 // server.js – Kenai backend (Recorder + Reels + AI)
-
 // --- Imports ---
 const express = require("express");
 const cors = require("cors");
@@ -18,9 +17,8 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
 app.use(express.json());
-app.use(express.static("public"));
+app.use(cors());
 
 // --- OpenAI-klient ---
 const openai = new OpenAI({
@@ -248,6 +246,99 @@ app.post("/api/ai-review", async (req, res) => {
 // ---------------------------------------------------------
 //  Starta servern
 // ---------------------------------------------------------
+// AI-transkribering + sammanfattning
+app.post("/api/summarize", async (req, res) => {
+  try {
+    const { audioUrl } = req.body;
+
+    if (!audioUrl) {
+      return res.status(400).json({ ok: false, error: "audioUrl saknas i body" });
+    }
+
+    // 1. Hämta ljudfilen från Supabase-länken
+    const audioResp = await fetch(audioUrl);
+    if (!audioResp.ok) {
+      console.error("Kunde inte ladda ner ljudfil:", audioResp.status, audioResp.statusText);
+      return res
+        .status(500)
+        .json({ ok: false, error: "Kunde inte ladda ner ljudfil från URL" });
+    }
+
+    const arrayBuffer = await audioResp.arrayBuffer();
+    const audioBuffer = Buffer.from(arrayBuffer);
+
+    // 2. Skicka till OpenAI för transkribering
+    const formData = new FormData();
+    formData.append("file", new Blob([audioBuffer]), "audio.wav");
+    formData.append("model", "gpt-4o-mini-transcribe");
+    formData.append("response_format", "json");
+
+    const openaiAudioResp = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: formData,
+    });
+
+    const audioData = await openaiAudioResp.json();
+
+    if (!openaiAudioResp.ok) {
+      console.error("OpenAI audio error:", audioData);
+      return res
+        .status(500)
+        .json({ ok: false, error: "Fel från OpenAI (audio)", details: audioData });
+    }
+
+    const transcript = audioData.text || "";
+
+    // 3. Sammanfatta texten
+    const summaryResp = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "Du är en assistent som sammanfattar svenska ljudinspelningar. Var kortfattad och tydlig.",
+          },
+          {
+            role: "user",
+            content:
+              "Här är transkriberingen av ett ljudklipp. Skriv först en mycket kort sammanfattning (2–4 meningar) på svenska. Efter det, om du vill, kan du lägga till viktiga punkter i punktlista.\n\n" +
+              transcript,
+          },
+        ],
+      }),
+    });
+
+    const summaryData = await summaryResp.json();
+
+    if (!summaryResp.ok) {
+      console.error("OpenAI summary error:", summaryData);
+      return res
+        .status(500)
+        .json({ ok: false, error: "Fel från OpenAI (summary)", details: summaryData });
+    }
+
+    const summary = (summaryData.choices?.[0]?.message?.content || "").trim();
+
+    return res.json({
+      ok: true,
+      transcript,
+      summary,
+    });
+  } catch (err) {
+    console.error("Fel i /api/summarize:", err);
+    return res.status(500).json({ ok: false, error: "Internt serverfel i /api/summarize" });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Kenai backend lyssnar på port ${PORT}`);
 });
