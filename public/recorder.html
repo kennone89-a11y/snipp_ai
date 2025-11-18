@@ -1,326 +1,56 @@
 <!DOCTYPE html>
 <html lang="sv">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Kenai Recorder</title>
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
-    />
+<head>
+  <meta charset="UTF-8" />
+  <title>Kenai Recorder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- ===== Supabase config (BYT TILL DINA RIKTIGA VÄRDEN) ===== -->
-    <script>
-      const SB_URL ='https://hywwzzzxgagqhlxooekz.supabase.co';
-      const SB_KEY ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
-      const SB_BUCKET = "kenai-audio"; // <--- din bucket
-      const SB_PREFIX = "reviews"; // undermapp i bucketen
-    </script>
+  <!-- Supabase config (FYLL I KEY NEDAN!) -->
+  <meta name="supabase-url" content="https://bywazzzzqgqghlxoookz.supabase.co">
+  <meta name="supabase-key" content='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
 
-    <style>
-      :root {
-        --bg-1: #020617;
-        --bg-2: #020617;
-        --accent: #38bdf8;
-        --accent-soft: rgba(56, 189, 248, 0.12);
-        --danger: #f97373;
-        --text-main: #e5e7eb;
-        --text-soft: #9ca3af;
-        --border-soft: rgba(148, 163, 184, 0.4);
-        --card-bg: rgba(15, 23, 42, 0.96);
-        --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.85);
-        --radius-xl: 24px;
-      }
+  <style>
+    /* Enkla recorder-styles */
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 18px; }
+    small code { background:#f2f2f2; padding:2px 6px; border-radius:6px; }
+    button { margin-right: 5px; }
+    .muted { opacity: .65; }
 
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-
-      body {
-        min-height: 100vh;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-          sans-serif;
-        color: var(--text-main);
-        background: radial-gradient(
-            circle at top left,
-            rgba(37, 99, 235, 0.45),
-            transparent 55%
-          ),
-          radial-gradient(
-            circle at bottom right,
-            rgba(8, 47, 73, 0.6),
-            transparent 55%
-          ),
-          #020617;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 24px;
-      }
-
-      .page {
-        width: 100%;
-        max-width: 920px;
-        display: flex;
-        justify-content: center;
-      }
-
-      .recorder-card {
-        width: 100%;
-        max-width: 520px;
-        background: var(--card-bg);
-        border-radius: var(--radius-xl);
-        box-shadow: var(--shadow-soft);
-        border: 1px solid rgba(148, 163, 184, 0.35);
-        padding: 22px 16px 16px;
-        backdrop-filter: blur(18px);
-      }
-
-      @media (min-width: 640px) {
-        .recorder-card {
-          padding: 26px 24px 20px;
-        }
-      }
-
-      .recorder-inner {
-        display: flex;
-        flex-direction: column;
-        gap: 18px;
-      }
-
-      .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.14em;
-        color: #c4d1ff;
-        background: rgba(15, 23, 42, 0.9);
-        border-radius: 999px;
-        padding: 5px 10px;
-        border: 1px solid rgba(148, 163, 184, 0.6);
-      }
-
-      .badge-dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 999px;
-        background: #22c55e;
-        box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.25);
-      }
-
-      .title {
-        margin-top: 6px;
-        font-size: 22px;
-        font-weight: 600;
-        letter-spacing: 0.03em;
-      }
-
-      .subtitle {
-        margin-top: 4px;
-        font-size: 13px;
-        line-height: 1.5;
-        color: var(--text-soft);
-      }
-
-      .link-small {
-        font-size: 12px;
-        color: #93c5fd;
-        text-decoration: none;
-      }
-
-      .link-small:hover {
-        text-decoration: underline;
-      }
-
-      .hr {
-        height: 1px;
-        background: radial-gradient(
-          circle,
-          rgba(148, 163, 184, 0.9),
-          transparent
+    /* Din gradient-bakgrund från tidigare (om du vill ha den kvar) */
+    body {
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        sans-serif;
+      color: var(--text-main);
+      background: radial-gradient(
+          circle at top left,
+          rgba(97, 39, 235, 0.45),
+          transparent 55%
+        ),
+        radial-gradient(
+          circle at bottom right,
+          rgba(47, 47, 79, 0.6),
+          transparent 55%
         );
-        opacity: 0.4;
-        margin: 2px 0 4px;
-      }
+      background-color: #020617;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 24px;
+    }
 
-      .controls-row {
-        display: flex;
-        gap: 8px;
-        margin-top: 8px;
-      }
+    .page {
+      max-width: 920px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
 
-      .btn {
-        appearance: none;
-        border: none;
-        border-radius: 999px;
-        padding: 9px 14px;
-        font-size: 13px;
-        font-weight: 500;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        transition: transform 0.06s ease, box-shadow 0.06s ease, opacity 0.1s;
-        white-space: nowrap;
-      }
+    /* resten av din .card / .header / etc CSS kan ligga kvar här inne i <style> */
+  </style>
+</head>
+<body>
 
-      .btn:disabled {
-        opacity: 0.5;
-        cursor: default;
-        transform: none;
-        box-shadow: none;
-      }
-
-      .btn-main {
-        background: linear-gradient(135deg, #4f46e5, #06b6d4);
-        color: #f9fafb;
-        box-shadow: 0 10px 28px rgba(56, 189, 248, 0.55);
-      }
-
-      .btn-main:hover:not(:disabled) {
-        transform: translateY(-1px);
-        box-shadow: 0 14px 36px rgba(56, 189, 248, 0.7);
-      }
-
-      .btn-danger {
-        background: rgba(239, 68, 68, 0.08);
-        color: #fecaca;
-        border: 1px solid rgba(239, 68, 68, 0.6);
-      }
-
-      .btn-danger:hover:not(:disabled) {
-        transform: translateY(-1px);
-        box-shadow: 0 10px 24px rgba(239, 68, 68, 0.6);
-      }
-
-      .btn-soft {
-        background: rgba(15, 23, 42, 0.9);
-        color: #e5e7eb;
-        border: 1px solid rgba(148, 163, 184, 0.7);
-      }
-
-      .btn-soft:hover:not(:disabled) {
-        transform: translateY(-1px);
-        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.9);
-      }
-
-      .timer-row {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 10px;
-        font-size: 12px;
-        color: var(--text-soft);
-      }
-
-      .player-row {
-        margin-top: 8px;
-      }
-
-      .player-row audio {
-        width: 100%;
-      }
-
-      .status-row {
-        margin-top: 10px;
-        font-size: 12px;
-        color: #a5b4fc;
-      }
-
-      .status-row .label {
-        color: var(--text-soft);
-      }
-
-      .link-row {
-        margin-top: 12px;
-        font-size: 12px;
-      }
-
-      .link-row label {
-        display: block;
-        margin-bottom: 4px;
-        color: var(--text-soft);
-      }
-
-      .link-row input {
-        width: 100%;
-        padding: 8px 10px;
-        border-radius: 10px;
-        border: 1px solid var(--border-soft);
-        background: rgba(15, 23, 42, 0.96);
-        color: var(--text-main);
-        font-size: 12px;
-      }
-
-      .link-actions {
-        display: flex;
-        gap: 8px;
-        margin-top: 8px;
-      }
-
-      .help-text {
-        margin-top: 6px;
-        font-size: 11px;
-        color: var(--text-soft);
-        text-align: center;
-      }
-
-      .ai-summary-box {
-        margin-top: 20px;
-        padding: 16px 18px;
-        border-radius: 16px;
-        background: rgba(12, 22, 40, 0.9);
-        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03);
-      }
-
-      .ai-summary-box h3 {
-        margin: 0 0 6px;
-        font-size: 14px;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        color: #9fb4ff;
-      }
-
-      .ai-summary-box p {
-        margin: 0 0 10px;
-        font-size: 13px;
-        color: #b6c4e5;
-      }
-
-      .ai-summary-actions {
-        display: flex;
-        gap: 8px;
-        margin-top: 10px;
-        align-items: center;
-        flex-wrap: wrap;
-      }
-
-      .ai-summary-status {
-        font-size: 12px;
-        color: #8ea4ff;
-      }
-
-      .ai-summary-box textarea {
-        width: 100%;
-        box-sizing: border-box;
-        min-height: 110px;
-        resize: vertical;
-        padding: 10px 12px;
-        border-radius: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        background: rgba(4, 10, 24, 0.95);
-        color: #eaf0ff;
-        font-size: 13px;
-        line-height: 1.4;
-        margin-top: 8px;
-      }
-    </style>
-  </head>
-
-  <body>
     <div class="page">
       <div class="recorder-card">
         <div class="recorder-inner">
