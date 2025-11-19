@@ -102,35 +102,84 @@ app.post("/api/build-reel", async (req, res) => {
   }
 });
 // --- AI-sammanfattning av inspelning ---
+// --- AI: transkribera & sammanfatta ---
 app.post("/api/summarize", async (req, res) => {
   try {
-    const { url } = req.body || {};
-
-    if (!url) {
-      return res.status(400).json({ error: "Ingen url skickades in." });
+    const { audioUrl } = req.body || {};
+    if (!audioUrl) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "audioUrl saknas i body" });
     }
 
-    // 1) Hämta ljudfilen från Supabase (den publika länken)
-    const fileResponse = await fetch(url);
-    if (!fileResponse.ok) {
-      throw new Error(`Kunde inte hämta filen (${fileResponse.status})`);
+    console.log("API /api/summarize – audioUrl:", audioUrl);
+
+    // 1) Ladda ner ljudfilen till temp
+    const tmpFile = path.join(os.tmpdir(), `kenai_${Date.now()}.webm`);
+
+    const dlResp = await fetch(audioUrl);
+    if (!dlResp.ok) {
+      const text = await dlResp.text().catch(() => "");
+      console.error(
+        "Kunde inte ladda ner audio från Supabase:",
+        dlResp.status,
+        text
+      );
+      return res.status(500).json({
+        ok: false,
+        error: "Kunde inte ladda ner ljudfilen från Supabase",
+      });
     }
-    const arrayBuffer = await fileResponse.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
 
-    // 2) Spara temporärt på disk (Render -> /tmp funkar)
-    const tmpFilePath = path.join(
-      os.tmpdir(),
-      `kenai-audio-${Date.now()}.webm`
-    );
-    await fs.promises.writeFile(tmpFilePath, buffer);
+    const buf = Buffer.from(await dlResp.arrayBuffer());
+    fs.writeFileSync(tmpFile, buf);
 
-    // 3) Skicka till OpenAI för transkribering (svenska)
-    const transcription = await openai.audio.transcriptions.create({
-      model: "gpt-4o-mini-transcribe",
-      file: fs.createReadStream(tmpFilePath),
+    // 2) Transkribera med Whisper
+    const transcriptResp = await openai.audio.transcriptions.create({
+      file: fs.createReadStream(tmpFile),
+      model: "whisper-1",
       language: "sv",
     });
+
+    const transcript = transcriptResp.text || "";
+
+    // 3) Sammanfatta med GPT
+    const summaryResp = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "Du är en assistent som sammanfattar svenska ljudinspelningar. Var kortfattad och tydlig.",
+        },
+        {
+          role: "user",
+          content:
+            "Här är transkriberingen av ett ljudklipp. Skriv först en mycket kort sammanfattning (2–4 meningar) på svenska. " +
+            "Efter det, om du vill, kan du lägga till viktiga punkter i punktlista.\n\n" +
+            transcript,
+        },
+      ],
+    });
+
+    const summary =
+      summaryResp.choices?.[0]?.message?.content?.trim() || "";
+
+    // 4) Skicka tillbaka JSON till frontenden
+    return res.json({
+      ok: true,
+      transcript,
+      summary,
+    });
+  } catch (err) {
+    console.error("Fel i /api/summarize:", err);
+    return res.status(500).json({
+      ok: false,
+      error: err.message || "Internt serverfel i /api/summarize",
+    });
+  }
+});
+
 
     const transcriptText = transcription.text || "";
 
