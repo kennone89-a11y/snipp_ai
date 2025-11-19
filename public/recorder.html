@@ -220,8 +220,7 @@
           "rec_" + new Date().toISOString().replace(/[:.]/g, "-") + "." + fileExt;
 
         const objectPath = `${SUPABASE_BUCKET}/${SUPABASE_PREFIX}/${fileName}`;
-        const uploadUrl =
-          SUPABASE_URL + "/storage/v1/object/" + encodeURIComponent(objectPath);
+        const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${objectPath}`;
 
         const resp = await fetch(uploadUrl, {
           method: "POST",
@@ -243,11 +242,7 @@
           return;
         }
 
-        const publicUrl =
-          SUPABASE_URL +
-          "/storage/v1/object/public/" +
-          encodeURIComponent(objectPath);
-
+        const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/${objectPath}`;
         audioUrlInput.value = publicUrl;
         aiBtn.disabled = false;
 
