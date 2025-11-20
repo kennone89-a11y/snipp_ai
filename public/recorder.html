@@ -269,7 +269,7 @@
       resultBox.value = "AI jobbar... (transkriberar & sammanfattar)";
 
       try {
-        const resp = await fetch("/api/summarize", {
+       const resp = await fetch("https://snipp-ai-1.onrender.com/api/summarize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ audioUrl }),
