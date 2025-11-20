@@ -3,400 +3,418 @@
 <head>
   <meta charset="UTF-8" />
   <title>Kenai Recorder</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+  <!-- Enkel, ren stil -->
   <style>
     body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      padding: 18px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       margin: 0;
-      background-color: #ffffff;
-      color: #111827;
+      padding: 0;
+      background: #f5f5f5;
+      color: #111;
     }
-
+    header {
+      padding: 16px 24px;
+      background: #111827;
+      color: #f9fafb;
+    }
+    main {
+      max-width: 900px;
+      margin: 24px auto 48px;
+      background: #ffffff;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1);
+    }
     h1 {
       margin-top: 0;
+      margin-bottom: 4px;
     }
-
-    small code {
-      background: #f2f2f2;
-      padding: 2px 6px;
-      border-radius: 6px;
+    p {
+      margin-top: 0;
+      margin-bottom: 12px;
     }
-
+    a {
+      color: #2563eb;
+    }
+    .row {
+      margin-bottom: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
     button {
-      margin-right: 5px;
-      padding: 6px 12px;
-      border-radius: 4px;
-      border: 1px solid #d1d5db;
-      background: #f9fafb;
       cursor: pointer;
+      border-radius: 6px;
+      border: 1px solid #111827;
+      padding: 8px 14px;
+      font-size: 14px;
+      background: #111827;
+      color: #f9fafb;
+      transition: background 0.15s ease, transform 0.05s ease;
     }
-
     button:disabled {
-      opacity: 0.5;
+      opacity: 0.4;
       cursor: not-allowed;
+      transform: none;
     }
-
-    .muted {
-      opacity: 0.65;
+    button:not(:disabled):hover {
+      background: #1f2937;
+      transform: translateY(-1px);
     }
-
-    .controls-row {
-      margin: 12px 0;
+    button.secondary {
+      background: #ffffff;
+      color: #111827;
     }
-
-    .field-row {
-      margin: 10px 0;
+    button.secondary:hover:not(:disabled) {
+      background: #e5e7eb;
     }
-
-    input[type="text"] {
-      padding: 6px 8px;
-      border-radius: 4px;
-      border: 1px solid #d1d5db;
-      width: 60%;
-      max-width: 520px;
-    }
-
-    textarea {
-      margin-top: 6px;
-      padding: 8px;
-      border-radius: 4px;
-      border: 1px solid #d1d5db;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-    }
-
-    audio {
-      margin-top: 10px;
-      width: 100%;
-      max-width: 420px;
-    }
-
     #status {
-      margin-left: 8px;
+      font-size: 13px;
+      color: #4b5563;
+      margin-left: 6px;
+    }
+    audio {
+      width: 100%;
+      margin-top: 8px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      font-size: 14px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 200px;
+      resize: vertical;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      font-size: 14px;
+    }
+    @media (max-width: 640px) {
+      main {
+        margin: 0;
+        border-radius: 0;
+        box-shadow: none;
+      }
+      .row {
+        align-items: flex-start;
+      }
+      button {
+        width: 100%;
+      }
     }
   </style>
+
+  <!-- jsPDF för lokal PDF-export -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
+
 <body>
-  <h1>Kenai Recorder</h1>
-  <p>
-    Nytt: Testa även <a href="/reels.html">AI Reels Maker</a> (tidig test) för att ladda upp bilder &amp; klipp och få en första reel-plan.
-  </p>
+  <header>
+    <div style="max-width: 900px; margin: 0 auto;">
+      <h1>Kenai Recorder</h1>
+      <p style="margin: 0; font-size: 14px;">
+        Nytt: Testa även
+        <a href="/reels.html">AI Reels Maker</a> (tidig test)
+        för att ladda upp bilder &amp; klipp och få en första reel-plan.
+      </p>
+    </div>
+  </header>
 
-  <div class="controls-row">
-    <button id="startBtn">Starta inspelning</button>
-    <button id="stopBtn" disabled>Stoppa</button>
-    <button id="uploadBtn" disabled>Upload till Supabase</button>
-    <small id="status" class="muted">status: idle</small>
-  </div>
+  <main>
+    <!-- Inspelning -->
+    <section>
+      <div class="row">
+        <button id="startBtn">Starta inspelning</button>
+        <button id="stopBtn" disabled>Stoppa</button>
+        <span id="status">idle</span>
+      </div>
 
-  <audio id="player" controls></audio>
+      <div class="row" style="flex-direction: column; align-items: flex-start;">
+        <audio id="player" controls></audio>
+      </div>
+    </section>
 
-  <div class="field-row">
-    <label for="audioUrlInput">Länk till ljudfil (Supabase URL):</label><br />
-    <input
-      id="audioUrlInput"
-      type="text"
-      placeholder="Här hamnar länken efter upload – eller klistra in manuellt..."
-    />
-    <button type="button" id="aiBtn" onclick="aiTranscribe()" disabled>
-      AI-transkribera &amp; sammanfatta
-    </button>
-  </div>
+    <!-- Länk + AI -->
+    <section style="margin-top: 24px;">
+      <div class="row" style="flex-direction: column; align-items: stretch;">
+        <label for="fileUrl" style="font-size: 14px; font-weight: 500; margin-bottom: 4px;">
+          Länk till ljudfil (Supabase URL):
+        </label>
+        <input
+          id="fileUrl"
+          type="text"
+          placeholder="Här hamnar länken efter upload – eller klistra in manuellt..."
+        />
+      </div>
 
-  <div class="field-row">
-    <label for="aiResult">AI-transkribering &amp; sammanfattning:</label><br />
-    <textarea
-      id="aiResult"
-      rows="10"
-      style="width: 80%; max-width: 720px;"
-      placeholder="Här kommer transkriberingen och sammanfattningen..."
-    ></textarea>
-    <button id="downloadPdfBtn" type="button">
-  Ladda ner som PDF
-</button>
+      <div class="row">
+        <button id="uploadBtn" class="secondary" disabled>Ladda upp till Kenai</button>
+        <button id="summarizeBtn" disabled>AI-transkribera &amp; sammanfatta</button>
+      </div>
+    </section>
 
-  </div>
+    <!-- Text + PDF -->
+    <section style="margin-top: 24px;">
+      <p style="font-weight: 500; margin-bottom: 4px;">AI-transkribering &amp; sammanfattning:</p>
+      <textarea
+        id="summaryText"
+        placeholder="Här kommer transkriberingen och sammanfattningen..."
+      ></textarea>
+
+      <div class="row" style="margin-top: 12px;">
+        <button id="downloadPdfBtn" class="secondary">Ladda ner som PDF</button>
+      </div>
+    </section>
+  </main>
 
   <script>
-    // --- Supabase config: BYT ENDAST SUPABASE_KEY HÄR ---
-    const SUPABASE_URL ='https://hywwzzzxgagqhlxooekz.supabase.co';
-    const SUPABASE_KEY ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
+    // =========================
+    //   KONFIGURATION
+    // =========================
 
-    console.log("Supabase URL:", SUPABASE_URL);
-    console.log(
-      "Supabase KEY length:",
-      SUPABASE_KEY ? SUPABASE_KEY.length : 0
-    );
+    // TODO: FYLL I DINA RIKTIGA VÄRDEN HÄR (du hade dem redan i tidigare version)
+    const SB_URL ='https://hywwzzzxgagqhlxooekz.supabase.co';   // <-- byt till din riktiga
+    const SB_ANON ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';                // <-- byt till din riktiga
+    const SB_BUCKET = "kenai-audio";                        // bucket-namn
+    const SB_PREFIX = "reviews";                            // mapp i bucketen
 
-    const SUPABASE_BUCKET = "kenai-audio";
-    const SUPABASE_PREFIX = "reviews";
+    // Om du har ett backend-API för AI-sammanfattning (Render, etc)
+    // justera denna URL. Om den redan funkade innan, använd samma.
+    const SUMMARIZE_ENDPOINT = "/api/summarize";
 
-    let mediaRecorder = null;
-    let mediaStream = null;
-    let chunks = [];
-    let recordedBlob = null;
-
+    // =========================
+    //   DOM-REFERENSER
+    // =========================
     const startBtn = document.getElementById("startBtn");
     const stopBtn = document.getElementById("stopBtn");
     const uploadBtn = document.getElementById("uploadBtn");
+    const summarizeBtn = document.getElementById("summarizeBtn");
     const statusEl = document.getElementById("status");
-    const player = document.getElementById("player");
-    const audioUrlInput = document.getElementById("audioUrlInput");
-    const aiBtn = document.getElementById("aiBtn");
-    const resultBox = document.getElementById("aiResult");
+    const audioEl = document.getElementById("player");
+    const fileUrlInput = document.getElementById("fileUrl");
+    const summaryText = document.getElementById("summaryText");
     const downloadPdfBtn = document.getElementById("downloadPdfBtn");
 
-    function setStatus(text) {
-      statusEl.textContent = "status: " + text;
+    // =========================
+    //   STATE
+    // =========================
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let recordedBlob = null;
+    let currentPublicUrl = "";
+
+    function setStatus(msg) {
+      statusEl.textContent = msg;
+      console.log("[Kenai Recorder]", msg);
     }
 
-   startBtn.addEventListener("click", async () => {
-  try {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      alert("Din webbläsare stödjer inte inspelning.");
-      return;
+    function setRecordingState(isRecording) {
+      startBtn.disabled = isRecording;
+      stopBtn.disabled = !isRecording;
+      uploadBtn.disabled = !recordedBlob || isRecording;
     }
 
-    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    chunks = [];
+    // =========================
+    //   INSPELNING
+    // =========================
 
-    mediaRecorder = new MediaRecorder(mediaStream, {
-      mimeType: "audio/webm",
-    });
+    async function startRecording() {
+      try {
+        setStatus("Begär mikrofon-tillgång...");
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data && e.data.size > 0) {
-        chunks.push(e.data);
-      }
-    };
-
-    mediaRecorder.onstop = () => {
-      recordedBlob = new Blob(chunks, { type: "audio/webm" });
-      const url = URL.createObjectURL(recordedBlob);
-      player.src = url;
-      setStatus("klar – förhandslyssna eller ladda upp");
-      updateButtons(false);
-      uploadBtn.disabled = false;
-    };
-
-    mediaRecorder.start();
-    setStatus("spelar in...");
-    updateButtons(true);
-  } catch (err) {
-    console.error("Fel vid start av inspelning:", err);
-    alert("Kunde inte starta inspelning.");
-  }
-});
-
-stopBtn.addEventListener("click", stopRecording);
-
-uploadBtn.addEventListener("click", uploadToSupabase);
-
-aiBtn.addEventListener("click", aiTranscribe);
-
-// NY RAD: PDF-knappen
-downloadPdfBtn.addEventListener("click", downloadPdf);
-
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          alert("Din webbläsare stödjer inte inspelning.");
-          return;
-        }
-
-        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        chunks = [];
-
-        mediaRecorder = new MediaRecorder(mediaStream, {
-          mimeType: "audio/webm",
+        audioChunks = [];
+        // Enkel webm/opus-inspelning – funkar i Chrome/Edge/Firefox.
+        // (Vill vi tillbaka till WAV-only för iOS kan vi bygga ut senare.)
+        mediaRecorder = new MediaRecorder(stream, {
+          mimeType: "audio/webm;codecs=opus"
         });
 
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data && e.data.size > 0) {
-            chunks.push(e.data);
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) {
+            audioChunks.push(event.data);
           }
         };
 
         mediaRecorder.onstop = () => {
-          recordedBlob = new Blob(chunks, { type: "audio/webm" });
+          stream.getTracks().forEach((t) => t.stop());
+          recordedBlob = new Blob(audioChunks, { type: "audio/webm" });
           const url = URL.createObjectURL(recordedBlob);
-          player.src = url;
-          setStatus("klar – förhandslyssna eller ladda upp");
-          updateButtons(false);
+          audioEl.src = url;
+          audioEl.play().catch(() => {});
           uploadBtn.disabled = false;
+          setStatus("Inspelning stoppad – redo att ladda upp.");
         };
 
         mediaRecorder.start();
-        setStatus("spelar in...");
-        updateButtons(true);
+        setRecordingState(true);
+        setStatus("Spelar in...");
       } catch (err) {
-        console.error("Kunde inte starta inspelning:", err);
-        alert("Kunde inte starta inspelning. Kolla mic-behörighet.");
+        console.error("Fel vid startRecording:", err);
+        setStatus("Kunde inte starta inspelning (mic-permission?).");
+        alert("Kunde inte starta inspelning. Kolla mic-tillstånd.");
       }
-    });
+    }
 
-    stopBtn.addEventListener("click", () => {
-      try {
-        if (mediaRecorder && mediaRecorder.state === "recording") {
-          mediaRecorder.stop();
-        }
-        if (mediaStream) {
-          mediaStream.getTracks().forEach((t) => t.stop());
-        }
-        setStatus("stoppar inspelning...");
-      } catch (err) {
-        console.error("Fel vid stop:", err);
+    function stopRecording() {
+      if (!mediaRecorder || mediaRecorder.state !== "recording") {
+        return;
       }
-    });
+      setStatus("Stoppar inspelning...");
+      mediaRecorder.stop();
+      setRecordingState(false);
+    }
 
-    uploadBtn.addEventListener("click", async () => {
+    startBtn.addEventListener("click", startRecording);
+    stopBtn.addEventListener("click", stopRecording);
+
+    // =========================
+    //   SUPABASE-UPLOAD
+    // =========================
+
+    async function uploadToSupabase() {
       if (!recordedBlob) {
-        alert("Spela in något först.");
+        alert("Det finns ingen inspelning att ladda upp.");
+        return;
+      }
+
+      if (!SB_URL || !SB_ANON) {
+        alert("Supabase-URL eller anon-key saknas i koden.");
         return;
       }
 
       try {
-        setStatus("laddar upp till Supabase...");
-        uploadBtn.disabled = true;
+        setStatus("Laddar upp till Supabase...");
 
-        const fileExt = "webm";
-        const fileName =
-          "rec_" + new Date().toISOString().replace(/[:.]/g, "-") + "." + fileExt;
-
-        const objectPath = `${SUPABASE_BUCKET}/${SUPABASE_PREFIX}/${fileName}`;
-        const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${objectPath}`;
+        const fileName = `review_${Date.now()}.webm`;
+        const objectPath = `${SB_PREFIX}/${fileName}`;
+        const uploadUrl = `${SB_URL}/storage/v1/object/${encodeURIComponent(
+          SB_BUCKET + "/" + objectPath
+        )}`;
 
         const resp = await fetch(uploadUrl, {
           method: "POST",
           headers: {
-            apikey: SUPABASE_KEY,
-            Authorization: "Bearer " + SUPABASE_KEY,
-            "Content-Type": recordedBlob.type,
-            "x-upsert": "true",
+            apikey: SB_ANON,
+            Authorization: `Bearer ${SB_ANON}`,
+            "Content-Type": "audio/webm"
           },
-          body: recordedBlob,
+          body: recordedBlob
         });
 
         if (!resp.ok) {
           const text = await resp.text();
-          console.error("Supabase upload fail:", resp.status, text);
-          setStatus("upload misslyckades");
-          alert("Upload misslyckades. Se konsolen för detaljer.");
-          uploadBtn.disabled = false;
+          console.error("Supabase-upload failed:", resp.status, text);
+          setStatus("Fel vid uppladdning.");
+          alert("Kunde inte ladda upp till Supabase. Kolla konsolen.");
           return;
         }
 
-        const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/${objectPath}`;
-        audioUrlInput.value = publicUrl;
-        aiBtn.disabled = false;
+        const publicUrl = `${SB_URL}/storage/v1/object/public/${SB_BUCKET}/${objectPath}`;
 
-        setStatus("uppladdad ✅ – länk kopierad till fältet");
-        console.log("Public URL:", publicUrl);
+        currentPublicUrl = publicUrl;
+        fileUrlInput.value = publicUrl;
+        summarizeBtn.disabled = false;
+
+        setStatus("Uppladdad! Länk insatt i fältet.");
       } catch (err) {
         console.error("Upload error:", err);
-        setStatus("upload-fel");
-        alert("Tekniskt fel vid upload. Se konsolen.");
-        uploadBtn.disabled = false;
+        setStatus("Tekniskt fel vid uppladdning.");
+        alert("Tekniskt fel vid uppladdning. Kolla konsolen.");
+      }
+    }
+
+    uploadBtn.addEventListener("click", uploadToSupabase);
+
+    // Om användaren klistrar in egen URL → aktivera sammanfattning
+    fileUrlInput.addEventListener("input", () => {
+      const value = fileUrlInput.value.trim();
+      if (value) {
+        currentPublicUrl = value;
+        summarizeBtn.disabled = false;
+      } else {
+        summarizeBtn.disabled = true;
       }
     });
 
-    audioUrlInput.addEventListener("input", () => {
-      aiBtn.disabled = !audioUrlInput.value.trim();
-    });
-        async function aiTranscribe() {
-      const audioUrl = audioUrlInput.value.trim();
-      if (!audioUrl) {
-        alert("Klistra in Supabase-länken först.");
+    // =========================
+    //   AI-SAMMANFATTNING
+    // =========================
+
+    async function summarizeWithAI() {
+      const url = fileUrlInput.value.trim();
+      if (!url) {
+        alert("Ingen ljudlänk angiven.");
         return;
       }
 
-      resultBox.value = "AI jobbar... (transkriberar & sammanfattar)";
-
       try {
-        const resp = await fetch("https://snipp-ai-1.onrender.com/api/summarize", {
+        setStatus("Skickar till AI för transkribering & sammanfattning...");
+
+        const resp = await fetch(SUMMARIZE_ENDPOINT, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: audioUrl }),
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            audioUrl: url,
+            locale: "sv-SE"
+          })
         });
 
-        const raw = await resp.text();
-        console.log("Raw /api/summarize response:", resp.status, raw);
-
-        let data;
-        try {
-          data = raw ? JSON.parse(raw) : {};
-        } catch (e) {
-          console.error("Kunde inte parsa JSON:", e);
-          resultBox.value =
-            "Servern skickade inte giltig JSON.\nStatus: " +
-            resp.status +
-            "\nSvar:\n" +
-            raw;
-          return;
-        }
-
-        // Om HTTP-status är fel ⇒ visa fel
         if (!resp.ok) {
-          console.error("Fel från /api/summarize:", data);
-          resultBox.value =
-            "Något gick fel med AI-sammanfattningen.\n\n" +
-            (data.error ? "Fel: " + data.error : "");
+          const text = await resp.text();
+          console.error("Summarize error:", resp.status, text);
+          setStatus("Fel från AI-endpoint.");
+          alert("AI-sammanfattning misslyckades. Kolla konsolen.");
           return;
         }
 
-        // Här är allt OK – backend skickar { summary, transcript }
-        const summary = data.summary || "(ingen sammanfattning mottogs)";
-        const transcript = data.transcript || "(ingen transkribering mottogs)";
-
-        resultBox.value =
-          "=== SAMMANFATTNING ===\n" +
-          summary +
-          "\n\n=== TRANSKRIBERING ===\n" +
-          transcript;
+        const data = await resp.json();
+        summaryText.value = data.summary || data.text || JSON.stringify(data, null, 2);
+        setStatus("AI-sammanfattning klar.");
       } catch (err) {
-        console.error("AI error:", err);
-        resultBox.value =
-          "Tekniskt fel när vi pratade med servern. Kolla konsolen i devtools.";
+        console.error("Summarize exception:", err);
+        setStatus("Tekniskt fel vid AI-sammanfattning.");
+        alert("Tekniskt fel vid AI-sammanfattning. Kolla konsolen.");
       }
     }
 
-async function downloadPdf() {
-  const content = resultBox.value.trim();
-  if (!content) {
-    alert("Det finns ingen text att exportera ännu.");
-    return;
-  }
+    summarizeBtn.addEventListener("click", summarizeWithAI);
 
-  try {
-    const resp = await fetch("https://snipp-ai-1.onrender.com/api/export-pdf", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content }),
+    // =========================
+    //   PDF-EXPORT AV TEXT
+    // =========================
+
+    downloadPdfBtn.addEventListener("click", () => {
+      const text = (summaryText.value || "").trim();
+      if (!text) {
+        alert("Det finns ingen text att spara ännu.");
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      const marginLeft = 10;
+      const marginTop = 10;
+      const maxWidth = 180;
+      const lines = doc.splitTextToSize(text, maxWidth);
+      doc.text(lines, marginLeft, marginTop);
+
+      doc.save("kenai-sammanfattning.pdf");
     });
 
-    if (!resp.ok) {
-      const rawErr = await resp.text();
-      console.error("Fel från /api/export-pdf:", resp.status, rawErr);
-      alert("Kunde inte skapa PDF. Testa igen senare.");
-      return;
-    }
-
-    const blob = await resp.blob();
-    const url = window.URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "kenai-sammanfattning.pdf";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    window.URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error("Tekniskt fel i downloadPdf:", err);
-    alert("Tekniskt fel när PDF skulle laddas ner.");
-  }
-}
-
+    // Init-state
+    setRecordingState(false);
+    setStatus("idle");
   </script>
 </body>
 </html>
