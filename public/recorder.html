@@ -272,7 +272,7 @@
        const resp = await fetch("https://snipp-ai-1.onrender.com/api/summarize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ audioUrl }),
+          body: JSON.stringify({ url: audioUrl }),
         });
 
         const raw = await resp.text();
