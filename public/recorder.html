@@ -359,6 +359,43 @@ downloadPdfBtn.addEventListener("click", downloadPdf);
       }
     }
 
+async function downloadPdf() {
+  const content = resultBox.value.trim();
+  if (!content) {
+    alert("Det finns ingen text att exportera ännu.");
+    return;
+  }
+
+  try {
+    const resp = await fetch("https://snipp-ai-1.onrender.com/api/export-pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    });
+
+    if (!resp.ok) {
+      const rawErr = await resp.text();
+      console.error("Fel från /api/export-pdf:", resp.status, rawErr);
+      alert("Kunde inte skapa PDF. Testa igen senare.");
+      return;
+    }
+
+    const blob = await resp.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "kenai-sammanfattning.pdf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error("Tekniskt fel i downloadPdf:", err);
+    alert("Tekniskt fel när PDF skulle laddas ner.");
+  }
+}
 
   </script>
 </body>
