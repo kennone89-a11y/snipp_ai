@@ -112,6 +112,10 @@
       style="width: 80%; max-width: 720px;"
       placeholder="Här kommer transkriberingen och sammanfattningen..."
     ></textarea>
+    <button id="downloadPdfBtn" type="button">
+  Ladda ner som PDF
+</button>
+
   </div>
 
   <script>
@@ -141,20 +145,59 @@
     const audioUrlInput = document.getElementById("audioUrlInput");
     const aiBtn = document.getElementById("aiBtn");
     const resultBox = document.getElementById("aiResult");
+    const downloadPdfBtn = document.getElementById("downloadPdfBtn");
 
     function setStatus(text) {
       statusEl.textContent = "status: " + text;
     }
 
-    function updateButtons(recording) {
-      startBtn.disabled = recording;
-      stopBtn.disabled = !recording;
-      uploadBtn.disabled = !recordedBlob; // vi skiter i URL/KEY-check här
-      aiBtn.disabled = !audioUrlInput.value.trim();
+   startBtn.addEventListener("click", async () => {
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert("Din webbläsare stödjer inte inspelning.");
+      return;
     }
 
-    startBtn.addEventListener("click", async () => {
-      try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    chunks = [];
+
+    mediaRecorder = new MediaRecorder(mediaStream, {
+      mimeType: "audio/webm",
+    });
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) {
+        chunks.push(e.data);
+      }
+    };
+
+    mediaRecorder.onstop = () => {
+      recordedBlob = new Blob(chunks, { type: "audio/webm" });
+      const url = URL.createObjectURL(recordedBlob);
+      player.src = url;
+      setStatus("klar – förhandslyssna eller ladda upp");
+      updateButtons(false);
+      uploadBtn.disabled = false;
+    };
+
+    mediaRecorder.start();
+    setStatus("spelar in...");
+    updateButtons(true);
+  } catch (err) {
+    console.error("Fel vid start av inspelning:", err);
+    alert("Kunde inte starta inspelning.");
+  }
+});
+
+stopBtn.addEventListener("click", stopRecording);
+
+uploadBtn.addEventListener("click", uploadToSupabase);
+
+aiBtn.addEventListener("click", aiTranscribe);
+
+// NY RAD: PDF-knappen
+downloadPdfBtn.addEventListener("click", downloadPdf);
+
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           alert("Din webbläsare stödjer inte inspelning.");
           return;
