@@ -358,10 +358,11 @@
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            audioUrl: url,
-            locale: "sv-SE"
-          })
-        });
+    url,             // <– detta fältet vill backend ha
+    audioUrl: url,   // <– behåller också denna för framtiden
+    locale: "sv-SE"
+  })
+});
 
         if (!resp.ok) {
           const text = await resp.text();
