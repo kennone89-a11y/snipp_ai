@@ -259,7 +259,7 @@
     audioUrlInput.addEventListener("input", () => {
       aiBtn.disabled = !audioUrlInput.value.trim();
     });
-    async function aiTranscribe() {
+        async function aiTranscribe() {
       const audioUrl = audioUrlInput.value.trim();
       if (!audioUrl) {
         alert("Klistra in Supabase-länken först.");
@@ -269,7 +269,7 @@
       resultBox.value = "AI jobbar... (transkriberar & sammanfattar)";
 
       try {
-       const resp = await fetch("https://snipp-ai-1.onrender.com/api/summarize", {
+        const resp = await fetch("https://snipp-ai-1.onrender.com/api/summarize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url: audioUrl }),
@@ -280,7 +280,7 @@
 
         let data;
         try {
-          data = JSON.parse(raw);
+          data = raw ? JSON.parse(raw) : {};
         } catch (e) {
           console.error("Kunde inte parsa JSON:", e);
           resultBox.value =
@@ -291,7 +291,8 @@
           return;
         }
 
-        if (!resp.ok || !data.ok) {
+        // Om HTTP-status är fel ⇒ visa fel
+        if (!resp.ok) {
           console.error("Fel från /api/summarize:", data);
           resultBox.value =
             "Något gick fel med AI-sammanfattningen.\n\n" +
@@ -299,17 +300,22 @@
           return;
         }
 
+        // Här är allt OK – backend skickar { summary, transcript }
+        const summary = data.summary || "(ingen sammanfattning mottogs)";
+        const transcript = data.transcript || "(ingen transkribering mottogs)";
+
         resultBox.value =
           "=== SAMMANFATTNING ===\n" +
-          data.summary +
+          summary +
           "\n\n=== TRANSKRIBERING ===\n" +
-          data.transcript;
+          transcript;
       } catch (err) {
         console.error("AI error:", err);
         resultBox.value =
           "Tekniskt fel när vi pratade med servern. Kolla konsolen i devtools.";
       }
     }
+
 
   </script>
 </body>
