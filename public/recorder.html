@@ -79,7 +79,8 @@
       width: 100%;
       margin-top: 8px;
     }
-    input[type="text"] {
+    input[type="text"],
+    input[type="email"] {
       width: 100%;
       padding: 8px 10px;
       border-radius: 6px;
@@ -106,6 +107,9 @@
       }
       button {
         width: 100%;
+      }
+      input[type="email"] {
+        max-width: 100% !important;
       }
     }
   </style>
@@ -159,7 +163,7 @@
       </div>
     </section>
 
-    <!-- Text + PDF -->
+    <!-- Text + PDF + Mail -->
     <section style="margin-top: 24px;">
       <p style="font-weight: 500; margin-bottom: 4px;">AI-transkribering &amp; sammanfattning:</p>
       <textarea
@@ -170,6 +174,16 @@
       <div class="row" style="margin-top: 12px;">
         <button id="downloadPdfBtn" class="secondary">Ladda ner som PDF</button>
       </div>
+
+      <div class="row" style="margin-top: 4px; flex-wrap: wrap;">
+        <input
+          id="emailInput"
+          type="email"
+          placeholder="Din e-postadress..."
+          style="max-width: 260px;"
+        />
+        <button id="emailBtn" class="secondary" disabled>Maila sammanfattning</button>
+      </div>
     </section>
   </main>
 
@@ -178,15 +192,16 @@
     //   KONFIGURATION
     // =========================
 
-    // TODO: BYT TILL DINA RIKTIGA VÄRDEN
+    // TODO: BYT TILL DINA RIKTIGA SUPABASE-VÄRDEN
     const SB_URL ='https://hywwzzzxgagqhlxooekz.supabase.co';   // <-- byt
     const SB_ANON ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';                // <-- byt
     const SB_BUCKET = "kenai-audio";
     const SB_PREFIX = "reviews";
 
-    // Din AI-endpoint (byt om du kör full URL på Render)
-    const SUMMARIZE_ENDPOINT = "https://snipp-ai-1.onrender.com/api/summarize";
-
+    // Din backend för AI-sammanfattning
+    const SUMMARIZE_ENDPOINT = "https://snipp-ai-1.onrender.com/api/summarize";      // <-- ändra om du vill
+    // Din backend för att skicka mail
+    const SEND_EMAIL_ENDPOINT = "https://snipp-ai-1.onrender.com/api/send-summary-email"; // <-- mock/implementeras där
 
     // =========================
     //   DOM-REFERENSER
@@ -200,6 +215,8 @@
     const fileUrlInput = document.getElementById("fileUrl");
     const summaryText = document.getElementById("summaryText");
     const downloadPdfBtn = document.getElementById("downloadPdfBtn");
+    const emailInput = document.getElementById("emailInput");
+    const emailBtn = document.getElementById("emailBtn");
 
     // =========================
     //   STATE
@@ -220,8 +237,19 @@
       uploadBtn.disabled = !recordedBlob || isRecording;
     }
 
+    function isValidEmail(value) {
+      return /\S+@\S+\.\S+/.test(value);
+    }
+
+    function updateEmailButtonState() {
+      if (!emailBtn) return;
+      const hasText = (summaryText.value || "").trim().length > 0;
+      const email = (emailInput.value || "").trim();
+      emailBtn.disabled = !(hasText && isValidEmail(email));
+    }
+
     // =========================
-    //   INSPELNING
+    //   INSPELNING (DESKTOP + MOBIL)
     // =========================
 
     async function startRecording() {
@@ -230,9 +258,14 @@
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
         audioChunks = [];
-        mediaRecorder = new MediaRecorder(stream, {
-          mimeType: "audio/webm;codecs=opus"
-        });
+
+        let options = {};
+        // För Chrome/Edge/Firefox – om stöds, använd webm/opus
+        if (window.MediaRecorder && MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+          options.mimeType = "audio/webm;codecs=opus";
+        }
+
+        mediaRecorder = new MediaRecorder(stream, options);
 
         mediaRecorder.ondataavailable = (event) => {
           if (event.data && event.data.size > 0) {
@@ -242,7 +275,7 @@
 
         mediaRecorder.onstop = () => {
           stream.getTracks().forEach((t) => t.stop());
-          recordedBlob = new Blob(audioChunks, { type: "audio/webm" });
+          recordedBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || "audio/webm" });
           const url = URL.createObjectURL(recordedBlob);
           audioEl.src = url;
           audioEl.play().catch(() => {});
@@ -290,7 +323,15 @@
       try {
         setStatus("Laddar upp till Supabase...");
 
-        const fileName = `review_${Date.now()}.webm`;
+        const mime = recordedBlob.type || "";
+        let ext = "webm";
+        if (mime.includes("wav")) {
+          ext = "wav";
+        } else if (mime.includes("mp4") || mime.includes("aac") || mime.includes("mpeg")) {
+          ext = "m4a";
+        }
+
+        const fileName = `review_${Date.now()}.${ext}`;
         const objectPath = `${SB_PREFIX}/${fileName}`;
         const uploadUrl = `${SB_URL}/storage/v1/object/${SB_BUCKET}/${objectPath}`;
 
@@ -299,7 +340,7 @@
           headers: {
             apikey: SB_ANON,
             Authorization: `Bearer ${SB_ANON}`,
-            "Content-Type": "audio/webm"
+            "Content-Type": mime || "audio/webm"
           },
           body: recordedBlob
         });
@@ -316,7 +357,8 @@
 
         currentPublicUrl = publicUrl;
         fileUrlInput.value = publicUrl;
-        summarizeBtn.disabled = false;
+        summarizeBtn.disabled = true; // aktiveras när fältet inte är tomt via input-listener
+        fileUrlInput.dispatchEvent(new Event("input"));
 
         setStatus("Uppladdad! Länk insatt i fältet.");
       } catch (err) {
@@ -358,11 +400,11 @@
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-    url,             // <– detta fältet vill backend ha
-    audioUrl: url,   // <– behåller också denna för framtiden
-    locale: "sv-SE"
-  })
-});
+            url,             // det fältet backend väntar på
+            audioUrl: url,   // extra fält om vi vill använda det senare
+            locale: "sv-SE"
+          })
+        });
 
         if (!resp.ok) {
           const text = await resp.text();
@@ -375,6 +417,7 @@
         const data = await resp.json();
         summaryText.value = data.summary || data.text || JSON.stringify(data, null, 2);
         setStatus("AI-sammanfattning klar.");
+        updateEmailButtonState();
       } catch (err) {
         console.error("Summarize exception:", err);
         setStatus("Tekniskt fel vid AI-sammanfattning.");
@@ -383,6 +426,9 @@
     }
 
     summarizeBtn.addEventListener("click", summarizeWithAI);
+
+    summaryText.addEventListener("input", updateEmailButtonState);
+    emailInput.addEventListener("input", updateEmailButtonState);
 
     // =========================
     //   PDF-EXPORT AV TEXT
@@ -407,9 +453,62 @@
       doc.save("kenai-sammanfattning.pdf");
     });
 
-    // Init
+    // =========================
+    //   MAILA SAMMANFATTNING
+    // =========================
+
+    async function sendSummaryByEmail() {
+      const email = (emailInput.value || "").trim();
+      const text = (summaryText.value || "").trim();
+
+      if (!isValidEmail(email)) {
+        alert("Skriv en giltig e-postadress först.");
+        return;
+      }
+      if (!text) {
+        alert("Det finns ingen sammanfattning att skicka.");
+        return;
+      }
+
+      try {
+        setStatus("Skickar sammanfattning via e-post...");
+
+        const resp = await fetch(SEND_EMAIL_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            summary: text,
+            audioUrl: currentPublicUrl || fileUrlInput.value.trim() || null,
+            locale: "sv-SE"
+          })
+        });
+
+        if (!resp.ok) {
+          const errText = await resp.text();
+          console.error("Send email error:", resp.status, errText);
+          setStatus("Fel vid e-post-skick.");
+          alert("Kunde inte skicka e-posten. Kolla konsolen.");
+          return;
+        }
+
+        setStatus("Sammanfattning skickad via e-post.");
+        alert("Skickat! Kolla din inkorg (och ev. skräppost).");
+      } catch (err) {
+        console.error("Send email exception:", err);
+        setStatus("Tekniskt fel vid e-post-skick.");
+        alert("Tekniskt fel när mailet skulle skickas. Kolla konsolen.");
+      }
+    }
+
+    emailBtn.addEventListener("click", sendSummaryByEmail);
+
+    // =========================
+    //   INIT
+    // =========================
     setRecordingState(false);
     setStatus("idle");
+    updateEmailButtonState();
   </script>
 </body>
 </html>
