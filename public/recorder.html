@@ -295,7 +295,8 @@
 
         const fileName = `review_${Date.now()}.webm`;
         const objectPath = `${SB_PREFIX}/${fileName}`;
-        const uploadUrl = `${SB_URL}/storage/v1/object/${encodeURIComponent(
+        const uploadUrl = `${SB_URL}/storage/v1/object/${SB_BUCKET}/${objectPath}`;
+
           SB_BUCKET + "/" + objectPath
         )}`;
 
