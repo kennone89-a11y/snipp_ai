@@ -5,7 +5,6 @@
   <title>Kenai Recorder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Enkel, ren stil -->
   <style>
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -179,14 +178,13 @@
     //   KONFIGURATION
     // =========================
 
-    // TODO: FYLL I DINA RIKTIGA VÄRDEN HÄR (du hade dem redan i tidigare version)
-    const SB_URL ='https://hywwzzzxgagqhlxooekz.supabase.co';   // <-- byt till din riktiga
-    const SB_ANON ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';                // <-- byt till din riktiga
-    const SB_BUCKET = "kenai-audio";                        // bucket-namn
-    const SB_PREFIX = "reviews";                            // mapp i bucketen
+    // TODO: BYT TILL DINA RIKTIGA VÄRDEN
+    const SB_URL ='https://hywwzzzxgagqhlxooekz.supabase.co';   // <-- byt
+    const SB_ANON ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';                // <-- byt
+    const SB_BUCKET = "kenai-audio";
+    const SB_PREFIX = "reviews";
 
-    // Om du har ett backend-API för AI-sammanfattning (Render, etc)
-    // justera denna URL. Om den redan funkade innan, använd samma.
+    // Din AI-endpoint (byt om du kör full URL på Render)
     const SUMMARIZE_ENDPOINT = "/api/summarize";
 
     // =========================
@@ -231,8 +229,6 @@
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
         audioChunks = [];
-        // Enkel webm/opus-inspelning – funkar i Chrome/Edge/Firefox.
-        // (Vill vi tillbaka till WAV-only för iOS kan vi bygga ut senare.)
         mediaRecorder = new MediaRecorder(stream, {
           mimeType: "audio/webm;codecs=opus"
         });
@@ -297,9 +293,6 @@
         const objectPath = `${SB_PREFIX}/${fileName}`;
         const uploadUrl = `${SB_URL}/storage/v1/object/${SB_BUCKET}/${objectPath}`;
 
-          SB_BUCKET + "/" + objectPath
-        )}`;
-
         const resp = await fetch(uploadUrl, {
           method: "POST",
           headers: {
@@ -334,7 +327,6 @@
 
     uploadBtn.addEventListener("click", uploadToSupabase);
 
-    // Om användaren klistrar in egen URL → aktivera sammanfattning
     fileUrlInput.addEventListener("input", () => {
       const value = fileUrlInput.value.trim();
       if (value) {
@@ -413,7 +405,7 @@
       doc.save("kenai-sammanfattning.pdf");
     });
 
-    // Init-state
+    // Init
     setRecordingState(false);
     setStatus("idle");
   </script>
