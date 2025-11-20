@@ -1,5 +1,6 @@
 // server.js – Kenai backend (Recorder + Reels + AI)
 // --- Imports ---
+const PDFDocument = require("pdfkit");
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -105,6 +106,46 @@ app.post("/api/build-reel", async (req, res) => {
 // --- AI: transkribera & sammanfatta ---
 // --- AI: transkribera & sammanfatta ---
 app.post("/api/summarize", async (req, res) => {
+  // --- Export: text -> PDF ---
+app.post("/api/export-pdf", (req, res) => {
+  try {
+    const { content } = req.body || {};
+    if (!content) {
+      return res.status(400).json({ ok: false, error: "content saknas" });
+    }
+
+    // Säg till browsern att det är en PDF att ladda ner
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="kenai-sammanfattning.pdf"'
+    );
+
+    const doc = new PDFDocument({ margin: 40 });
+
+    // Skicka PDF-strömmen direkt till klienten
+    doc.pipe(res);
+
+    // Rubrik
+    doc.fontSize(18).text("Kenai – AI-sammanfattning", {
+      align: "center",
+    });
+    doc.moveDown();
+
+    // Själva innehållet (det du har i rutan)
+    doc.fontSize(12).text(content, {
+      align: "left",
+    });
+
+    doc.end();
+  } catch (err) {
+    console.error("Fel i /api/export-pdf:", err);
+    return res
+      .status(500)
+      .json({ ok: false, error: "Internt fel i /api/export-pdf" });
+  }
+});
+  
   try {
     const { audioUrl } = req.body || {};
     if (!audioUrl) {
