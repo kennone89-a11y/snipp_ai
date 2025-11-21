@@ -1,72 +1,178 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-  ...
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kenai Recorder – Spela in, ladda upp & AI-sammanfatta</title>
+
+  <!-- Supabase JS (för upload) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    /* ===== Kenai Recorder – mörkare, snyggare stil utan att röra JS ===== */
-    body {
+    :root {
+      --bg: #020617;
+      --bg-soft: #0b1120;
+      --card: rgba(15, 23, 42, 0.98);
+      --card-inner: #020617;
+      --border: rgba(148, 163, 184, 0.45);
+      --accent: #38bdf8;
+      --accent-2: #a855f7;
+      --accent-soft: rgba(56, 189, 248, 0.18);
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --danger: #f97373;
+    }
+
+    * {
+      box-sizing: border-box;
       margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Segoe UI", sans-serif;
       background: radial-gradient(circle at top, #0f172a 0, #020617 45%, #000 100%);
-      color: #e5e7eb;
+      color: var(--text-main);
     }
 
-    header, .topbar, .navbar {
-      background: linear-gradient(90deg, #020617, #020617 40%, #0f172a 100%);
-      color: #e5e7eb;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.35);
-    }
-
-    main,
-    .main-container,
-    .page-content,
-    .recorder-card,
-    body > div.main,
-    body > div.container,
-    body > div.wrapper {
-      max-width: 960px;
-      margin: 32px auto 48px;
-      padding: 24px 24px 28px;
-      border-radius: 24px;
-      background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.18), transparent 55%),
-                  radial-gradient(circle at 100% 100%, rgba(129, 140, 248, 0.15), transparent 60%),
-                  rgba(15, 23, 42, 0.96);
-      box-shadow:
-        0 0 0 1px rgba(15, 23, 42, 0.9),
-        0 24px 60px rgba(15, 23, 42, 0.95);
-      box-sizing: border-box;
-    }
-
-    h1, h2, h3, label { color: #e5e7eb; }
-
-    input[type="text"],
-    input[type="email"],
-    input[type="url"],
-    textarea {
+    .topbar {
       width: 100%;
-      background: rgba(15, 23, 42, 0.96);
-      border: 1px solid rgba(148, 163, 184, 0.7);
-      border-radius: 10px;
-      padding: 8px 10px;
-      color: #e5e7eb;
-      font-size: 0.9rem;
-      box-sizing: border-box;
+      padding: 10px 18px;
+      background: linear-gradient(90deg, #020617, #020617 40%, #0f172a 100%);
+      border-bottom: 1px solid rgba(15, 23, 42, 1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
     }
 
-    input::placeholder,
-    textarea::placeholder { color: #6b7280; }
-
-    textarea {
-      min-height: 180px;
-      resize: vertical;
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
-    button,
-    .btn,
-    input[type="button"],
-    input[type="submit"] {
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 20%, #e0f2fe 0, #38bdf8 30%, #1d4ed8 70%, #020617 100%);
+      box-shadow:
+        0 0 18px rgba(56, 189, 248, 0.8),
+        0 0 30px rgba(37, 99, 235, 0.6);
+    }
+
+    .brand-title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .brand-sub {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--text-muted);
+    }
+
+    .pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(56, 189, 248, 0.6);
+      background: rgba(15, 23, 42, 0.95);
+      font-size: 0.74rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.35);
+    }
+
+    .page {
+      max-width: 960px;
+      margin: 24px auto 40px;
+      padding: 0 16px 32px;
+    }
+
+    .card {
+      border-radius: 26px;
+      border: 1px solid var(--border);
+      background:
+        radial-gradient(circle at 0 0, var(--accent-soft), transparent 55%),
+        radial-gradient(circle at 100% 100%, rgba(129, 140, 248, 0.16), transparent 60%),
+        var(--card);
+      box-shadow:
+        0 0 0 1px rgba(15, 23, 42, 0.95),
+        0 24px 80px rgba(15, 23, 42, 0.95);
+      padding: 22px 20px 24px;
+    }
+
+    @media (max-width: 768px) {
+      .page {
+        padding: 0 10px 24px;
+      }
+
+      .card {
+        border-radius: 20px;
+        padding: 18px 14px 20px;
+      }
+
+      .topbar {
+        padding-inline: 12px;
+      }
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 0.86rem;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+    }
+
+    .subtitle a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .subtitle a:hover {
+      text-decoration: underline;
+    }
+
+    .section {
+      margin-bottom: 18px;
+    }
+
+    .section-label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: var(--text-muted);
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 6px;
+    }
+
+    button {
       border-radius: 999px;
       padding: 8px 16px;
       font-size: 0.9rem;
@@ -80,753 +186,534 @@
         box-shadow 0.12s ease-out;
     }
 
-    .btn-primary,
-    button.primary,
-    button#startButton,
-    button#btnSummarize {
+    button.primary {
       background: radial-gradient(circle at 0 0, #e0f2fe 0, #38bdf8 30%, #0f172a 100%);
-      border-color: rgba(56, 189, 248, 0.8);
+      border-color: rgba(56, 189, 248, 0.85);
       color: #020617;
       font-weight: 500;
       box-shadow:
-        0 0 22px rgba(56, 189, 248, 0.7),
-        0 0 45px rgba(37, 99, 235, 0.5);
+        0 0 24px rgba(56, 189, 248, 0.8),
+        0 0 60px rgba(37, 99, 235, 0.6);
     }
 
-    .btn-secondary,
-    button.secondary,
-    button#stopButton,
-    button#btnUpload,
-    button#btnPdf,
-    button#btnSendEmail {
-      background: rgba(15, 23, 42, 0.95);
+    button.secondary {
+      background: rgba(15, 23, 42, 0.96);
       border-color: rgba(148, 163, 184, 0.7);
-      color: #e5e7eb;
-    }
-
-    button:hover,
-    .btn:hover,
-    input[type="button"]:hover,
-    input[type="submit"]:hover {
-      transform: translateY(-1px);
-      box-shadow:
-        0 0 26px rgba(15, 23, 42, 0.8),
-        0 0 55px rgba(15, 23, 42, 0.7);
-    }
-
-    .subtitle,
-    .help-text,
-    small { color: #9ca3af; }
-
-    .section,
-    .block,
-    .row { margin-bottom: 16px; }
-
-    @media (max-width: 768px) {
-      main,
-      .main-container,
-      .page-content,
-      .recorder-card,
-      body > div.main,
-      body > div.container,
-      body > div.wrapper {
-        margin: 16px auto 32px;
-        padding: 16px 14px 20px;
-        border-radius: 18px;
-      }
-    }
-  </style>
-</head>
-
-
-  /* Om ditt innehåll ligger direkt i en div under body */
-  body > div.main,
-  body > div.container,
-  body > div.wrapper {
-    max-width: 960px;
-    margin: 32px auto 48px;
-    padding: 24px 24px 28px;
-    border-radius: 24px;
-    background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.18), transparent 55%),
-                radial-gradient(circle at 100% 100%, rgba(129, 140, 248, 0.15), transparent 60%),
-                rgba(15, 23, 42, 0.96);
-    box-shadow:
-      0 0 0 1px rgba(15, 23, 42, 0.9),
-      0 24px 60px rgba(15, 23, 42, 0.95);
-    box-sizing: border-box;
-  }
-
-  h1, h2, h3, label {
-    color: #e5e7eb;
-  }
-
-  /* Inputs, textarea, URL-fält osv */
-  input[type="text"],
-  input[type="email"],
-  input[type="url"],
-  textarea {
-    width: 100%;
-    background: rgba(15, 23, 42, 0.96);
-    border: 1px solid rgba(148, 163, 184, 0.7);
-    border-radius: 10px;
-    padding: 8px 10px;
-    color: #e5e7eb;
-    font-size: 0.9rem;
-    box-sizing: border-box;
-  }
-
-  input::placeholder,
-  textarea::placeholder {
-    color: #6b7280;
-  }
-
-  textarea {
-    min-height: 180px;
-    resize: vertical;
-  }
-
-  /* Knapparna (Starta inspelning, Stoppa, AI-transkribera & sammanfatta etc.) */
-  button,
-  .btn,
-  input[type="button"],
-  input[type="submit"] {
-    border-radius: 999px;
-    padding: 8px 16px;
-    font-size: 0.9rem;
-    border: 1px solid transparent;
-    cursor: pointer;
-    white-space: nowrap;
-    transition:
-      background 0.12s ease-out,
-      border-color 0.12s ease-out,
-      transform 0.12s ease-out,
-      box-shadow 0.12s ease-out;
-  }
-
-  /* Primära knappar */
-  .btn-primary,
-  button.primary,
-  button#startButton,
-  button#btnSummarize {
-    background: radial-gradient(circle at 0 0, #e0f2fe 0, #38bdf8 30%, #0f172a 100%);
-    border-color: rgba(56, 189, 248, 0.8);
-    color: #020617;
-    font-weight: 500;
-    box-shadow:
-      0 0 22px rgba(56, 189, 248, 0.7),
-      0 0 45px rgba(37, 99, 235, 0.5);
-  }
-
-  /* Sekundära/ghost-knappar (t.ex. Stoppa, Ladda upp till Kenai osv) */
-  .btn-secondary,
-  button.secondary,
-  button#stopButton,
-  button#btnUpload,
-  button#btnPdf,
-  button#btnSendEmail {
-    background: rgba(15, 23, 42, 0.95);
-    border-color: rgba(148, 163, 184, 0.7);
-    color: #e5e7eb;
-  }
-
-  button:hover,
-  .btn:hover,
-  input[type="button"]:hover,
-  input[type="submit"]:hover {
-    transform: translateY(-1px);
-    box-shadow:
-      0 0 26px rgba(15, 23, 42, 0.8),
-      0 0 55px rgba(15, 23, 42, 0.7);
-  }
-
-  /* Små texter under rubriken */
-  .subtitle,
-  .help-text,
-  small {
-    color: #9ca3af;
-  }
-
-  /* Liten justering för att allt inte ska ligga klistrat i kanterna */
-  .section,
-  .block,
-  .row {
-    margin-bottom: 16px;
-  }
-
-  @media (max-width: 768px) {
-    main,
-    .main-container,
-    .page-content,
-    .recorder-card,
-    body > div.main,
-    body > div.container,
-    body > div.wrapper {
-      margin: 16px auto 32px;
-      padding: 16px 14px 20px;
-      border-radius: 18px;
-    }
-  }
-</style>
-
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kenai Recorder – Spela in, ladda upp & AI-sammanfatta</title>
-
-  <!-- Supabase JS (för upload) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <style>
-    :root {
-      --bg: #020617;
-      --card: #020617;
-      --card-inner: #020817;
-      --border: rgba(148, 163, 184, 0.5);
-      --accent: #38bdf8;
-      --accent-soft: rgba(56, 189, 248, 0.15);
-      --text-main: #e5e7eb;
-      --text-muted: #9ca3af;
-      --danger: #f97373;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background:
-        radial-gradient(circle at top left, #0ea5e9 0, #020617 35%) no-repeat,
-        radial-gradient(circle at bottom right, #6366f1 0, #020617 40%) no-repeat,
-        var(--bg);
-      background-attachment: fixed;
       color: var(--text-main);
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
     }
 
-    a {
-      color: inherit;
-      text-decoration: none;
-    }
-
-    .kr-shell {
-      max-width: 960px;
-      width: 100%;
-      padding: 32px 16px 40px;
-    }
-
-    .kr-card {
-      background: radial-gradient(circle at top left, rgba(148, 163, 184, 0.08), rgba(15, 23, 42, 0.96));
-      border-radius: 24px;
-      border: 1px solid var(--border);
-      box-shadow: 0 24px 50px rgba(15, 23, 42, 0.9);
-      padding: 20px 20px 24px;
-    }
-
-    .kr-header {
-      margin-bottom: 18px;
-    }
-
-    .kr-title {
-      font-size: 24px;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-
-    .kr-subtitle {
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-
-    .kr-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 3px 9px;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.5);
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-bottom: 10px;
-    }
-
-    .kr-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 999px;
-      background: #22c55e;
-      box-shadow: 0 0 8px rgba(34, 197, 94, 0.8);
-    }
-
-    .kr-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 14px;
-    }
-
-    .kr-btn {
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: rgba(15, 23, 42, 0.9);
-      color: var(--text-main);
-      font-size: 13px;
-      padding: 7px 14px;
-      cursor: pointer;
-      transition: all 0.12s ease-out;
-    }
-
-    .kr-btn-primary {
-      border-color: var(--accent);
-      background: linear-gradient(135deg, #38bdf8, #6366f1);
-      color: #f9fafb;
-      box-shadow: 0 10px 20px rgba(56, 189, 248, 0.5);
-    }
-
-    .kr-btn-secondary {
-      background: rgba(15, 23, 42, 0.7);
-    }
-
-    .kr-btn:disabled {
-      opacity: 0.45;
+    button:disabled {
+      opacity: 0.5;
       cursor: default;
       box-shadow: none;
       transform: none;
     }
 
-    .kr-btn:not(:disabled):hover {
+    button:not(:disabled):hover {
       transform: translateY(-1px);
-      box-shadow: 0 10px 20px rgba(15, 23, 42, 0.7);
-      border-color: #e5e7eb;
+      box-shadow:
+        0 0 22px rgba(15, 23, 42, 0.9),
+        0 0 48px rgba(15, 23, 42, 0.85);
     }
 
-    .kr-audio-wrap {
-      background: rgba(15, 23, 42, 0.9);
-      border-radius: 16px;
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      padding: 10px 12px;
-      margin-bottom: 14px;
+    .status-pill {
+      font-size: 0.8rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      color: var(--text-muted);
+    }
+
+    .status-pill.recording {
+      border-color: rgba(248, 113, 113, 0.8);
+      color: #fecaca;
     }
 
     audio {
       width: 100%;
     }
 
-    .kr-label {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-    }
-
-    .kr-input,
-    .kr-textarea {
+    input[type="text"],
+    input[type="email"],
+    textarea {
       width: 100%;
-      border-radius: 12px;
-      border: 1px solid rgba(148, 163, 184, 0.5);
-      background: rgba(15, 23, 42, 0.9);
-      color: var(--text-main);
-      font-size: 13px;
+      background: rgba(15, 23, 42, 0.98);
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.75);
       padding: 8px 10px;
-      outline: none;
+      color: var(--text-main);
+      font-size: 0.9rem;
+      box-sizing: border-box;
     }
 
-    .kr-input::placeholder,
-    .kr-textarea::placeholder {
+    input::placeholder,
+    textarea::placeholder {
       color: #6b7280;
     }
 
-    .kr-input:focus,
-    .kr-textarea:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.6);
-    }
-
-    .kr-textarea {
-      min-height: 220px;
+    textarea {
+      min-height: 180px;
       resize: vertical;
-      line-height: 1.45;
     }
 
-    .kr-section-title {
-      font-size: 13px;
-      font-weight: 600;
-      margin: 14px 0 6px;
+    .small {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 4px;
     }
 
-    .kr-footer-row {
+    .bottom-row {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
       align-items: center;
-      margin-top: 14px;
+      margin-top: 10px;
     }
 
-    .kr-email {
-      flex: 1;
-      min-width: 180px;
+    .bottom-row input[type="email"] {
+      max-width: 220px;
     }
 
-    .kr-status {
-      margin-top: 8px;
-      font-size: 11px;
-      color: var(--text-muted);
-      white-space: pre-line;
-    }
-
-    .kr-status-error {
+    .error {
+      margin-top: 6px;
+      font-size: 0.8rem;
       color: var(--danger);
     }
 
-    @media (max-width: 768px) {
-      .kr-shell {
-        padding: 20px 12px 28px;
+    .success {
+      margin-top: 6px;
+      font-size: 0.8rem;
+      color: #4ade80;
+    }
+
+    .loader {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      border: 2px solid rgba(148, 163, 184, 0.4);
+      border-top-color: var(--accent);
+      animation: spin 0.7s linear infinite;
+      vertical-align: -2px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
       }
-      .kr-card {
-        padding: 16px 14px 20px;
-      }
-      .kr-title {
-        font-size: 20px;
-      }
+    }
+
+    footer {
+      margin-top: 16px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-align: right;
     }
   </style>
 </head>
 <body>
-  <div class="kr-shell">
-    <div class="kr-card">
-      <div class="kr-header">
-        <div class="kr-badge">
-          <span class="kr-dot"></span>
-          <span>Kenai Recorder • Beta</span>
-        </div>
-        <h1 class="kr-title">Kenai Recorder</h1>
-        <p class="kr-subtitle">
-          Spela in ljud direkt i webbläsaren, ladda upp till Kenai och låt AI transkribera & sammanfatta.
-          Exportera sammanfattningen som PDF.
-        </p>
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-logo"></div>
+      <div>
+        <div class="brand-title">Kenai Recorder</div>
+        <div class="brand-sub">AI-sammanfattning för ljud</div>
       </div>
+    </div>
+    <div class="pill">
+      <span class="pill-dot"></span>
+      Live · Recorder v1
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="card">
+      <header class="section">
+        <h1>Kenai Recorder</h1>
+        <p class="subtitle">
+          Nytt: Testa även
+          <a href="https://app.kenai.technology/reels.html" target="_blank" rel="noopener">
+            AI Reels Maker
+          </a>
+          för att ladda upp bilder & klipp och få en första reel-plan.
+        </p>
+      </header>
 
       <!-- Inspelning -->
-      <div class="kr-row">
-        <button id="startBtn" class="kr-btn kr-btn-primary">Starta inspelning</button>
-        <button id="stopBtn" class="kr-btn kr-btn-secondary" disabled>Stoppa</button>
-        <span id="timer" class="kr-subtitle"></span>
-      </div>
-
-      <div class="kr-audio-wrap">
-        <audio id="audioPlayer" controls></audio>
-      </div>
-
-      <!-- URL / Supabase-länk -->
-      <div class="kr-section">
-        <div class="kr-label">Länk till ljudfil (Supabase URL):</div>
-        <input
-          id="audioUrlInput"
-          class="kr-input"
-          type="text"
-          placeholder="Här dyker länken upp efter uppladdning..."
-          readonly
-        />
-        <div class="kr-row" style="margin-top:10px;">
-          <button id="uploadBtn" class="kr-btn kr-btn-secondary">Ladda upp till Kenai</button>
-          <button id="aiBtn" class="kr-btn kr-btn-primary">AI-transkribera & sammanfatta</button>
+      <section class="section">
+        <div class="section-label">Inspelning:</div>
+        <div class="row">
+          <button id="btnStart" class="primary">Starta inspelning</button>
+          <button id="btnStop" class="secondary" disabled>Stoppa</button>
+          <span id="recordStatus" class="status-pill">idle</span>
         </div>
-      </div>
+        <div style="margin-top: 10px;">
+          <audio id="player" controls></audio>
+          <div class="small" id="fileInfo">Ingen inspelning ännu.</div>
+        </div>
+        <div id="recordError" class="error"></div>
+      </section>
 
-      <!-- Sammanfattning -->
-      <div class="kr-section">
-        <div class="kr-section-title">AI-transkribering & sammanfattning:</div>
+      <!-- Supabase-länk -->
+      <section class="section">
+        <div class="section-label">Länk till ljudfil (Supabase URL):</div>
+        <input
+          id="audioUrl"
+          type="text"
+          placeholder="Här hamnar länken efter upload – eller klistra in manuellt..."
+        />
+        <div class="row" style="margin-top: 8px;">
+          <button id="btnUpload" class="secondary">Ladda upp till Kenai</button>
+          <button id="btnSummarize" class="primary">AI-transkribera &amp; sammanfatta</button>
+        </div>
+        <div class="small">
+          Kenai laddar upp din inspelning till Supabase, skickar den till AI och fyller i rutan nedan.
+        </div>
+        <div id="uploadStatus" class="success"></div>
+        <div id="uploadError" class="error"></div>
+      </section>
+
+      <!-- AI-transkribering & sammanfattning -->
+      <section class="section">
+        <div class="section-label">AI-transkribering &amp; sammanfattning:</div>
         <textarea
           id="summary"
-          class="kr-textarea"
           placeholder="Här kommer transkriberingen och sammanfattningen..."
         ></textarea>
-      </div>
+        <div id="summaryStatus" class="success"></div>
+        <div id="summaryError" class="error"></div>
+      </section>
 
-      <div class="kr-footer-row">
-        <button id="pdfBtn" class="kr-btn kr-btn-secondary">Ladda ner som PDF</button>
+      <!-- PDF + e-post -->
+      <section class="section">
+        <div class="section-label">Export &amp; utskick:</div>
+        <div class="bottom-row">
+          <button id="btnPdf" class="secondary">Ladda ner som PDF</button>
+          <input
+            id="email"
+            type="email"
+            placeholder="Din e-postadress..."
+          />
+          <button id="btnEmail" class="secondary">Maila sammanfattning</button>
+        </div>
+        <div id="exportStatus" class="success"></div>
+        <div id="exportError" class="error"></div>
+      </section>
 
-        <input
-          id="emailInput"
-          type="email"
-          class="kr-input kr-email"
-          placeholder="Din e-postadress..."
-        />
-        <button id="emailBtn" class="kr-btn kr-btn-secondary">Maila sammanfattning</button>
-      </div>
-
-      <div id="status" class="kr-status">
-        [Kenai Recorder] redo.
-      </div>
+      <footer>
+        Kenai · Framtidens Google Translate fast för ljud.
+      </footer>
     </div>
   </div>
 
   <script>
-    // ==========================
-    // KONFIG – ÄNDRA DESSA VÄRDEN
-    // ==========================
+    // ===== KONFIG – FYLL I DINA RIKTIGA SUPABASE-VÄRDEN HÄR =====
+    // Kopiera in exakt samma URL + anon key som du har i den version som funkade.
+    const SB_URL ='https://hywwzzzxgagqhlxooekz.supabase.co';  // <-- BYT DETTA
+    const SB_ANON ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';                    // <-- BYT DETTA
+    const SB_BUCKET = "kenai-audio";                       // eller det bucket-namn du använder
+    const SB_PREFIX = "reviews";                           // underkatalog, t.ex. reviews/
 
-    // TODO: FYLL I dina riktiga supabase-värden här:
-    const SB_URL ='https://hywwzzzxgagqhlxooekz.supabase.co'; // <-- BYT
-    const SB_ANON ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';               // <-- BYT
-    const SB_BUCKET = "kenai-audio";                       // eller ditt bucket-namn
-    const SB_PREFIX = "reviews";                           // prefix i bucket
+    const supabaseClient = window.supabase.createClient(SB_URL, SB_ANON);
 
-    const supabase = window.Supabase
-      ? window.Supabase.createClient(SB_URL, SB_ANON)
-      : supabasejs.createClient(SB_URL, SB_ANON); // fallback om namnet skiljer sig
+    // ===== DOM ELEMENT =====
+    const btnStart = document.getElementById("btnStart");
+    const btnStop = document.getElementById("btnStop");
+    const statusSpan = document.getElementById("recordStatus");
+    const player = document.getElementById("player");
+    const fileInfo = document.getElementById("fileInfo");
+    const recordError = document.getElementById("recordError");
 
-    // ==========================
-    // DOM-refs
-    // ==========================
-    const startBtn = document.getElementById("startBtn");
-    const stopBtn = document.getElementById("stopBtn");
-    const uploadBtn = document.getElementById("uploadBtn");
-    const aiBtn = document.getElementById("aiBtn");
-    const pdfBtn = document.getElementById("pdfBtn");
-    const emailBtn = document.getElementById("emailBtn");
-    const audioPlayer = document.getElementById("audioPlayer");
-    const audioUrlInput = document.getElementById("audioUrlInput");
-    const summaryEl = document.getElementById("summary");
-    const emailInput = document.getElementById("emailInput");
-    const statusEl = document.getElementById("status");
-    const timerEl = document.getElementById("timer");
+    const audioUrlInput = document.getElementById("audioUrl");
+    const btnUpload = document.getElementById("btnUpload");
+    const btnSummarize = document.getElementById("btnSummarize");
+    const uploadStatus = document.getElementById("uploadStatus");
+    const uploadError = document.getElementById("uploadError");
 
-    // ==========================
-    // Recorder state
-    // ==========================
+    const summaryTextarea = document.getElementById("summary");
+    const summaryStatus = document.getElementById("summaryStatus");
+    const summaryError = document.getElementById("summaryError");
+
+    const btnPdf = document.getElementById("btnPdf");
+    const btnEmail = document.getElementById("btnEmail");
+    const emailInput = document.getElementById("email");
+    const exportStatus = document.getElementById("exportStatus");
+    const exportError = document.getElementById("exportError");
+
+    // ===== STATE =====
     let mediaRecorder = null;
     let chunks = [];
-    let audioBlob = null;
-    let recordingStart = null;
-    let timerInterval = null;
+    let currentBlob = null;
 
-    function setStatus(msg, isError = false) {
-      console.log(msg);
-      statusEl.textContent = msg;
-      statusEl.classList.toggle("kr-status-error", isError);
+    function setRecordingState(state) {
+      statusSpan.textContent = state;
+      statusSpan.classList.toggle("recording", state === "spelar in...");
     }
 
-    function updateTimer() {
-      if (!recordingStart) return;
-      const diff = Math.floor((Date.now() - recordingStart) / 1000);
-      const m = String(Math.floor(diff / 60)).padStart(2, "0");
-      const s = String(diff % 60).padStart(2, "0");
-      timerEl.textContent = `${m}:${s}`;
+    function resetMessages() {
+      recordError.textContent = "";
+      uploadError.textContent = "";
+      uploadStatus.textContent = "";
+      summaryError.textContent = "";
+      summaryStatus.textContent = "";
+      exportError.textContent = "";
+      exportStatus.textContent = "";
     }
 
+    // ===== INSPELNING =====
     async function startRecording() {
+      resetMessages();
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        recordError.textContent = "Din webbläsare stödjer inte inspelning (getUserMedia saknas).";
+        return;
+      }
+
       try {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          alert("Din webbläsare stöder inte ljudinspelning.");
-          return;
-        }
-
-        setStatus("[Kenai Recorder] Begär mikrofon-tillgång...");
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
         chunks = [];
         mediaRecorder = new MediaRecorder(stream);
+
         mediaRecorder.ondataavailable = (e) => {
           if (e.data && e.data.size > 0) {
             chunks.push(e.data);
           }
         };
-        mediaRecorder.onstop = () => {
-          clearInterval(timerInterval);
-          timerInterval = null;
-          timerEl.textContent = "";
-          recordingStart = null;
 
-          audioBlob = new Blob(chunks, { type: "audio/webm" });
-          const localUrl = URL.createObjectURL(audioBlob);
-          audioPlayer.src = localUrl;
-          audioPlayer.play().catch(() => {});
-          setStatus("[Kenai Recorder] Inspelning stoppad – redo att ladda upp.");
+        mediaRecorder.onstop = () => {
+          const mimeType = mediaRecorder.mimeType || "audio/webm";
+          currentBlob = new Blob(chunks, { type: mimeType });
+          const url = URL.createObjectURL(currentBlob);
+          player.src = url;
+          player.load();
+
+          const sizeKb = (currentBlob.size / 1024).toFixed(1);
+          fileInfo.textContent = `Inspelning klar (${mimeType}, ${sizeKb} KB).`;
+          setRecordingState("klar");
+          btnStart.disabled = false;
+          btnStop.disabled = true;
         };
 
         mediaRecorder.start();
-        recordingStart = Date.now();
-        timerInterval = setInterval(updateTimer, 500);
-
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-        setStatus("[Kenai Recorder] Spelar in...");
+        setRecordingState("spelar in...");
+        btnStart.disabled = true;
+        btnStop.disabled = false;
+        fileInfo.textContent = "Spelar in...";
       } catch (err) {
         console.error(err);
-        setStatus("[Kenai Recorder] Kunde inte starta inspelning (mikrofonfel).", true);
+        recordError.textContent = "Kunde inte starta inspelning. Kolla mikrofonbehörigheter.";
       }
     }
 
     function stopRecording() {
       if (mediaRecorder && mediaRecorder.state === "recording") {
-        setStatus("[Kenai Recorder] Stoppar inspelning...");
         mediaRecorder.stop();
         mediaRecorder.stream.getTracks().forEach((t) => t.stop());
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
       }
     }
 
+    // ===== SUPABASE-UPPLOAD =====
     async function uploadToSupabase() {
+      resetMessages();
+
+      if (!currentBlob) {
+        uploadError.textContent = "Det finns ingen inspelning att ladda upp. Spela in först.";
+        return;
+      }
+
       try {
-        if (!audioBlob) {
-          alert("Spela in något först.");
-          return;
-        }
-        setStatus("[Kenai Recorder] Laddar upp till Supabase...");
+        btnUpload.disabled = true;
+        btnUpload.innerHTML = '<span class="loader"></span> Laddar upp...';
 
-        const fileName = `review_${Date.now()}.webm`;
-        const filePath = `${SB_PREFIX}/${fileName}`;
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const ext = currentBlob.type.includes("webm") ? "webm" :
+                    currentBlob.type.includes("ogg") ? "ogg" :
+                    currentBlob.type.includes("mp4") || currentBlob.type.includes("m4a") ? "m4a" :
+                    "wav";
+        const filename = `${SB_PREFIX}/${timestamp}.${ext}`;
 
-        const { data, error } = await supabase.storage.from(SB_BUCKET).upload(filePath, audioBlob, {
-          contentType: "audio/webm",
-          upsert: false,
-        });
+        const { data, error } = await supabaseClient.storage
+          .from(SB_BUCKET)
+          .upload(filename, currentBlob, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: currentBlob.type || "audio/webm"
+          });
 
         if (error) {
           console.error(error);
-          setStatus("[Kenai Recorder] Uppladdning misslyckades.", true);
+          uploadError.textContent = "Kunde inte ladda upp filen till Supabase.";
           return;
         }
 
-        const { data: pub } = supabase.storage.from(SB_BUCKET).getPublicUrl(filePath);
-        const url = pub?.publicUrl;
-        if (!url) {
-          setStatus("[Kenai Recorder] Kunde inte hämta publik URL.", true);
-          return;
-        }
+        const { data: publicUrlData } = supabaseClient
+          .storage
+          .from(SB_BUCKET)
+          .getPublicUrl(data.path);
 
-        audioUrlInput.value = url;
-        setStatus("[Kenai Recorder] Uppladdad! Länk insatt i fältet.");
+        const publicUrl = publicUrlData.publicUrl;
+        audioUrlInput.value = publicUrl;
+        uploadStatus.textContent = "Uppladdning klar. Länken är ifylld.";
       } catch (err) {
         console.error(err);
-        setStatus("[Kenai Recorder] Tekniskt fel vid uppladdning.", true);
+        uploadError.textContent = "Ett oväntat fel uppstod vid uppladdning.";
+      } finally {
+        btnUpload.disabled = false;
+        btnUpload.textContent = "Ladda upp till Kenai";
       }
     }
 
-    async function summarizeWithAI() {
+    // ===== AI-SUMMARIZE =====
+    async function summarizeAudio() {
+      resetMessages();
+
+      const audioUrl = audioUrlInput.value.trim();
+      if (!audioUrl) {
+        summaryError.textContent = "Fyll i eller generera en Supabase-URL först.";
+        return;
+      }
+
       try {
-        const url = audioUrlInput.value.trim();
-        if (!url) {
-          alert("Ladda upp ljudet först så att det finns en URL.");
-          return;
-        }
-        setStatus("[Kenai Recorder] Skickar till AI för transkribering & sammanfattning...");
+        btnSummarize.disabled = true;
+        btnSummarize.innerHTML = '<span class="loader"></span> Bearbetar...';
 
         const res = await fetch("/api/summarize", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ audioUrl: url, locale: "sv-SE" }),
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ audioUrl })
         });
 
         if (!res.ok) {
-          const t = await res.text();
-          console.error("Summarize error:", t);
-          setStatus("[Kenai Recorder] AI-sammanfattning misslyckades.", true);
+          const txt = await res.text();
+          console.error("Summarize error:", res.status, txt);
+          summaryError.textContent = "AI-sammanfattning misslyckades. Kolla serverns loggar.";
           return;
         }
 
         const data = await res.json();
-        const text =
-          data.summary ||
-          data.text ||
-          data.content ||
-          JSON.stringify(data, null, 2);
+        // Vi förväntar oss t.ex. { transcript: "...", summary: "..." }
+        let combined = "";
+        if (data.transcript) {
+          combined += "TRANSKRIBERING:\n" + data.transcript + "\n\n";
+        }
+        if (data.summary) {
+          combined += "SAMMANFATTNING:\n" + data.summary;
+        }
+        if (!combined) {
+          combined = JSON.stringify(data, null, 2);
+        }
 
-        summaryEl.value = text;
-        setStatus("[Kenai Recorder] AI-sammanfattning klar.");
+        summaryTextarea.value = combined;
+        summaryStatus.textContent = "AI-transkribering & sammanfattning klar.";
       } catch (err) {
         console.error(err);
-        setStatus("[Kenai Recorder] Tekniskt fel vid AI-sammanfattning.", true);
+        summaryError.textContent = "Ett oväntat fel uppstod vid AI-sammanfattning.";
+      } finally {
+        btnSummarize.disabled = false;
+        btnSummarize.textContent = "AI-transkribera & sammanfatta";
       }
     }
 
-    async function downloadPdf() {
+    // ===== PDF-EXPORT =====
+    async function exportPdf() {
+      resetMessages();
+
+      const content = summaryTextarea.value.trim();
+      if (!content) {
+        exportError.textContent = "Det finns ingen text att göra PDF av.";
+        return;
+      }
+
       try {
-        const content = summaryEl.value.trim();
-        if (!content) {
-          alert("Det finns ingen sammanfattning att ladda ner.");
-          return;
-        }
-        setStatus("[Kenai Recorder] Skapar PDF...");
+        btnPdf.disabled = true;
+        btnPdf.innerHTML = '<span class="loader"></span> Skapar PDF...';
 
         const res = await fetch("/api/export-pdf", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content }),
+          body: JSON.stringify({ content })
         });
 
         if (!res.ok) {
-          const t = await res.text();
-          console.error("PDF error:", t);
-          setStatus("[Kenai Recorder] PDF-export misslyckades.", true);
+          const txt = await res.text();
+          console.error("PDF error:", res.status, txt);
+          exportError.textContent = "Kunde inte skapa PDF. Kolla servern.";
           return;
         }
 
+        // Förväntar oss att servern returnerar en fil (application/pdf)
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
+
         const a = document.createElement("a");
         a.href = url;
         a.download = "kenai-sammanfattning.pdf";
         document.body.appendChild(a);
         a.click();
         a.remove();
-        URL.revokeObjectURL(url);
 
-        setStatus("[Kenai Recorder] PDF nedladdad.");
+        URL.revokeObjectURL(url);
+        exportStatus.textContent = "PDF nedladdad.";
       } catch (err) {
         console.error(err);
-        setStatus("[Kenai Recorder] Tekniskt fel vid PDF-export.", true);
+        exportError.textContent = "Ovntat fel vid PDF-export.";
+      } finally {
+        btnPdf.disabled = false;
+        btnPdf.textContent = "Ladda ner som PDF";
       }
     }
 
-    async function emailSummary() {
-      try {
-        const email = emailInput.value.trim();
-        const content = summaryEl.value.trim();
-        if (!email) {
-          alert("Skriv in en e-postadress.");
-          return;
-        }
-        if (!content) {
-          alert("Det finns ingen sammanfattning att skicka.");
-          return;
-        }
+    // ===== EMAIL MOCK =====
+    async function sendEmail() {
+      resetMessages();
 
-        setStatus("[Kenai Recorder] Skickar sammanfattning via e-post...");
+      const email = emailInput.value.trim();
+      const content = summaryTextarea.value.trim();
+
+      if (!email) {
+        exportError.textContent = "Fyll i en e-postadress.";
+        return;
+      }
+      if (!content) {
+        exportError.textContent = "Det finns ingen sammanfattning att skicka.";
+        return;
+      }
+
+      try {
+        btnEmail.disabled = true;
+        btnEmail.innerHTML = '<span class="loader"></span> Skickar...';
 
         const res = await fetch("/api/send-summary-email", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, content }),
+          body: JSON.stringify({ email, content })
         });
 
         if (!res.ok) {
-          const t = await res.text();
-          console.error("Email error:", t);
-          setStatus("[Kenai Recorder] Kunde inte skicka e-post.", true);
+          const txt = await res.text();
+          console.error("Email error:", res.status, txt);
+          exportError.textContent = "Mail-funktionen misslyckades (mock).";
           return;
         }
 
-        setStatus("[Kenai Recorder] Sammanfattning skickad via e-post (mock).");
-        alert("I denna version loggas bara mailet på servern som test.");
+        exportStatus.textContent = "Sammanfattningen skickades (mock).";
       } catch (err) {
         console.error(err);
-        setStatus("[Kenai Recorder] Tekniskt fel vid mail-sändning.", true);
+        exportError.textContent = "Ovntat fel vid mail-försök.";
+      } finally {
+        btnEmail.disabled = false;
+        btnEmail.textContent = "Maila sammanfattning";
       }
     }
 
-    // Ereignkoppling
-    startBtn.addEventListener("click", startRecording);
-    stopBtn.addEventListener("click", stopRecording);
-    uploadBtn.addEventListener("click", uploadToSupabase);
-    aiBtn.addEventListener("click", summarizeWithAI);
-    pdfBtn.addEventListener("click", downloadPdf);
-    emailBtn.addEventListener("click", emailSummary);
+    // ===== EVENT LISTENERS =====
+    btnStart.addEventListener("click", startRecording);
+    btnStop.addEventListener("click", stopRecording);
+    btnUpload.addEventListener("click", uploadToSupabase);
+    btnSummarize.addEventListener("click", summarizeAudio);
+    btnPdf.addEventListener("click", exportPdf);
+    btnEmail.addEventListener("click", sendEmail);
   </script>
 </body>
 </html>
