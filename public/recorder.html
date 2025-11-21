@@ -1,39 +1,143 @@
 <!DOCTYPE html>
 <html lang="sv">
-<head><style>
-  /* ===== Kenai Recorder – mörkare, snyggare stil utan att röra JS ===== */
+<head>
+  ...
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  body {
-    margin: 0;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
-    background: radial-gradient(circle at top, #0f172a 0, #020617 45%, #000 100%);
-    color: #e5e7eb;
-  }
+  <style>
+    /* ===== Kenai Recorder – mörkare, snyggare stil utan att röra JS ===== */
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #0f172a 0, #020617 45%, #000 100%);
+      color: #e5e7eb;
+    }
 
-  /* Top-baren får lite mer glow (om du redan har en header/nav används bara detta ovanpå) */
-  header, .topbar, .navbar {
-    background: linear-gradient(90deg, #020617, #020617 40%, #0f172a 100%);
-    color: #e5e7eb;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.35);
-  }
+    header, .topbar, .navbar {
+      background: linear-gradient(90deg, #020617, #020617 40%, #0f172a 100%);
+      color: #e5e7eb;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+    }
 
-  /* Mitt-kortet (den vita rutan) → mörk “glass” */
-  main,
-  .main-container,
-  .page-content,
-  .recorder-card {
-    max-width: 960px;
-    margin: 32px auto 48px;
-    padding: 24px 24px 28px;
-    border-radius: 24px;
-    background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.18), transparent 55%),
-                radial-gradient(circle at 100% 100%, rgba(129, 140, 248, 0.15), transparent 60%),
-                rgba(15, 23, 42, 0.96);
-    box-shadow:
-      0 0 0 1px rgba(15, 23, 42, 0.9),
-      0 24px 60px rgba(15, 23, 42, 0.95);
-    box-sizing: border-box;
-  }
+    main,
+    .main-container,
+    .page-content,
+    .recorder-card,
+    body > div.main,
+    body > div.container,
+    body > div.wrapper {
+      max-width: 960px;
+      margin: 32px auto 48px;
+      padding: 24px 24px 28px;
+      border-radius: 24px;
+      background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.18), transparent 55%),
+                  radial-gradient(circle at 100% 100%, rgba(129, 140, 248, 0.15), transparent 60%),
+                  rgba(15, 23, 42, 0.96);
+      box-shadow:
+        0 0 0 1px rgba(15, 23, 42, 0.9),
+        0 24px 60px rgba(15, 23, 42, 0.95);
+      box-sizing: border-box;
+    }
+
+    h1, h2, h3, label { color: #e5e7eb; }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="url"],
+    textarea {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.96);
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      border-radius: 10px;
+      padding: 8px 10px;
+      color: #e5e7eb;
+      font-size: 0.9rem;
+      box-sizing: border-box;
+    }
+
+    input::placeholder,
+    textarea::placeholder { color: #6b7280; }
+
+    textarea {
+      min-height: 180px;
+      resize: vertical;
+    }
+
+    button,
+    .btn,
+    input[type="button"],
+    input[type="submit"] {
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      border: 1px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
+      transition:
+        background 0.12s ease-out,
+        border-color 0.12s ease-out,
+        transform 0.12s ease-out,
+        box-shadow 0.12s ease-out;
+    }
+
+    .btn-primary,
+    button.primary,
+    button#startButton,
+    button#btnSummarize {
+      background: radial-gradient(circle at 0 0, #e0f2fe 0, #38bdf8 30%, #0f172a 100%);
+      border-color: rgba(56, 189, 248, 0.8);
+      color: #020617;
+      font-weight: 500;
+      box-shadow:
+        0 0 22px rgba(56, 189, 248, 0.7),
+        0 0 45px rgba(37, 99, 235, 0.5);
+    }
+
+    .btn-secondary,
+    button.secondary,
+    button#stopButton,
+    button#btnUpload,
+    button#btnPdf,
+    button#btnSendEmail {
+      background: rgba(15, 23, 42, 0.95);
+      border-color: rgba(148, 163, 184, 0.7);
+      color: #e5e7eb;
+    }
+
+    button:hover,
+    .btn:hover,
+    input[type="button"]:hover,
+    input[type="submit"]:hover {
+      transform: translateY(-1px);
+      box-shadow:
+        0 0 26px rgba(15, 23, 42, 0.8),
+        0 0 55px rgba(15, 23, 42, 0.7);
+    }
+
+    .subtitle,
+    .help-text,
+    small { color: #9ca3af; }
+
+    .section,
+    .block,
+    .row { margin-bottom: 16px; }
+
+    @media (max-width: 768px) {
+      main,
+      .main-container,
+      .page-content,
+      .recorder-card,
+      body > div.main,
+      body > div.container,
+      body > div.wrapper {
+        margin: 16px auto 32px;
+        padding: 16px 14px 20px;
+        border-radius: 18px;
+      }
+    }
+  </style>
+</head>
+
 
   /* Om ditt innehåll ligger direkt i en div under body */
   body > div.main,
