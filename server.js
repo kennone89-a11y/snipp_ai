@@ -8,9 +8,7 @@ import cors from "cors";
 import fetch from "node-fetch";
 import PDFDocument from "pdfkit";
 import { OpenAI } from "openai";
-import dotenv from "dotenv";
 
-dotenv.config();
 
 const app = express();
 app.use(cors());
