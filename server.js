@@ -409,23 +409,133 @@ app.post("/api/ai-review", async (req, res) => {
 //  Starta servern
 // ---------------------------------------------------------
 // AI-transkribering + sammanfattning
-app.post("/api/summarize", async (req, res) => { 
+// --- AI-transkribering + sammanfattning ---
+app.post("/api/summarize", async (req, res) => {
   try {
-    const { audioUrl } = req.body;
+    const { audioUrl, url, locale } = req.body || {};
+    const finalUrl = audioUrl || url;
 
-    if (!audioUrl) {
-      return res.status(400).json({ ok: false, error: "audioUrl saknas i body" });
+    if (!finalUrl) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "audioUrl eller url saknas i body" });
     }
 
-    // 1. Hämta ljudfilen från Supabase-länken
-    const audioResp = await fetch(audioUrl);
+    console.log("[/api/summarize] Hämtar ljud från:", finalUrl);
+
+    // 1. Hämta ljudfilen från Supabase-länken (eller annan URL)
+    const audioResp = await fetch(finalUrl);
     if (!audioResp.ok) {
-      console.error("Kunde inte ladda ner ljudfil:", audioResp.status, audioResp.statusText);
+      console.error(
+        "Kunde inte ladda ner ljudfil:",
+        audioResp.status,
+        audioResp.statusText
+      );
       return res
         .status(500)
         .json({ ok: false, error: "Kunde inte ladda ner ljudfil från URL" });
     }
-    app.post("/api/send-summary-email", async (req, res) => {
+
+    const arrayBuffer = await audioResp.arrayBuffer();
+    const audioBuffer = Buffer.from(arrayBuffer);
+
+    // 2. Skicka till OpenAI för transkribering
+    const formData = new FormData();
+    // Typen spelar mindre roll här, OpenAI försöker autodetektera
+    formData.append(
+      "file",
+      new Blob([audioBuffer], { type: "audio/webm" }),
+      "audio.webm"
+    );
+    formData.append("model", "gpt-4o-mini-transcribe");
+
+    const openaiAudioResp = await fetch(
+      "https://api.openai.com/v1/audio/transcriptions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+        body: formData,
+      }
+    );
+
+    if (!openaiAudioResp.ok) {
+      const errText = await openaiAudioResp.text();
+      console.error("Fel från OpenAI audio:", openaiAudioResp.status, errText);
+      return res.status(500).json({
+        ok: false,
+        error: "Fel vid transkribering hos OpenAI",
+        details: errText,
+      });
+    }
+
+    const audioJson = await openaiAudioResp.json();
+    const transcript = audioJson.text || "";
+
+    console.log("[/api/summarize] Transcript längd:", transcript.length);
+
+    // 3. Be GPT sammanfatta på svenska
+    const promptLocale = locale || "sv-SE";
+    const languageHint =
+      promptLocale.toLowerCase().startsWith("sv") ? "svenska" : "samma språk som texten";
+
+    const summaryResp = await fetch(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content:
+                `Du är en hjälpsam assistent som transkriberar och sammanfattar ljud. ` +
+                `Svara på ${languageHint}. Ge både en kort sammanfattning och gärna lite review-ton om det passar.`,
+            },
+            {
+              role: "user",
+              content:
+                "Här är transkriberingen av ljudet:\n\n" +
+                transcript +
+                "\n\nSammanfatta innehållet tydligt.",
+            },
+          ],
+        }),
+      }
+    );
+
+    if (!summaryResp.ok) {
+      const errText = await summaryResp.text();
+      console.error("Fel från OpenAI summary:", summaryResp.status, errText);
+      return res.status(500).json({
+        ok: false,
+        error: "Fel vid textsammanfattning hos OpenAI",
+        details: errText,
+      });
+    }
+
+    const summaryJson = await summaryResp.json();
+    const summaryText =
+      summaryJson.choices?.[0]?.message?.content?.trim() || "";
+
+    return res.json({
+      ok: true,
+      transcript,
+      summary: summaryText,
+    });
+  } catch (err) {
+    console.error("summarize error:", err);
+    return res.status(500).json({ ok: false, error: "Server error" });
+  }
+});
+
+// --- Skicka sammanfattning via e-post (mock) ---
+app.post("/api/send-summary-email", async (req, res) => {
   try {
     const { email, summary, audioUrl, locale } = req.body || {};
 
@@ -448,83 +558,40 @@ app.post("/api/summarize", async (req, res) => {
   }
 });
 
-    
-
-    const arrayBuffer = await audioResp.arrayBuffer();
-    const audioBuffer = Buffer.from(arrayBuffer);
-
-    // 2. Skicka till OpenAI för transkribering
-    const formData = new FormData();
-    formData.append("file", new Blob([audioBuffer]), "audio.wav");
-    formData.append("model", "gpt-4o-mini-transcribe");
-    formData.append("response_format", "json");
-
-    const openaiAudioResp = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: formData,
-    });
-
-    const audioData = await openaiAudioResp.json();
-
-    if (!openaiAudioResp.ok) {
-      console.error("OpenAI audio error:", audioData);
+// --- Exportera text till PDF ---
+app.post("/api/export-pdf", (req, res) => {
+  try {
+    const { content } = req.body || {};
+    if (!content) {
       return res
-        .status(500)
-        .json({ ok: false, error: "Fel från OpenAI (audio)", details: audioData });
+        .status(400)
+        .json({ ok: false, error: "content saknas" });
     }
 
-    const transcript = audioData.text || "";
+    // Säg till browsern att det är en PDF att ladda ner
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="kenai-sammanfattning.pdf"'
+    );
 
-    // 3. Sammanfatta texten
-    const summaryResp = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content:
-              "Du är en assistent som sammanfattar svenska ljudinspelningar. Var kortfattad och tydlig.",
-          },
-          {
-            role: "user",
-            content:
-              "Här är transkriberingen av ett ljudklipp. Skriv först en mycket kort sammanfattning (2–4 meningar) på svenska. Efter det, om du vill, kan du lägga till viktiga punkter i punktlista.\n\n" +
-              transcript,
-          },
-        ],
-      }),
+    const doc = new PDFDocument();
+    doc.pipe(res);
+
+    doc.fontSize(14).text(content, {
+      width: 500,
+      align: "left",
     });
 
-    const summaryData = await summaryResp.json();
-
-    if (!summaryResp.ok) {
-      console.error("OpenAI summary error:", summaryData);
-      return res
-        .status(500)
-        .json({ ok: false, error: "Fel från OpenAI (summary)", details: summaryData });
-    }
-
-    const summary = (summaryData.choices?.[0]?.message?.content || "").trim();
-
-    return res.json({
-      ok: true,
-      transcript,
-      summary,
-    });
+    doc.end();
   } catch (err) {
-    console.error("Fel i /api/summarize:", err);
-    return res.status(500).json({ ok: false, error: "Internt serverfel i /api/summarize" });
+    console.error("export-pdf error:", err);
+    return res.status(500).json({ ok: false, error: "Server error" });
   }
 });
 
+// --- Starta servern ---
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Kenai backend lyssnar på port ${PORT}`);
 });
