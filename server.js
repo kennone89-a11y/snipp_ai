@@ -105,8 +105,29 @@ app.post("/api/build-reel", async (req, res) => {
 // --- AI-sammanfattning av inspelning ---
 // --- AI: transkribera & sammanfatta ---
 // --- AI: transkribera & sammanfatta ---
-app.post("/api/summarize", async (req, res) => {
-  // --- Export: text -> PDF ---
+app.post("/api/send-summary-email", async (req, res) => {
+  try {
+    const { email, summary, audioUrl, locale } = req.body || {};
+
+    if (!email || !summary) {
+      return res.status(400).json({ error: "email och summary krävs" });
+    }
+
+    console.log("=== MOCK EMAIL ===");
+    console.log("Till:", email);
+    console.log("Språk:", locale);
+    console.log("Audio URL:", audioUrl);
+    console.log("Sammanfattning:", summary.slice(0, 200), "...");
+    console.log("===================");
+
+    // TODO: här bygger vi in riktig mailfunktion (Resend/Nodemailer)
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("send-summary-email error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
 app.post("/api/export-pdf", (req, res) => {
   try {
     const { content } = req.body || {};
