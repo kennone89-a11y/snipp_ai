@@ -1,289 +1,430 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Kenai Recorder</title>
+  <meta charset="UTF-8" />
+  <title>Kenai Recorder – Spela in, sammanfatta & spara</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <style>
-        body {
-            background: #f4f6f9;
-            font-family: Arial;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            max-width: 900px;
-            margin: 30px auto;
-            padding: 20px;
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 0 12px rgba(0,0,0,0.1);
-        }
-        h1 {
-            margin-bottom: 10px;
-        }
-        button {
-            padding: 10px 18px;
-            border-radius: 6px;
-            border: none;
-            cursor: pointer;
-            margin-right: 6px;
-            background: #0d6efd;
-            color: #fff;
-        }
-        button.red { background: #dc3545; }
-        textarea {
-            width: 100%;
-            height: 150px;
-            margin-top: 10px;
-        }
-        input[type="text"] {
-            width: 250px;
-            padding: 8px;
-        }
-    </style>
+  <!-- Ikoner (om du har dessa i public) -->
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #020617;
+      --card: #020817;
+      --card-soft: #05091b;
+      --border-soft: rgba(148, 163, 184, 0.28);
+      --text-main: #e5e7eb;
+      --text-soft: #9ca3af;
+      --accent: #22d3ee;
+      --accent-strong: #fbbf24;
+      --danger: #f97316;
+      --radius-lg: 18px;
+      --radius-xl: 22px;
+      --shadow-soft: 0 22px 60px rgba(15, 23, 42, 0.8);
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #002617 0, #020617 45%, #000000 100%);
+      color: var(--text-main);
+      padding: 20px 16px 40px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 960px;
+    }
+
+    /* Kenai-logga uppe till vänster (om du vill lägga in sen) */
+    .kenai-logo {
+      position: fixed;
+      top: 16px;
+      left: 24px;
+      z-index: 1000;
+      display: block;
+    }
+
+    .kenai-logo img {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      display: block;
+      transition: transform 0.18s ease-out, box-shadow 0.35s ease-out;
+      animation: kenaiPulse 4s ease-in-out infinite;
+    }
+
+    .kenai-logo:hover img {
+      transform: translateY(-2px);
+      box-shadow: 0 0 22px rgba(34, 211, 238, 0.85);
+    }
+
+    @keyframes kenaiPulse {
+      0%   { box-shadow: 0 0 6px rgba(34, 211, 238, 0.25); }
+      50%  { box-shadow: 0 0 16px rgba(34, 211, 238, 0.5); }
+      100% { box-shadow: 0 0 6px rgba(34, 211, 238, 0.25); }
+    }
+
+    header {
+      margin-bottom: 16px;
+      padding-left: 72px; /* så vi har luft ifall loggan ligger i hörnet */
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text-soft);
+      font-size: 11px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      margin-bottom: 8px;
+    }
+
+    .eyebrow span.tag {
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.16);
+      color: #7dd3fc;
+      font-size: 11px;
+    }
+
+    h1 {
+      font-size: 26px;
+      margin-bottom: 6px;
+    }
+
+    .subheading {
+      font-size: 14px;
+      color: var(--text-soft);
+    }
+
+    .subheading a {
+      color: #7dd3fc;
+      text-decoration: none;
+    }
+
+    .subheading a:hover {
+      text-decoration: underline;
+    }
+
+    .card {
+      margin-top: 18px;
+      border-radius: 28px;
+      padding: 20px 20px 18px;
+      background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.22), transparent 60%) border-box,
+        var(--card-soft);
+      border: 1px solid var(--border-soft);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .card-meta {
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+
+    .badge-live {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(22, 163, 74, 0.16);
+      border: 1px solid rgba(22, 163, 74, 0.7);
+      color: #4ade80;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .recorder-row {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: none;
+      padding: 9px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, opacity 0.12s ease-out, background 0.12s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #22d3ee, #0ea5e9);
+      color: #020617;
+      box-shadow: 0 14px 34px rgba(56, 189, 248, 0.55);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 44px rgba(56, 189, 248, 0.7);
+    }
+
+    .btn-secondary {
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text-main);
+      border: 1px solid rgba(148, 163, 184, 0.6);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      background: rgba(15, 23, 42, 1);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-soft);
+      border: 1px dashed rgba(148, 163, 184, 0.6);
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: default;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .status-line {
+      font-size: 12px;
+      color: var(--text-soft);
+      min-height: 16px;
+    }
+
+    .status-line.error {
+      color: var(--danger);
+    }
+
+    audio {
+      width: 100%;
+      border-radius: 999px;
+      background: #020617;
+    }
+
+    .field-group {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 13px;
+      color: var(--text-soft);
+    }
+
+    input[type="text"],
+    input[type="email"] {
+      width: 100%;
+      padding: 9px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--text-main);
+      font-size: 13px;
+      outline: none;
+    }
+
+    input::placeholder {
+      color: #6b7280;
+    }
+
+    .field-inline {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 220px;
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: rgba(15, 23, 42, 0.96);
+      color: var(--text-main);
+      font-size: 13px;
+      padding: 10px 11px;
+      resize: vertical;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.4;
+    }
+
+    .section-title {
+      margin-top: 18px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #9ca3af;
+    }
+
+    .helper-text {
+      font-size: 11px;
+      color: var(--text-soft);
+    }
+
+    .footer-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .footer-row .helper-text {
+      flex: 1;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 12px;
+      }
+
+      header {
+        padding-left: 0;
+        margin-top: 72px;
+      }
+
+      .card {
+        padding: 16px 14px 14px;
+        border-radius: 22px;
+      }
+
+      .button-row {
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+    }
+  </style>
 </head>
 <body>
+  <!-- Om du vill ha Kenai-loggan i hörnet, avkommentera nedan och se till att android-chrome-512x512.png finns i public -->
+  <!--
+  <a class="kenai-logo" href="https://kenai.technology">
+    <img src="/android-chrome-512x512.png" alt="Kenai logo">
+  </a>
+  -->
 
-<div class="container">
-    <h1>Kenai Recorder</h1>
-    <p>Nytt: Testa även AI Reels Maker för att skapa reels automatiskt!</p>
+  <div class="page">
+    <header>
+      <div class="eyebrow">
+        <span>Kenai Recorder</span>
+        <span class="tag">Röst → AI-sammanfattning</span>
+      </div>
+      <h1>Spela in, ladda upp & få din inspelning sammanfattad.</h1>
+      <p class="subheading">
+        Spela in direkt i webbläsaren, ladda upp ljudfilen till Kenai och låt AI transkribera & sammanfatta.
+        Nyfiken på video? Testa även <a href="https://app.kenai.technology/reels.html" target="_blank" rel="noreferrer">Kenai Reels Maker</a>.
+      </p>
+    </header>
 
-    <button id="startBtn">Starta inspelning</button>
-    <button id="stopBtn" class="red">Stoppa</button>
+    <main>
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Inspelning & uppspelning</div>
+            <div class="card-meta">WAV 44.1 kHz · mono · funkar i Chrome (desktop) & Safari (iPhone).</div>
+          </div>
+          <div class="badge-live">Live · Beta</div>
+        </div>
 
-    <p id="status">Idle...</p>
+        <!-- Inspelning -->
+        <div class="recorder-row">
+          <div class="button-row">
+            <button id="startBtn" class="btn btn-primary">● Starta inspelning</button>
+            <button id="stopBtn" class="btn btn-secondary">■ Stoppa</button>
+          </div>
+          <audio id="audioPlayer" controls></audio>
+          <div id="status" class="status-line">Idle – redo att spela in.</div>
+        </div>
 
-    <audio id="player" controls></audio>
+        <!-- URL & AI -->
+        <div class="field-group">
+          <label for="supabaseUrlInput">Länk till ljudfil (Supabase-URL):</label>
+          <div class="field-inline">
+            <input
+              type="text"
+              id="supabaseUrlInput"
+              placeholder="Här hamnar länken efter upload – eller klistra in manuellt..."
+            />
+            <button id="uploadBtn" class="btn btn-secondary">Ladda upp till Kenai</button>
+            <button id="summarizeBtn" class="btn btn-primary">✨ AI-transkribera & sammanfatta</button>
+          </div>
+          <div class="helper-text">
+            Först: spela in & ladda upp. Sen: låt AI ta hand om transkribering & sammanfattning.
+          </div>
+        </div>
 
-    <p><b>Länk till ljudfil (Supabase URL):</b></p>
-    <input id="fileUrl" type="text" readonly />
+        <!-- AI-svar -->
+        <h2 class="section-title">AI-transkribering & sammanfattning</h2>
+        <p class="helper-text">
+          Här dyker texten upp när AI:n är klar. Du kan redigera texten innan du laddar ner som PDF eller mailar den.
+        </p>
+        <textarea id="summaryText" placeholder="Här kommer transkriberingen och sammanfattningen..."></textarea>
 
-    <br><br>
+        <!-- Export / e-post -->
+        <div class="footer-row">
+          <div>
+            <button id="pdfBtn" class="btn btn-secondary">⬇ Ladda ner som PDF</button>
+          </div>
+          <div class="field-inline" style="flex:1; min-width: 220px;">
+            <input
+              type="email"
+              id="emailInput"
+              placeholder="Din e-postadress..."
+            />
+            <button id="emailBtn" class="btn btn-ghost">✉ Maila sammanfattning</button>
+          </div>
+        </div>
 
-    <button id="uploadBtn">Ladda upp till Kenai</button>
-    <button id="summarizeBtn">AI-transkribera & sammanfatta</button>
+        <div class="helper-text" style="margin-top: 8px;">
+          Inget sparas permanent utanför din egen lagring förrän vi bygger in konton. Just nu är detta ett rent verktygsläge.
+        </div>
+      </section>
+    </main>
+  </div>
 
-    <h3>AI-transkribering & sammanfattning:</h3>
-    <textarea id="summary"></textarea>
-
-    <br><br>
-
-    <button id="pdfBtn">Ladda ner som PDF</button>
-
-    <br><br>
-
-    <input id="email" placeholder="Din e-postadress..." type="text" />
-    <button id="mailBtn">Maila sammanfattning</button>
-</div>
-
-
-<script>
-/* ============================
-      SUPABASE KONFIG
-============================ */
-
-const SB_URL ='https://hywwzzzxgagqhlxooekz.supabase.co';   // <-- BYT
-const SB_ANON ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';                    // <-- BYT
-const BUCKET = "kenai-audio";
-const FOLDER = "reviews";
-
-/* ============================
-      GLOBALA VARIABLER
-============================ */
-
-let mediaRecorder;
-let audioChunks = [];
-let audioBlob;
-let wavBlob;
-let stream;
-
-/* ============================
-      STARTA INSPELNING
-============================ */
-
-document.getElementById("startBtn").onclick = async () => {
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mime = MediaRecorder.isTypeSupported("audio/webm")
-            ? "audio/webm"
-            : "audio/mp4";
-
-        mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
-
-        audioChunks = [];
-        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-
-        mediaRecorder.onstop = convertToWAV;
-
-        mediaRecorder.start();
-        document.getElementById("status").innerText = "Spelar in...";
-    } catch (err) {
-        alert("Kunde inte starta inspelning: " + err);
-    }
-};
-
-/* ============================
-      STOPPA INSPELNING
-============================ */
-
-document.getElementById("stopBtn").onclick = () => {
-    if (!mediaRecorder) return;
-    mediaRecorder.stop();
-    stream.getTracks().forEach(t => t.stop());
-    document.getElementById("status").innerText = "Stoppar...";
-};
-
-/* ============================
-      KONVERTERA TILL WAV (16-bit PCM)
-============================ */
-
-async function convertToWAV() {
-    const rawBlob = new Blob(audioChunks);
-    const arrayBuf = await rawBlob.arrayBuffer();
-
-    let audioCtx = new AudioContext({ sampleRate: 44100 });
-    let decoded = await audioCtx.decodeAudioData(arrayBuf);
-
-    let samples = decoded.getChannelData(0); // mono
-    let wav = encodeWAV(samples, 44100);
-    wavBlob = wav;
-
-    document.getElementById("player").src = URL.createObjectURL(wavBlob);
-    document.getElementById("status").innerText = "Inspelning klar!";
-}
-
-/* WAV-encoder 16-bit PCM */
-function encodeWAV(samples, sampleRate) {
-    const buffer = new ArrayBuffer(44 + samples.length * 2);
-    const view = new DataView(buffer);
-
-    function writeString(view, offset, str) {
-        for (let i = 0; i < str.length; i++) view.setUint8(offset+i, str.charCodeAt(i));
-    }
-
-    writeString(view, 0, "RIFF");
-    view.setUint32(4, 36 + samples.length * 2, true);
-    writeString(view, 8, "WAVE");
-    writeString(view, 12, "fmt ");
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, 1, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true);
-    view.setUint16(32, 2, true);
-    view.setUint16(34, 16, true);
-    writeString(view, 36, "data");
-    view.setUint32(40, samples.length * 2, true);
-
-    let offset = 44;
-    for (let i = 0; i < samples.length; i++, offset += 2) {
-        let s = Math.max(-1, Math.min(1, samples[i]));
-        view.setInt16(offset, s * 0x7FFF, true);
-    }
-    return new Blob([view], { type: "audio/wav" });
-}
-
-/* ============================
-      UPLOAD TILL SUPABASE
-============================ */
-
-document.getElementById("uploadBtn").onclick = async () => {
-    if (!wavBlob) return alert("Ingen fil!");
-
-    const fileName = `${Date.now()}.wav`;
-    const path = `${FOLDER}/${fileName}`;
-
-    const res = await fetch(`${SB_URL}/storage/v1/object/${BUCKET}/${path}`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "audio/wav",
-            "Authorization": "Bearer " + SB_ANON,
-            "apikey": SB_ANON,
-            "x-upsert": "true"
-        },
-        body: wavBlob
-    });
-
-    if (!res.ok) return alert("Upload misslyckades!");
-
-    const publicUrl = `${SB_URL}/storage/v1/object/public/${BUCKET}/${path}`;
-
-    document.getElementById("fileUrl").value = publicUrl;
-    document.getElementById("status").innerText = "Uppladdad!";
-};
-
-/* ============================
-      AI-SAMMANFATTNING
-============================ */
-
-document.getElementById("summarizeBtn").onclick = async () => {
-    const url = document.getElementById("fileUrl").value;
-    if (!url) return alert("Ingen ljudfil!");
-
-    document.getElementById("status").innerText = "Skickar till AI...";
-
-    const res = await fetch("/api/summarize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url })
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-        alert("AI fel: " + data.error);
-        document.getElementById("status").innerText = "Misslyckades.";
-        return;
-    }
-
-    document.getElementById("summary").value = data.summary;
-    document.getElementById("status").innerText = "AI sammanfattning klar!";
-};
-
-/* ============================
-      PDF EXPORT
-============================ */
-
-document.getElementById("pdfBtn").onclick = async () => {
-    const text = document.getElementById("summary").value;
-    if (!text.trim()) return alert("Ingen text att exportera!");
-
-    const res = await fetch("/api/export-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text })
-    });
-
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "summary.pdf";
-    a.click();
-};
-
-/* ============================
-      SKICKA MAIL (mock)
-============================ */
-
-document.getElementById("mailBtn").onclick = async () => {
-    const email = document.getElementById("email").value.trim();
-    const text = document.getElementById("summary").value;
-
-    if (!email) return alert("Skriv e-post!");
-
-    await fetch("/api/send-summary-email", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ email, text })
-    });
-
-    alert("Skickat!");
-};
-</script>
-
+  <!-- Din befintliga JS ska ligga här under (app.js / recorder.js etc) -->
+  <!-- <script src="/app.js"></script> -->
 </body>
 </html>
