@@ -409,7 +409,7 @@ app.post("/api/ai-review", async (req, res) => {
 //  Starta servern
 // ---------------------------------------------------------
 // AI-transkribering + sammanfattning
-app.post("/api/summarize", async (req, res) => {
+app.post("/api/summarize", async (req, res) => { 
   try {
     const { audioUrl } = req.body;
 
