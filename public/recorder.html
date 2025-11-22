@@ -309,68 +309,45 @@
       color: var(--text-muted);
       text-align: right;
     }
-    /* ===== SISTA LAGRET – döda all vit card-bakgrund ===== */
-div[class*="card"],
-div[class*="Card"],
-div[class*="bg-base"],
-div[class*="bg-white"],
-section[class*="card"],
-main[class*="bg-base"] {
-  background: rgba(15, 23, 42, 0.98) !important;
-  border-radius: 24px !important;
-  border: 1px solid rgba(148, 163, 184, 0.45) !important;
-  box-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.9),
-    0 24px 60px rgba(15, 23, 42, 0.95) !important;
-  color: #e5e7eb !important;
-  /* Material-UI kort (om sidan använder det) */
-.MuiPaper-root,
-.MuiCard-root {
-  background: rgba(15, 23, 42, 0.98) !important;
-  border-radius: 24px !important;
-  border: 1px solid rgba(148, 163, 184, 0.45) !important;
-  box-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.9),
-    0 24px 60px rgba(15, 23, 42, 0.95) !important;
-  color: #e5e7eb !important;
-}
+/* ===== Kenai Recorder – mörkt kort utan att röra JS ===== */
 
-}
-    /* ===== Kenai skin – endast utseende, rör inte funktion ===== */
-
-/* Mörk rymd-bakgrund för hela sidan */
+/* Hela sidans bakgrund */
 body {
   margin: 0;
   min-height: 100vh;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
   background:
-    radial-gradient(circle at top, #0f172a 0, #020617 45%, #000 100%);
+    radial-gradient(circle at top, #0f172a 0, #020617 45%, #000 100%) !important;
   color: #e5e7eb;
 }
 
-/* Själva “kortet” i mitten: gör det mörkt glas istället för vitt */
-main,
-main > div,
-div[class*="card"],
-section[class*="card"],
-.MuiPaper-root,
-.MuiCard-root {
+/* Slå av ljus bakgrund på ytter-wrappers */
+body > div,
+body > main {
+  background: transparent !important;
+}
+
+/* Själva “kortet” runt recordern */
+body main,
+body main > div,
+body > div main,
+body > div main > div {
   background:
     radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.18), transparent 55%),
     radial-gradient(circle at 100% 100%, rgba(129, 140, 248, 0.16), transparent 60%),
-    rgba(15, 23, 42, 0.98);
-  border-radius: 24px;
-  border: 1px solid rgba(148, 163, 184, 0.45);
+    rgba(15, 23, 42, 0.98) !important;
+  border-radius: 24px !important;
+  border: 1px solid rgba(148, 163, 184, 0.45) !important;
   box-shadow:
     0 0 0 1px rgba(15, 23, 42, 0.9),
-    0 24px 60px rgba(15, 23, 42, 0.95);
+    0 24px 60px rgba(15, 23, 42, 0.95) !important;
 }
 
-/* Inputs & textarea – mörka, inte kritvitt */
+/* Inputs & textarea – mörka fält */
 input[type="text"],
 input[type="email"],
 textarea {
-  background: rgba(15, 23, 42, 0.98);
+  background: rgba(15, 23, 42, 0.98) !important;
   border-radius: 10px;
   border: 1px solid rgba(148, 163, 184, 0.75);
   padding: 8px 10px;
@@ -382,7 +359,7 @@ textarea::placeholder {
   color: #6b7280;
 }
 
-/* Knappar – lite mer Kenai-feeling */
+/* Knappar – Kenai-stil */
 button {
   border-radius: 999px;
   padding: 8px 16px;
@@ -402,7 +379,7 @@ button:not(:disabled):hover {
     0 0 48px rgba(15, 23, 42, 0.85);
 }
 
-/* Primär knapp (oftast AI- och startknappar) – blå/cyan glow */
+/* Primärknappar (start/AI) */
 button.primary,
 button#btnSummarize,
 button#btnStart {
@@ -415,7 +392,7 @@ button#btnStart {
     0 0 60px rgba(37, 99, 235, 0.6);
 }
 
-/* Sekundära knappar – mörka med ljus kant */
+/* Sekundära knappar (stop, upload, PDF, mail) */
 button.secondary,
 button#btnStop,
 button#btnUpload,
@@ -426,7 +403,7 @@ button#btnEmail {
   color: #e5e7eb;
 }
 
-/* Små hjälptexter */
+/* Småtexter */
 .small,
 .help-text,
 label,
@@ -434,19 +411,16 @@ label,
   color: #9ca3af;
 }
 
-/* Lite tightare paddings på mobiler */
+/* Lite mjukare på mobil */
 @media (max-width: 768px) {
-  main,
-  main > div,
-  div[class*="card"],
-  section[class*="card"],
-  .MuiPaper-root,
-  .MuiCard-root {
-    border-radius: 18px;
+  body main,
+  body main > div,
+  body > div main,
+  body > div main > div {
+    border-radius: 18px !important;
   }
 }
 
-    
   </style>
 </head>
 <body>
