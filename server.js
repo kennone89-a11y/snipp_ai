@@ -139,13 +139,13 @@ app.post("/api/send-summary-email", async (req, res) => {
 });
 
 // === NY ROUTE: enkel /api/trends-test för Kenai Reels ===
-// === /api/trends – YouTube-baserade trender med AI + fallback ===
+// === /api/trends – AI-genererade trender baserat på nisch ===
 app.get("/api/trends", async (req, res) => {
-        const niche = (req.query.niche || "").toString();
+    const niche = (req.query.niche || "").toString().trim();
 
-    // 1. Mock-data som backup om YouTube/AI failar
-    const mockTrends = {
-        platform: "mock",
+    // Backup om AI skulle faila helt
+    const fallback = {
+        platform: "ai_niche_mock",
         country: "SE",
         items: [
             {
@@ -186,6 +186,66 @@ app.get("/api/trends", async (req, res) => {
             }
         ]
     };
+
+    try {
+        const nicheText = niche || "bred svensk publik, svensk tiktok, motivation";
+
+        const aiResponse = await client.responses.create({
+            model: "gpt-4.1-mini",
+            input: [
+                {
+                    role: "system",
+                    content:
+                        "Du är en svensk social media-expert som hjälper skapare att göra korta TikTok/Instagram Reels/YouTube Shorts-klipp. " +
+                        "Du gillar tydliga hooks, enkelt språk och blandar svenska/engelska hashtags."
+                },
+                {
+                    role: "user",
+                    content: [
+                        {
+                            type: "text",
+                            text: `
+Skapa 3–5 förslag på korta klipp-idéer baserat på vad som trendar just nu online.
+
+Nisch / målgrupp: ${nicheText}.
+
+För varje förslag, returnera:
+- "title": kort titel på idén
+- "idea": 1–2 meningar om hur klippet ska se ut (på svenska)
+- "hashtags": en array med 8–15 hashtags (utan #kenai), blandat svenska/engelska, relevanta för idén.
+
+Returnera svaret som REN JSON i formatet:
+{"platform":"ai_niche","country":"SE","items":[{"title":"...","idea":"...","hashtags":["...","..."]}, ...]}
+                            `.trim()
+                        }
+                    ]
+                }
+            ],
+            response_format: { type: "json_object" }
+        });
+
+        const rawText = aiResponse.output[0].content[0].text;
+        let parsed;
+
+        try {
+            parsed = JSON.parse(rawText);
+        } catch (e) {
+            console.error("Kunde inte parsa AI JSON i /api/trends:", e, rawText);
+            parsed = null;
+        }
+
+        if (!parsed || !Array.isArray(parsed.items) || !parsed.items.length) {
+            console.warn("AI gav inget användbart svar – returnerar fallback.");
+            return res.json(fallback);
+        }
+
+        return res.json(parsed);
+    } catch (err) {
+        console.error("Fel i /api/trends:", err);
+        return res.json(fallback);
+    }
+});
+
 
     const YT_API_KEY = process.env.YT_API_KEY;
 
