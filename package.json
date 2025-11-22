@@ -6,12 +6,11 @@
   "scripts": {
     "start": "node server.js"
   },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.19.0",
-    "ffmpeg-static": "^5.2.0",
-    "fluent-ffmpeg": "^2.1.2",
-    "openai": "^4.78.1",
-    "pdfkit": "^0.15.0"
+    "dependencies": {
+    "express": "^4.19.2",
+    "openai": "^4.58.0",
+    "dotenv": "^16.4.5"
+  }
+
   }
 }
