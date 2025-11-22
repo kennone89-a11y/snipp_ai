@@ -29,79 +29,65 @@ const client = new OpenAI({
 });
 
 // ===============================
-// 1. SUMMARIZE ENDPOINT
-// ===============================
-// Tar emot Supabase-public URL → laddar ner → skickar till OpenAI
+// 1. SUMMARIZE (Whisper + ChatGPT)
 // ===============================
 
 app.post("/api/summarize", async (req, res) => {
     try {
-        // Frontenden skickar "audioUrl", äldre version kanske skickar "url".
-        const { audioUrl, url } = req.body || {};
-        const finalUrl = audioUrl || url;
+        const { url } = req.body;
 
-        if (!finalUrl) {
+        if (!url) {
             return res.status(400).json({ error: "Ingen ljud-URL mottagen." });
         }
 
-        console.log("[Kenai] Hämtar ljud från:", finalUrl);
+        console.log("[Kenai] Hämtar ljud från:", url);
 
-        // 1) Hämta ljudfilen (supabase public URL)
-        const audioRes = await fetch(finalUrl);
+        // Hämta ljudfilen från Supabase (offentlig URL)
+        const audioRes = await fetch(url);
         if (!audioRes.ok) {
-            console.error("Supabase fetch fel:", audioRes.status, await audioRes.text());
             throw new Error("Kunde inte hämta ljudfil från Supabase");
         }
-
         const arrayBuffer = await audioRes.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
         console.log("[Kenai] Fil hämtad, skickar till OpenAI...");
 
-        // 2) Gör om Buffer -> "File" för OpenAI (annars: 'Could not parse multipart form')
-        const fileForOpenAI = await OpenAI.toFile(buffer, "audio.webm", {
-    contentType: "audio/webm",
-});
-
-
-        // 3) Transkribera med Whisper / gpt-4o-transcribe
+        // 1) Transkribera med Whisper
         const transcriptText = await client.audio.transcriptions.create({
-            file: fileForOpenAI,
+            file: buffer,
             model: "gpt-4o-transcribe",
-            response_format: "text",
+            response_format: "text"
         });
 
         console.log("[Kenai] Transkribering klar.");
 
-        // 4) Sammanfatta transkriptet
+        // 2) Sammanfatta med ChatGPT
         const chat = await client.chat.completions.create({
             model: "gpt-4.1-mini",
             messages: [
                 {
                     role: "system",
-                    content:
-                        "Du är en assistent som sammanfattar ljudinspelningar på svenska. Gör en kort, tydlig och lättläst sammanfattning.",
+                    content: "Du är en assistent som skriver korta, tydliga sammanfattningar på svenska. Var konkret och enkel."
                 },
                 {
                     role: "user",
-                    content: transcriptText,
-                },
-            ],
+                    content: transcriptText
+                }
+            ]
         });
 
-        const summary = chat.choices?.[0]?.message?.content ?? "";
+        const summary = chat.choices[0].message.content;
 
         console.log("[Kenai] Sammanfattning genererad.");
 
         return res.json({
             transcript: transcriptText,
-            summary,
+            summary
         });
+
     } catch (err) {
         console.error("SUMMARY ERROR:", err);
-        return res
-            .status(500)
-            .json({ error: err?.message || "Okänt fel från OpenAI/servern" });
+        return res.status(500).json({ error: err.message || "Okänt fel" });
     }
 });
 
@@ -118,7 +104,7 @@ app.post("/api/export-pdf", async (req, res) => {
 
         const doc = new PDFDocument();
         doc.pipe(res);
-        doc.fontSize(14).text(text);
+        doc.fontSize(14).text(text || "");
         doc.end();
 
     } catch (err) {
@@ -127,16 +113,30 @@ app.post("/api/export-pdf", async (req, res) => {
     }
 });
 
+// ===============================
 // 3. MOCK MAIL ENDPOINT
-// ==========================
-app.post("/api/send-summary-email", async (req, res) => {
-    const { email, html } = req.body;
+// ===============================
 
-    console.log("MOCK EMAIL SEND >>>", email);
-    console.log("HTML length:", html?.length || 0);
+app.post("/api/send-summary-email", async (req, res) => {
+    const { email, text } = req.body;
+
+    console.log("=== MAIL MOCK ===");
+    console.log("Mottagare:", email);
+    console.log("Text:", text);
+    console.log("=================");
 
     return res.json({ ok: true });
 });
+
+// ===============================
+// 4. START SERVER
+// ===============================
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Kenai backend körs på port ${PORT}`);
+});
+
 
 // === NY ROUTE: enkel /api/trends-test för Kenai Reels ===
 // === /api/trends – AI-genererade trender baserat på nisch ===
