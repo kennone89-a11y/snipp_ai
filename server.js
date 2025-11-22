@@ -30,60 +30,71 @@ const client = new OpenAI({
 
 app.post("/api/summarize", async (req, res) => {
     try {
-        const { url } = req.body;
+        // Frontenden skickar "audioUrl", äldre version kanske skickar "url".
+        const { audioUrl, url } = req.body || {};
+        const finalUrl = audioUrl || url;
 
-        if (!url) {
+        if (!finalUrl) {
             return res.status(400).json({ error: "Ingen ljud-URL mottagen." });
         }
 
-        console.log("[Kenai] Hämtar ljud från:", url);
+        console.log("[Kenai] Hämtar ljud från:", finalUrl);
 
-        // Hämta ljudfilen från Supabase
-        const audioRes = await fetch(url);
+        // 1) Hämta ljudfilen (supabase public URL)
+        const audioRes = await fetch(finalUrl);
         if (!audioRes.ok) {
+            console.error("Supabase fetch fel:", audioRes.status, await audioRes.text());
             throw new Error("Kunde inte hämta ljudfil från Supabase");
         }
+
         const arrayBuffer = await audioRes.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
         console.log("[Kenai] Fil hämtad, skickar till OpenAI...");
 
-        // Skicka till OpenAI Whisper
-        const transcript = await client.audio.transcriptions.create({
-            file: buffer,
-            model: "gpt-4o-transcribe",     // bästa modellen för ljud
-            response_format: "text"
+        // 2) Gör om Buffer -> "File" för OpenAI (annars: 'Could not parse multipart form')
+        const fileForOpenAI = await toFile(buffer, "audio.webm", {
+            contentType: "audio/webm",
+        });
+
+        // 3) Transkribera med Whisper / gpt-4o-transcribe
+        const transcriptText = await client.audio.transcriptions.create({
+            file: fileForOpenAI,
+            model: "gpt-4o-transcribe",
+            response_format: "text",
         });
 
         console.log("[Kenai] Transkribering klar.");
 
-        // Sammanfatta transkriptet
+        // 4) Sammanfatta transkriptet
         const chat = await client.chat.completions.create({
             model: "gpt-4.1-mini",
             messages: [
                 {
                     role: "system",
-                    content: "Sammanfatta detta ljud på svenska. Gör det kortfattat, tydligt och enkelt."
+                    content:
+                        "Du är en assistent som sammanfattar ljudinspelningar på svenska. Gör en kort, tydlig och lättläst sammanfattning.",
                 },
                 {
                     role: "user",
-                    content: transcript
-                }
-            ]
+                    content: transcriptText,
+                },
+            ],
         });
 
-        const summary = chat.choices[0].message.content;
+        const summary = chat.choices?.[0]?.message?.content ?? "";
 
         console.log("[Kenai] Sammanfattning genererad.");
 
         return res.json({
-            transcript,
-            summary
+            transcript: transcriptText,
+            summary,
         });
-
     } catch (err) {
         console.error("SUMMARY ERROR:", err);
-        return res.status(500).json({ error: err.message || "Okänt fel" });
+        return res
+            .status(500)
+            .json({ error: err?.message || "Okänt fel från OpenAI/servern" });
     }
 });
 
