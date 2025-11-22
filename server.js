@@ -139,7 +139,9 @@ app.post("/api/send-summary-email", async (req, res) => {
 });
 
 // === NY ROUTE: enkel /api/trends-test för Kenai Reels ===
-app.get("/api/trends", (req, res) => {
+// === /api/trends – YouTube-baserade trender med AI + fallback ===
+app.get("/api/trends", async (req, res) => {
+    // 1. Mock-data som backup om YouTube/AI failar
     const mockTrends = {
         platform: "mock",
         country: "SE",
@@ -152,8 +154,8 @@ app.get("/api/trends", (req, res) => {
                     "#svensktiktok",
                     "#träning",
                     "#motivation",
-                    "#kenai",
-                    "#beforeafter"
+                    "#beforeafter",
+                    "#glowup"
                 ]
             },
             {
@@ -165,7 +167,7 @@ app.get("/api/trends", (req, res) => {
                     "#sparande",
                     "#investera",
                     "#aktier",
-                    "#kenai"
+                    "#moneytips"
                 ]
             },
             {
@@ -177,13 +179,104 @@ app.get("/api/trends", (req, res) => {
                     "#2025",
                     "#svensktiktok",
                     "#mindset",
-                    "#kenai"
+                    "#grind"
                 ]
             }
         ]
     };
 
-    res.json(mockTrends);
+    const YT_API_KEY = process.env.YT_API_KEY;
+
+    // Om ingen YouTube-nyckel finns ännu → kör bara mock-data
+    if (!YT_API_KEY) {
+        console.warn("YT_API_KEY saknas – returnerar mockTrends.");
+        return res.json(mockTrends);
+    }
+
+    try {
+        // 2. Hämta "most popular" videos på YouTube i Sverige
+        const ytUrl =
+            "https://www.googleapis.com/youtube/v3/videos" +
+            "?part=snippet,statistics" +
+            "&chart=mostPopular" +
+            "&regionCode=SE" +
+            "&maxResults=10" +
+            `&key=${YT_API_KEY}`;
+
+        const ytRes = await fetch(ytUrl);
+        if (!ytRes.ok) {
+            console.error("YouTube API svarade med felstatus:", ytRes.status, await ytRes.text());
+            return res.json(mockTrends);
+        }
+
+        const ytData = await ytRes.json();
+        const items = Array.isArray(ytData.items) ? ytData.items : [];
+
+        if (!items.length) {
+            console.warn("YouTube API gav inga items – kör mockTrends.");
+            return res.json(mockTrends);
+        }
+
+        const videos = items.map((item) => ({
+            title: item?.snippet?.title || "",
+            channel: item?.snippet?.channelTitle || "",
+            tags: item?.snippet?.tags || [],
+            viewCount: item?.statistics?.viewCount || null,
+            likeCount: item?.statistics?.likeCount || null
+        }));
+
+        // 3. Låt OpenAI forma trender → kortklipps-idéer + hashtags
+        const aiResponse = await client.responses.create({
+            model: "gpt-4.1-mini",
+            input: [
+                {
+                    role: "system",
+                    content:
+                        "Du är en svensk social media-expert som hjälper skapare att göra korta TikTok/Instagram Reels/YouTube Shorts-klipp. " +
+                        "Du gillar tydliga hooks, enkelt språk och blandar svenska/engelska hashtags."
+                },
+                {
+                    role: "user",
+                    content: [
+                        {
+                            type: "text",
+                            text:
+                                "Här är en lista med populära YouTube-videos (titel, kanal, tags, views, likes) från Sverige just nu.\n\n" +
+                                "Skapa 3–5 förslag på korta klipp-idéer baserat på dessa trender. För varje förslag, returnera:\n" +
+                                '- "title": kort titel på idén\n' +
+                                '- "idea": 1–2 meningar om hur klippet ska se ut\n' +
+                                '- "hashtags": en array med 8–15 hashtags (utan #kenai), blandat svenska/engelska, relevanta för idén\n\n' +
+                                "Returnera svaret som REN JSON i formatet:\n" +
+                                '{ "platform": "youtube_se", "country": "SE", "items": [ { "title": "...", "idea": "...", "hashtags": ["...", ...] }, ... ] }\n\n' +
+                                "Här är videodata:\n" +
+                                JSON.stringify(videos)
+                        }
+                    ]
+                }
+            ],
+            response_format: { type: "json_object" }
+        });
+
+        const rawText = aiResponse.output[0].content[0].text;
+        let parsed;
+
+        try {
+            parsed = JSON.parse(rawText);
+        } catch (e) {
+            console.error("Kunde inte parsa AI JSON:", e, rawText);
+            parsed = null;
+        }
+
+        if (!parsed || !Array.isArray(parsed.items) || !parsed.items.length) {
+            console.warn("AI gav inget användbart svar – kör mockTrends.");
+            return res.json(mockTrends);
+        }
+
+        return res.json(parsed);
+    } catch (err) {
+        console.error("Fel i /api/trends:", err);
+        return res.json(mockTrends);
+    }
 });
 
 // 4. SERVER STATUS
