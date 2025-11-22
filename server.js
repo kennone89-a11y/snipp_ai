@@ -141,6 +141,8 @@ app.post("/api/send-summary-email", async (req, res) => {
 // === NY ROUTE: enkel /api/trends-test för Kenai Reels ===
 // === /api/trends – YouTube-baserade trender med AI + fallback ===
 app.get("/api/trends", async (req, res) => {
+        const niche = (req.query.niche || "").toString();
+
     // 1. Mock-data som backup om YouTube/AI failar
     const mockTrends = {
         platform: "mock",
@@ -238,19 +240,21 @@ app.get("/api/trends", async (req, res) => {
                 {
                     role: "user",
                     content: [
-                        {
+                     {
                             type: "text",
                             text:
                                 "Här är en lista med populära YouTube-videos (titel, kanal, tags, views, likes) från Sverige just nu.\n\n" +
                                 "Skapa 3–5 förslag på korta klipp-idéer baserat på dessa trender. För varje förslag, returnera:\n" +
-                                '- "title": kort titel på idén\n' +
-                                '- "idea": 1–2 meningar om hur klippet ska se ut\n' +
-                                '- "hashtags": en array med 8–15 hashtags (utan #kenai), blandat svenska/engelska, relevanta för idén\n\n' +
+                                '- \"title\": kort titel på idén\n' +
+                                '- \"idea\": 1–2 meningar om hur klippet ska se ut\n' +
+                                '- \"hashtags\": en array med 8–15 hashtags (utan #kenai), blandat svenska/engelska, relevanta för idén\n\n' +
                                 "Returnera svaret som REN JSON i formatet:\n" +
-                                '{ "platform": "youtube_se", "country": "SE", "items": [ { "title": "...", "idea": "...", "hashtags": ["...", ...] }, ... ] }\n\n' +
+                                '{ \"platform\": \"youtube_se\", \"country\": \"SE\", \"items\": [ { \"title\": \"...\", \"idea\": \"...\", \"hashtags\": [\"...\", ...] }, ... ] }\n\n' +
+                                nicheInstruction +
                                 "Här är videodata:\n" +
                                 JSON.stringify(videos)
                         }
+
                     ]
                 }
             ],
