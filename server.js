@@ -8,24 +8,37 @@ import path from "path";
 import { fileURLToPath } from "url";
 import OpenAI from "openai";
 import PDFDocument from "pdfkit";
-import dotenv from "dotenv";
+
 
 dotenv.config();
 
 const app = express();
-app.use(express.json());
 
-// __dirname / __filename för ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Statisk katalog: public/
-app.use(express.static(path.join(__dirname, "public")));
+// Enkel CORS-middleware utan paket
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, OPTIONS"
+  );
 
-// OpenAI-klient
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+
+  next();
 });
+
+app.use(express.json());
+app.use(express.static("public"));
+
 
 // ===============================
 // 1. ROOT (index.html om du vill)
@@ -119,21 +132,36 @@ app.post("/api/export-pdf", async (req, res) => {
 // ===============================
 // 4. /api/send-summary-email – mock
 // ===============================
-app.post("/api/send-summary-email", async (req, res) => {
-  const { email, text } = req.body;
+// 3. /api/trends-backend – enkel mock
+// ===============================
 
-  console.log("=== MAIL MOCK ===");
-  console.log("Mottagare:", email);
-  console.log("Text:", text);
-  console.log("=================");
+app.post("/api/trends-backend", async (req, res) => {
+  try {
+    const { niche } = req.body || {};
 
-  return res.json({ ok: true });
+    const mockTrends = [
+      {
+        title: "Snabb hook på 3 sekunder",
+        idea: `Börja med en stark fråga inom ${niche || "din nisch"} direkt första sekunden.`,
+        hashtags: "#kenai #reels #hook #viral"
+      },
+      {
+        title: "Före / efter",
+        idea: `Visa ett kort "före" och direkt efter ett "efter" resultat inom ${niche || "din nisch"}.`,
+        hashtags: "#beforeafter #transformation #reels"
+      },
+      {
+        title: "1 grej du gör fel",
+        idea: `Berätta om ett vanligt misstag folk gör inom ${niche || "din nisch"} och hur man löser det.`,
+        hashtags: "#tips #mistakes #learn"
+      }
+    ];
+
+    // Skicka tillbaka i samma format som frontend förväntar sig
+    return res.json({ trends: mockTrends });
+  } catch (err) {
+    console.error("TRENDS ERROR:", err);
+    return res.status(500).json({ error: "Kunde inte generera trender" });
+  }
 });
 
-// ===============================
-// 5. START SERVERN
-// ===============================
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Kenai backend körs på port ${PORT}`);
-});
