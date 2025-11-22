@@ -526,19 +526,20 @@ body {
 .page {
     background: transparent !important;
 }
- /* Gör själva kortet (den stora vita rutan) mörkt glas i stället för vitt */
-.page > .card,
+
+/* === KENAI DARK CARD – gör själva kortet mörkt === */
 .page .card {
-    background:
-        radial-gradient(circle at 0 0, rgba(6, 182, 212, 0.18), transparent 55%),
-        radial-gradient(circle at 100% 100%, rgba(129, 140, 248, 0.16), transparent 60%),
-        rgba(15, 23, 42, 0.98) !important;
-    border-radius: 24px !important;
-    border: 1px solid rgba(148, 163, 184, 0.45) !important;
+    background: radial-gradient(circle at top, #07172a, #020617 45%, #000 100%) !important;
+    border-radius: 24px;
     box-shadow:
-        0 0 1px rgba(15, 23, 42, 0.9),
-        0 18px 45px rgba(15, 23, 42, 0.9) !important;
-}   
+        0 0 0 1px rgba(15, 23, 42, 0.6),
+        0 24px 60px rgba(15, 23, 42, 0.95);
+    color: #e5e7eb;
+}
+
+.page .card header.section {
+    border-bottom: 1px solid rgba(148, 163, 184, 0.4);
+}
 </style>
 </head>
 <body>
