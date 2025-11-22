@@ -619,110 +619,111 @@ checkBackend();
 
 
     <script>
-        // Kenai Reels – hämta mock-trender från /api/trends
-            document.addEventListener("DOMContentLoaded", () => {
+    // Kenai Reels – hämta trender (YouTube + AI + nisch) från /api/trends
+    document.addEventListener("DOMContentLoaded", () => {
         const btn = document.getElementById("fetchTrendsBtn");
         const container = document.getElementById("trendResults");
         const nicheInput = document.getElementById("trendNiche");
 
         if (!btn || !container) return;
 
+        btn.addEventListener("click", async () => {
+            btn.disabled = true;
+            const originalText = btn.textContent;
+            btn.textContent = "Hämtar...";
+            container.textContent = "Hämtar trender...";
 
-            btn.addEventListener("click", async () => {
-                btn.disabled = true;
-                const originalText = btn.textContent;
-                btn.textContent = "Hämtar...";
-                container.textContent = "Hämtar trender...";
-
-                            try {
+            try {
                 const niche = nicheInput ? nicheInput.value.trim() : "";
                 const url = niche
                     ? `/api/trends?niche=${encodeURIComponent(niche)}`
                     : "/api/trends";
 
                 const res = await fetch(url);
+                if (!res.ok) throw new Error("Fel från servern");
 
+                const data = await res.json();
 
-                    if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
-                        container.textContent = "Inga trender hittades.";
-                        return;
-                    }
-
-                    container.innerHTML = data.items
-    .map((item, index) => {
-        const title = item.title || "Okänd titel";
-        const idea = item.idea || "";
-        const hashtags = Array.isArray(item.hashtags) ? item.hashtags.join(" ") : "";
-
-        return `
-            <div class="trend-item" style="border: 1px solid #333; padding: 0.75rem; border-radius: 8px; display: flex; flex-direction: column; gap: 0.5rem;">
-                <div>
-                    <h3 style="margin: 0 0 0.25rem 0;">${index + 1}. ${title}</h3>
-                    <p style="margin: 0 0 0.5rem 0; font-size: 0.9rem;">${idea}</p>
-                    <p style="margin: 0; font-size: 0.85rem;">
-                        <strong>Hashtags:</strong> ${hashtags}
-                    </p>
-                </div>
-                <div style="display: flex; justify-content: flex-end;">
-                    <button
-                        class="trend-copy-btn"
-                        data-hashtags="${hashtags}"
-                        style="font-size: 0.8rem; padding: 0.3rem 0.7rem; cursor: pointer; border-radius: 999px; border: 1px solid #555; background: #111;"
-                    >
-                        Kopiera hashtags
-                    </button>
-                </div>
-            </div>
-        `;
-    })
-    .join("");
-// Lägg till click-handlers för "Kopiera hashtags"-knappar
-const copyButtons = container.querySelectorAll(".trend-copy-btn");
-
-copyButtons.forEach((copyBtn) => {
-    copyBtn.addEventListener("click", async () => {
-        const hashtagsText = copyBtn.dataset.hashtags || "";
-        const originalText = copyBtn.textContent;
-
-        try {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                await navigator.clipboard.writeText(hashtagsText);
-            } else {
-                // Fallback om Clipboard API inte finns
-                const tempInput = document.createElement("textarea");
-                tempInput.value = hashtagsText;
-                document.body.appendChild(tempInput);
-                tempInput.select();
-                document.execCommand("copy");
-                document.body.removeChild(tempInput);
-            }
-
-            copyBtn.disabled = true;
-            copyBtn.textContent = "Kopierat!";
-            setTimeout(() => {
-                copyBtn.disabled = false;
-                copyBtn.textContent = originalText;
-            }, 1200);
-        } catch (e) {
-            console.error("Kunde inte kopiera hashtags:", e);
-            copyBtn.textContent = "Fel vid kopiering";
-            setTimeout(() => {
-                copyBtn.textContent = originalText;
-            }, 1500);
-        }
-    });
-});
-
-                } catch (err) {
-                    console.error(err);
-                    container.textContent = "Kunde inte hämta trender just nu.";
-                } finally {
-                    btn.disabled = false;
-                    btn.textContent = originalText;
+                if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
+                    container.textContent = "Inga trender hittades.";
+                    return;
                 }
-            });
-        });
-    </script>
 
-  </body>
-</html>
+                container.innerHTML = data.items
+                    .map((item, index) => {
+                        const title = item.title || "Okänd titel";
+                        const idea = item.idea || "";
+                        const hashtags = Array.isArray(item.hashtags)
+                            ? item.hashtags.join(" ")
+                            : "";
+
+                        return `
+                            <div class="trend-item" style="border: 1px solid #333; padding: 0.75rem; border-radius: 8px; display: flex; flex-direction: column; gap: 0.5rem;">
+                                <div>
+                                    <h3 style="margin: 0 0 0.25rem 0;">${index + 1}. ${title}</h3>
+                                    <p style="margin: 0 0 0.5rem 0; font-size: 0.9rem;">${idea}</p>
+                                    <p style="margin: 0; font-size: 0.85rem;">
+                                        <strong>Hashtags:</strong> ${hashtags}
+                                    </p>
+                                </div>
+                                <div style="display: flex; justify-content: flex-end;">
+                                    <button
+                                        class="trend-copy-btn"
+                                        data-hashtags="${hashtags}"
+                                        style="font-size: 0.8rem; padding: 0.3rem 0.7rem; cursor: pointer; border-radius: 999px; border: 1px solid #555; background: #111;"
+                                    >
+                                        Kopiera hashtags
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    })
+                    .join("");
+
+                // Lägg till click-handlers för "Kopiera hashtags"-knappar
+                const copyButtons = container.querySelectorAll(".trend-copy-btn");
+
+                copyButtons.forEach((copyBtn) => {
+                    copyBtn.addEventListener("click", async () => {
+                        const hashtagsText = copyBtn.dataset.hashtags || "";
+                        const originalBtnText = copyBtn.textContent;
+
+                        try {
+                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                                await navigator.clipboard.writeText(hashtagsText);
+                            } else {
+                                // Fallback om Clipboard API inte finns
+                                const tempInput = document.createElement("textarea");
+                                tempInput.value = hashtagsText;
+                                document.body.appendChild(tempInput);
+                                tempInput.select();
+                                document.execCommand("copy");
+                                document.body.removeChild(tempInput);
+                            }
+
+                            copyBtn.disabled = true;
+                            copyBtn.textContent = "Kopierat!";
+                            setTimeout(() => {
+                                copyBtn.disabled = false;
+                                copyBtn.textContent = originalBtnText;
+                            }, 1200);
+                        } catch (e) {
+                            console.error("Kunde inte kopiera hashtags:", e);
+                            copyBtn.textContent = "Fel vid kopiering";
+                            setTimeout(() => {
+                                copyBtn.textContent = originalBtnText;
+                            }, 1500);
+                        }
+                    });
+                });
+            } catch (err) {
+                console.error(err);
+                container.textContent = "Kunde inte hämta trender just nu.";
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        });
+    });
+</script>
+
