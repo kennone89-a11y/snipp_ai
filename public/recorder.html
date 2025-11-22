@@ -106,17 +106,20 @@
     }
 
     .card {
-      border-radius: 26px;
-      border: 1px solid var(--border);
-      background:
-        radial-gradient(circle at 0 0, var(--accent-soft), transparent 55%),
-        radial-gradient(circle at 100% 100%, rgba(129, 140, 248, 0.16), transparent 60%),
-        var(--card);
-      box-shadow:
-        0 0 0 1px rgba(15, 23, 42, 0.95),
-        0 24px 80px rgba(15, 23, 42, 0.95);
-      padding: 22px 20px 24px;
-    }
+    margin: 24px auto 40px;
+    max-width: 880px;
+    padding: 24px;
+    background:
+        radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.14), transparent 55%),
+        radial-gradient(circle at 100% 100%, rgba(129, 140, 248, 0.18), transparent 60%),
+        #020617;
+    border-radius: 24px;
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    box-shadow:
+        0 0 0 1px rgba(15, 23, 42, 0.7),
+        0 28px 80px rgba(15, 23, 42, 0.9);
+}
+
 
     @media (max-width: 768px) {
       .page {
@@ -510,14 +513,20 @@ body {
 /* main och sektionerna inuti ska INTE lägga på egen vit bakgrund */
 .page main,
 .page main > section {
-  background: transparent !important;
+    background: transparent !important;
 }
-/* SISTA OVERRIDE – gör hela sidan mörk */
+
+/* === FORCE DARK BAKGRUND PÅ HELA SIDAN === */
+html,
 body {
-    background: radial-gradient(circle at top, #020617 0%, #020617 40%, #000 100%) !important;
-    color: #e5e7eb;
+    background: radial-gradient(circle at top, #07172a, #020617 45%, #000 100%) !important;
 }
-  </style>
+
+/* Se till att själva .page inte lägger på vitt */
+.page {
+    background: transparent !important;
+}
+</style>
 </head>
 <body>
   <div class="topbar">
