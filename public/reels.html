@@ -591,29 +591,42 @@ async function checkBackend() {
 checkBackend();
 </script>
         <!-- Kenai Reels – trendidéer & hashtags -->
-    <section id="trend-tools" style="margin-top: 2rem; padding: 1rem; border-top: 1px solid #333;">
-        <h2>Trend-idéer & hashtags</h2>
-        <p style="font-size: 0.9rem; opacity: 0.8;">
-            Klicka på knappen för att hämta förslag på klipp-idéer och hashtags baserat på vår mock-data.
-            Senare kopplar vi detta mot riktiga trender.
-        </p>
+   <section id="trend-tools" style="margin-top: 2rem; padding: 1rem; border-top: 1px solid #333;">
+    <h2>Trend-idéer & hashtags</h2>
+    <p style="font-size: 0.9rem; opacity: 0.8;">
+        Skriv kort om din nisch/målgrupp och klicka sedan på knappen för att hämta idéer & hashtags.
+        T.ex. "svensk tiktok, gym, pengar, motivation".
+    </p>
 
-        <button id="fetchTrendsBtn" style="margin-top: 0.5rem; padding: 0.5rem 1rem; cursor: pointer;">
-            Hämta trend-idéer
-        </button>
+    <label for="trendNiche" style="display:block; font-size: 0.85rem; margin-top: 0.5rem; opacity: 0.9;">
+        Din nisch / målgrupp:
+    </label>
+    <input
+        id="trendNiche"
+        type="text"
+        placeholder="svensk tiktok, gym, pengar, motivation"
+        style="width: 100%; margin-top: 0.25rem; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid #333; background: #050712; color: #fff; font-size: 0.9rem;"
+    />
 
-        <div id="trendResults" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 1rem;">
-            <!-- Här fylls trenderna in via JS -->
-        </div>
-    </section>
+    <button id="fetchTrendsBtn" style="margin-top: 0.75rem; padding: 0.5rem 1rem; cursor: pointer;">
+        Hämta trend-idéer
+    </button>
+
+    <div id="trendResults" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 1rem;">
+        <!-- Här fylls trenderna in via JS -->
+    </div>
+</section>
+
 
     <script>
         // Kenai Reels – hämta mock-trender från /api/trends
-        document.addEventListener("DOMContentLoaded", () => {
-            const btn = document.getElementById("fetchTrendsBtn");
-            const container = document.getElementById("trendResults");
+            document.addEventListener("DOMContentLoaded", () => {
+        const btn = document.getElementById("fetchTrendsBtn");
+        const container = document.getElementById("trendResults");
+        const nicheInput = document.getElementById("trendNiche");
 
-            if (!btn || !container) return;
+        if (!btn || !container) return;
+
 
             btn.addEventListener("click", async () => {
                 btn.disabled = true;
@@ -621,11 +634,14 @@ checkBackend();
                 btn.textContent = "Hämtar...";
                 container.textContent = "Hämtar trender...";
 
-                try {
-                    const res = await fetch("/api/trends");
-                    if (!res.ok) throw new Error("Fel från servern");
+                            try {
+                const niche = nicheInput ? nicheInput.value.trim() : "";
+                const url = niche
+                    ? `/api/trends?niche=${encodeURIComponent(niche)}`
+                    : "/api/trends";
 
-                    const data = await res.json();
+                const res = await fetch(url);
+
 
                     if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
                         container.textContent = "Inga trender hittades.";
