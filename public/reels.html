@@ -632,7 +632,7 @@ checkBackend();
                         return;
                     }
 
-                    ccontainer.innerHTML = data.items
+                    container.innerHTML = data.items
     .map((item, index) => {
         const title = item.title || "Okänd titel";
         const idea = item.idea || "";
@@ -660,6 +660,42 @@ checkBackend();
         `;
     })
     .join("");
+// Lägg till click-handlers för "Kopiera hashtags"-knappar
+const copyButtons = container.querySelectorAll(".trend-copy-btn");
+
+copyButtons.forEach((copyBtn) => {
+    copyBtn.addEventListener("click", async () => {
+        const hashtagsText = copyBtn.dataset.hashtags || "";
+        const originalText = copyBtn.textContent;
+
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(hashtagsText);
+            } else {
+                // Fallback om Clipboard API inte finns
+                const tempInput = document.createElement("textarea");
+                tempInput.value = hashtagsText;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand("copy");
+                document.body.removeChild(tempInput);
+            }
+
+            copyBtn.disabled = true;
+            copyBtn.textContent = "Kopierat!";
+            setTimeout(() => {
+                copyBtn.disabled = false;
+                copyBtn.textContent = originalText;
+            }, 1200);
+        } catch (e) {
+            console.error("Kunde inte kopiera hashtags:", e);
+            copyBtn.textContent = "Fel vid kopiering";
+            setTimeout(() => {
+                copyBtn.textContent = originalText;
+            }, 1500);
+        }
+    });
+});
 
                 } catch (err) {
                     console.error(err);
