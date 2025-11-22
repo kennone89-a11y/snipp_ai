@@ -7,12 +7,18 @@ import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
 import PDFDocument from "pdfkit";
+import path from "path";
+import { fileURLToPath } from "url";
 import { OpenAI } from "openai";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "200mb" }));
+app.use(express.static(path.join(__dirname, "public")));
+
 
 // ===============================
 // OPENAI CLIENT
