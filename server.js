@@ -121,26 +121,68 @@ app.post("/api/export-pdf", async (req, res) => {
     }
 });
 
-// ===============================
 // 3. MOCK MAIL ENDPOINT
-// ===============================
-
+// ==========================
 app.post("/api/send-summary-email", async (req, res) => {
-    const { email, text } = req.body;
+    const { email, html } = req.body;
 
-    console.log("=== MAIL MOCK ===");
-    console.log("Mottagare:", email);
-    console.log("Text:", text);
-    console.log("=================");
+    console.log("MOCK EMAIL SEND >>>", email);
+    console.log("HTML length:", html?.length || 0);
 
     return res.json({ ok: true });
 });
 
-// ===============================
-// 4. START SERVER
-// ===============================
+// === NY ROUTE: enkel /api/trends-test för Kenai Reels ===
+app.get("/api/trends", (req, res) => {
+    const mockTrends = {
+        platform: "mock",
+        country: "SE",
+        items: [
+            {
+                title: "Gym motivation 2025 – före/efter-träning",
+                idea: "Visa klipp från när du är trött innan gymmet och klipp till energi efter passet.",
+                hashtags: [
+                    "#gymtok",
+                    "#svensktiktok",
+                    "#träning",
+                    "#motivation",
+                    "#kenai",
+                    "#beforeafter"
+                ]
+            },
+            {
+                title: "Pengatips – 1 sak att ändra 2025",
+                idea: "Kort klipp där du säger EN konkret sak som förbättrar ekonomin (t.ex. sluta med dyra småköp).",
+                hashtags: [
+                    "#ekonomi",
+                    "#pengar",
+                    "#sparande",
+                    "#investera",
+                    "#aktier",
+                    "#kenai"
+                ]
+            },
+            {
+                title: "POV: Du börjar ta ditt liv seriöst",
+                idea: "Snabba klipp: gym, jobba vid dator, laga mat, läsa bok – tempo och energi.",
+                hashtags: [
+                    "#glowup",
+                    "#selfimprovement",
+                    "#2025",
+                    "#svensktiktok",
+                    "#mindset",
+                    "#kenai"
+                ]
+            }
+        ]
+    };
 
-const PORT = process.env.PORT || 3000;
+    res.json(mockTrends);
+});
+
+// 4. SERVER STATUS
+// ==========================
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-    console.log(`Kenai backend körs på port ${PORT}`);
+    console.log(`Kenai backend listens on port ${PORT}`);
 });
