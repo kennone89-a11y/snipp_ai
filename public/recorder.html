@@ -336,7 +336,117 @@ main[class*="bg-base"] {
 }
 
 }
+    /* ===== Kenai skin – endast utseende, rör inte funktion ===== */
 
+/* Mörk rymd-bakgrund för hela sidan */
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at top, #0f172a 0, #020617 45%, #000 100%);
+  color: #e5e7eb;
+}
+
+/* Själva “kortet” i mitten: gör det mörkt glas istället för vitt */
+main,
+main > div,
+div[class*="card"],
+section[class*="card"],
+.MuiPaper-root,
+.MuiCard-root {
+  background:
+    radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.18), transparent 55%),
+    radial-gradient(circle at 100% 100%, rgba(129, 140, 248, 0.16), transparent 60%),
+    rgba(15, 23, 42, 0.98);
+  border-radius: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.9),
+    0 24px 60px rgba(15, 23, 42, 0.95);
+}
+
+/* Inputs & textarea – mörka, inte kritvitt */
+input[type="text"],
+input[type="email"],
+textarea {
+  background: rgba(15, 23, 42, 0.98);
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.75);
+  padding: 8px 10px;
+  color: #e5e7eb;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280;
+}
+
+/* Knappar – lite mer Kenai-feeling */
+button {
+  border-radius: 999px;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background 0.12s ease-out,
+    border-color 0.12s ease-out,
+    transform 0.12s ease-out,
+    box-shadow 0.12s ease-out;
+}
+
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 22px rgba(15, 23, 42, 0.9),
+    0 0 48px rgba(15, 23, 42, 0.85);
+}
+
+/* Primär knapp (oftast AI- och startknappar) – blå/cyan glow */
+button.primary,
+button#btnSummarize,
+button#btnStart {
+  background: radial-gradient(circle at 0 0, #e0f2fe 0, #38bdf8 30%, #0f172a 100%);
+  border-color: rgba(56, 189, 248, 0.85);
+  color: #020617;
+  font-weight: 500;
+  box-shadow:
+    0 0 24px rgba(56, 189, 248, 0.8),
+    0 0 60px rgba(37, 99, 235, 0.6);
+}
+
+/* Sekundära knappar – mörka med ljus kant */
+button.secondary,
+button#btnStop,
+button#btnUpload,
+button#btnPdf,
+button#btnEmail {
+  background: rgba(15, 23, 42, 0.96);
+  border-color: rgba(148, 163, 184, 0.7);
+  color: #e5e7eb;
+}
+
+/* Små hjälptexter */
+.small,
+.help-text,
+label,
+.section-label {
+  color: #9ca3af;
+}
+
+/* Lite tightare paddings på mobiler */
+@media (max-width: 768px) {
+  main,
+  main > div,
+  div[class*="card"],
+  section[class*="card"],
+  .MuiPaper-root,
+  .MuiCard-root {
+    border-radius: 18px;
+  }
+}
+
+    
   </style>
 </head>
 <body>
