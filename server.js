@@ -53,9 +53,10 @@ app.post("/api/summarize", async (req, res) => {
         console.log("[Kenai] Fil hämtad, skickar till OpenAI...");
 
         // 2) Gör om Buffer -> "File" för OpenAI (annars: 'Could not parse multipart form')
-        const fileForOpenAI = await toFile(buffer, "audio.webm", {
-            contentType: "audio/webm",
-        });
+        const fileForOpenAI = await OpenAI.toFile(buffer, "audio.webm", {
+    contentType: "audio/webm",
+});
+
 
         // 3) Transkribera med Whisper / gpt-4o-transcribe
         const transcriptText = await client.audio.transcriptions.create({
