@@ -632,23 +632,35 @@ checkBackend();
                         return;
                     }
 
-                    container.innerHTML = data.items
-                        .map((item, index) => {
-                            const title = item.title || "Okänd titel";
-                            const idea = item.idea || "";
-                            const hashtags = Array.isArray(item.hashtags) ? item.hashtags.join(" ") : "";
+                    ccontainer.innerHTML = data.items
+    .map((item, index) => {
+        const title = item.title || "Okänd titel";
+        const idea = item.idea || "";
+        const hashtags = Array.isArray(item.hashtags) ? item.hashtags.join(" ") : "";
 
-                            return `
-                                <div class="trend-item" style="border: 1px solid #333; padding: 0.75rem; border-radius: 8px;">
-                                    <h3 style="margin: 0 0 0.25rem 0;">${index + 1}. ${title}</h3>
-                                    <p style="margin: 0 0 0.5rem 0; font-size: 0.9rem;">${idea}</p>
-                                    <p style="margin: 0; font-size: 0.85rem;">
-                                        <strong>Hashtags:</strong> ${hashtags}
-                                    </p>
-                                </div>
-                            `;
-                        })
-                        .join("");
+        return `
+            <div class="trend-item" style="border: 1px solid #333; padding: 0.75rem; border-radius: 8px; display: flex; flex-direction: column; gap: 0.5rem;">
+                <div>
+                    <h3 style="margin: 0 0 0.25rem 0;">${index + 1}. ${title}</h3>
+                    <p style="margin: 0 0 0.5rem 0; font-size: 0.9rem;">${idea}</p>
+                    <p style="margin: 0; font-size: 0.85rem;">
+                        <strong>Hashtags:</strong> ${hashtags}
+                    </p>
+                </div>
+                <div style="display: flex; justify-content: flex-end;">
+                    <button
+                        class="trend-copy-btn"
+                        data-hashtags="${hashtags}"
+                        style="font-size: 0.8rem; padding: 0.3rem 0.7rem; cursor: pointer; border-radius: 999px; border: 1px solid #555; background: #111;"
+                    >
+                        Kopiera hashtags
+                    </button>
+                </div>
+            </div>
+        `;
+    })
+    .join("");
+
                 } catch (err) {
                     console.error(err);
                     container.textContent = "Kunde inte hämta trender just nu.";
