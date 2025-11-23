@@ -1036,64 +1036,92 @@ body {
 </div>
 
 <script>
-  // Ny version av summarizeAudio som skickar { url } till backend
-  async function summarizeAudio() {
-    const input = document.getElementById("audioUrl");
-    const summaryBox = document.getElementById("summary");
+  // Patchar Kenai-sammanfattning så att rätt URL skickas till backend
+  window.addEventListener("load", () => {
+    const oldFn = window.summarizeAudio; // gamla funktionen
 
-    if (!input) {
-      alert("Hittar inte fältet för ljudlänken. Ladda om sidan och testa igen.");
-      return;
-    }
+    async function summarizeAudioNew() {
+      const input = document.getElementById("audioUrl");
+      const summaryBox = document.getElementById("summary");
 
-    const url = (input.value || "").trim();
-
-    if (!url) {
-      alert("Ingen ljud-URL hittad. Spela in & ladda upp först så att länken hamnar i rutan.");
-      return;
-    }
-
-    if (summaryBox) {
-      summaryBox.value = "Kenai tänker... transkriberar & sammanfattar ljudet...";
-    }
-
-    try {
-      const res = await fetch("/api/summarize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url })
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        const msg = data && data.error ? data.error : "Okänt fel från servern";
-        throw new Error(msg);
+      if (!input) {
+        alert("Hittar inte fältet för ljudlänken. Ladda om sidan och testa igen.");
+        return;
       }
 
-      const text =
-        data.summary ||
-        data.text ||
-        data.fullSummary ||
-        JSON.stringify(data, null, 2);
+      const url = (input.value || "").trim();
+
+      if (!url) {
+        alert("Ingen ljud-URL hittad. Spela in & ladda upp först så att länken hamnar i rutan.");
+        return;
+      }
 
       if (summaryBox) {
-        summaryBox.value = text;
-      } else {
-        alert("AI-svar mottaget, men text-rutan hittades inte.");
-        console.log("AI-svar:", text);
+        summaryBox.value = "Kenai tänker... transkriberar & sammanfattar ljudet...";
       }
-    } catch (err) {
-      console.error("Summarize error:", err);
-      if (summaryBox) {
-        summaryBox.value =
-          "AI-sammanfattning misslyckades:\n" + (err.message || String(err));
-      } else {
-        alert("AI-sammanfattning misslyckades: " + (err.message || String(err)));
+
+      try {
+        console.log("[Kenai] Skickar till /api/summarize:", url);
+
+        // Skicka både 'url' och 'audioUrl' ifall backend förväntar något av dom
+        const payload = { url, audioUrl: url };
+
+        const res = await fetch("/api/summarize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          const msg = data && data.error ? data.error : "Okänt fel från servern";
+          throw new Error(msg);
+        }
+
+        const text =
+          data.summary ||
+          data.text ||
+          data.fullSummary ||
+          (Array.isArray(data.chapters)
+            ? data.chapters
+                .map((c) => `• ${c.title}\n${c.summary || ""}`)
+                .join("\n\n")
+            : JSON.stringify(data, null, 2));
+
+        if (summaryBox) {
+          summaryBox.value = text;
+        } else {
+          alert("AI-svar mottaget, men text-rutan hittades inte.");
+          console.log("AI-svar:", text);
+        }
+      } catch (err) {
+        console.error("[Kenai] Summarize error (patch):", err);
+        if (summaryBox) {
+          summaryBox.value =
+            "AI-sammanfattning misslyckades:\n" + (err.message || String(err));
+        } else {
+          alert(
+            "AI-sammanfattning misslyckades: " + (err.message || String(err))
+          );
+        }
       }
     }
-  }
+
+    // Byt ut lyssnaren på knappen: ta bort gamla funktionen, lägg till nya
+    const btn = document.getElementById("btnSummarize");
+    if (btn) {
+      if (oldFn) {
+        btn.removeEventListener("click", oldFn);
+      }
+      btn.addEventListener("click", summarizeAudioNew);
+    }
+
+    // Exponera den nya globalt ifall något annat anropar summarizeAudio()
+    window.summarizeAudio = summarizeAudioNew;
+  });
 </script>
 
 </body>
 </html>
+
