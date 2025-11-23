@@ -191,10 +191,10 @@
       </div>
       <h1 style="font-size: 22px; margin-bottom: 4px;">Kenaireel – preset-demo</h1>
       <p style="font-size: 13px; color:#9ca3af; margin:0 0 4px;">
-        Här testar vi hur <strong>Marvel-reel</strong> och andra stilar ska planeras innan vi kopplar på backend &amp; Supabase.
+        Här testar vi hur olika presets (Marvel, Tarantino, Kenai) ska planeras innan vi kopplar på riktig videobygge.
       </p>
       <p style="font-size: 12px; color:#6b7280; margin:0;">
-        Steg 1: Välj stil &amp; filer → AI borde klippa upp reelen.
+        Steg 1: Välj stil &amp; filer → AI-klippning som plan. Steg 2: Skicka planen till backend.
       </p>
     </div>
 
@@ -208,15 +208,19 @@
         </button>
         <button class="preset-btn" data-style="marvel_intro">
           <strong>Marvel-reel</strong>
-          <small>Snabb reklam/intro, 3–5 sek, korta klipp.</small>
+          <small>Snabb intro/reklam, 3–5 sek, korta klipp + logga.</small>
+        </button>
+        <button class="preset-btn" data-style="tarantino_cut">
+          <strong>Tarantino-cut</strong>
+          <small>Non-linear, smash cuts, lång opening shot.</small>
         </button>
         <button class="preset-btn" data-style="kenai_classic">
           <strong>Kenaireel Classic</strong>
-          <small>Placeholder för din egna signaturstil.</small>
+          <small>Placeholder för din egen signaturstil.</small>
         </button>
       </div>
       <p class="small-muted" id="styleDescription">
-        Stil: <strong>Basic</strong> – bra för test. Marvel-reel = snabb reklam/intro av dina klipp.
+        Stil: <strong>Basic</strong> – bra för test. Marvel/Tarantino/Kenai ger olika klippkänsla.
       </p>
     </div>
 
@@ -235,7 +239,7 @@
           <label for="targetSeconds">Mål-längd (sekunder)</label>
           <input id="targetSeconds" type="number" min="1" max="90" value="10" />
           <div class="small-muted">
-            Marvel-reel ligger ofta runt 3–5 sek. Basic kan vara längre.
+            Marvel/Tarantino brukar ligga runt 3–8 sek. Basic kan vara längre.
           </div>
         </div>
       </div>
@@ -244,9 +248,6 @@
       </button>
       <button id="sendPlanBtn" class="primary" style="margin-left:8px;" disabled>
         📡 Skicka planen till backend (test)
-      </button>
-      <button id="buildReelBtn" class="primary" style="margin-left:8px;" disabled>
-        🎬 Bygg reel (fake)
       </button>
       <div class="small-muted" id="statusText"></div>
     </div>
@@ -269,7 +270,7 @@
         Ingen plan ännu. Välj stil, filer och klicka på “Skapa reel-plan”.
       </div>
       <p class="small-muted">
-        Senare kan vi låta Kenai spara detta som <code>plan.json</code> och låta backend bygga den riktiga videon.
+        Senare kan vi spara detta som <code>plan.json</code> och låta backend bygga den riktiga videon.
       </p>
     </div>
   </div>
@@ -285,7 +286,6 @@
     const targetSecondsInput = document.getElementById("targetSeconds");
     const buildPlanBtn = document.getElementById("buildPlanBtn");
     const sendPlanBtn = document.getElementById("sendPlanBtn");
-    const buildReelBtn = document.getElementById("buildReelBtn");
     const statusText = document.getElementById("statusText");
     const planPreview = document.getElementById("planPreview");
     const pillStyle = document.getElementById("pillStyle");
@@ -307,9 +307,11 @@
         if (style === "basic") {
           desc = "Stil: Basic – klipper upp jämnt per klipp, bra för test.";
         } else if (style === "marvel_intro") {
-          desc = "Stil: Marvel-reel – kort, snabb reklam/intro (3–5 sek) med snabba klipp och logga i slutet.";
+          desc = "Stil: Marvel-reel – kort, snabb intro/reklam (3–5 sek) med snabba klipp och logga i slutet.";
+        } else if (style === "tarantino_cut") {
+          desc = "Stil: Tarantino-cut – längre opening shot, sen non-linear smash cuts mellan klippen.";
         } else if (style === "kenai_classic") {
-          desc = "Stil: Kenaireel Classic – placeholder för din unika Kenai-stil.";
+          desc = "Stil: Kenaireel Classic – placeholder för din unika Kenai-stil (mix av story + tempo).";
         }
         styleDescriptionEl.innerHTML = desc;
 
@@ -320,6 +322,7 @@
     function prettyStyleName(style) {
       if (style === "basic") return "Basic";
       if (style === "marvel_intro") return "Marvel-reel";
+      if (style === "tarantino_cut") return "Tarantino-cut";
       if (style === "kenai_classic") return "Kenaireel Classic";
       return style;
     }
@@ -337,9 +340,10 @@
 
       let target = isNaN(rawTarget) || rawTarget <= 0 ? 10 : rawTarget;
 
-      // Om Marvel-intro: sätt typiskt 4 sek om användaren satt något konstigt
-      if (selectedStyle === "marvel_intro" && (rawTarget <= 0 || rawTarget > 8)) {
-        target = 4;
+      // Marvel & Tarantino – auto-fixa konstiga värden
+      if ((selectedStyle === "marvel_intro" || selectedStyle === "tarantino_cut") &&
+          (rawTarget <= 0 || rawTarget > 12)) {
+        target = 6;
       }
 
       const plan = buildPlanForStyle({
@@ -350,7 +354,6 @@
 
       lastPlan = plan;
       sendPlanBtn.disabled = false;
-      buildReelBtn.disabled = false;
 
       // uppdatera UI
       pillFiles.innerHTML = "📂 <span>Filer: " + files.length + "</span>";
@@ -368,6 +371,7 @@
       const clips = [];
       let clipDuration = targetSeconds / count;
 
+      // ---- MARVEL-INTRO ----
       if (style === "marvel_intro") {
         let ideal = targetSeconds / count;
         let perClip = Math.min(0.18, Math.max(0.06, ideal));
@@ -418,6 +422,83 @@
         };
       }
 
+      // ---- TARANTINO-CUT ----
+      if (style === "tarantino_cut") {
+        if (count === 1) {
+          // bara ett klipp -> kör hela som en "opening shot"
+          const only = files[0];
+          const d = parseFloat(targetSeconds.toFixed(3));
+          clips.push({
+            index: 0,
+            filename: only.name,
+            type: only.type.startsWith("video") ? "video" : "image",
+            duration: d
+          });
+          return {
+            style,
+            totalDuration: d,
+            segments: [
+              {
+                type: "tarantino_cut",
+                mode: "single_shot",
+                colorGrade: "high_contrast",
+                transition: "slow_push_in",
+                totalDuration: d,
+                clips
+              }
+            ]
+          };
+        }
+
+        // fler klipp -> lång opening + smash cuts i "fel" ordning
+        const pivotIndex = Math.floor(count / 2); // "main" shot i mitten
+        const introDuration = Math.min(3, targetSeconds * 0.4);
+        const remaining = Math.max(0.5, targetSeconds - introDuration);
+        const perOther = remaining / (count - 1);
+
+        // bygg ordning: pivot först, resten slumpat
+        const indices = [...Array(count).keys()];
+        indices.splice(pivotIndex, 1);
+        // enkel shuffle
+        for (let i = indices.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
+        const order = [pivotIndex, ...indices];
+
+        order.forEach((idx, orderPos) => {
+          const file = files[idx];
+          const isIntro = orderPos === 0;
+          const dur = isIntro ? introDuration : perOther;
+          clips.push({
+            index: idx,
+            filename: file.name,
+            type: file.type.startsWith("video") ? "video" : "image",
+            role: isIntro ? "opening_shot" : "smash_cut",
+            duration: parseFloat(dur.toFixed(3))
+          });
+        });
+
+        const total = introDuration + perOther * (count - 1);
+
+        return {
+          style,
+          totalDuration: parseFloat(total.toFixed(3)),
+          segments: [
+            {
+              type: "tarantino_cut",
+              narrativeMode: "non_linear",
+              colorGrade: "high_contrast",
+              transition: "smash_cut",
+              totalDuration: parseFloat(total.toFixed(3)),
+              clips,
+              playOrder: order
+            }
+          ]
+        };
+      }
+
+      // ---- KENAIREEL CLASSIC (placeholder) ----
       if (style === "kenai_classic") {
         let perClip = targetSeconds / count;
         files.forEach((file, index) => {
@@ -443,7 +524,7 @@
         };
       }
 
-      // BASIC fallback
+      // ---- BASIC fallback ----
       clipDuration = targetSeconds / count;
       files.forEach((file, index) => {
         clips.push({
@@ -500,46 +581,6 @@
         console.error("SEND PLAN ERROR:", err);
         statusText.style.color = "#f97373";
         statusText.textContent = "Kunde inte nå backend: " + err.message;
-      }
-    });
-
-    // --- Bygg reel (fake) ---
-    buildReelBtn.addEventListener("click", async () => {
-      if (!lastPlan) {
-        statusText.style.color = "#f97373";
-        statusText.textContent = "Ingen plan att bygga – skapa en plan först.";
-        return;
-      }
-
-      statusText.style.color = "#9ca3af";
-      statusText.textContent = "Ber backend bygga fake-reel...";
-
-      try {
-        const res = await fetch("/api/build-reel", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ plan: lastPlan })
-        });
-
-        if (!res.ok) {
-          throw new Error("Status " + res.status);
-        }
-
-        const data = await res.json();
-        statusText.style.color = "#4ade80";
-        statusText.textContent =
-          "Build-id: " +
-          (data.buildId || "okänt") +
-          " – stil: " +
-          (data.style || "?") +
-          ", klipp: " +
-          (data.clipCount || 0);
-      } catch (err) {
-        console.error("BUILD REEL ERROR:", err);
-        statusText.style.color = "#f97373";
-        statusText.textContent = "Kunde inte bygga reel: " + err.message;
       }
     });
   </script>
