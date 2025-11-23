@@ -3,15 +3,14 @@
 // ===============================
 // Imports & setup
 // ===============================
+import dotenv from "dotenv";
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import OpenAI from "openai";
 import PDFDocument from "pdfkit";
 
-
 dotenv.config();
-
 const app = express();
 
 const __filename = fileURLToPath(import.meta.url);
