@@ -168,7 +168,6 @@ app.post("/api/reels-plan-demo", async (req, res) => {
       return res.status(400).json({ error: "Ingen plan mottagen" });
     }
 
-    // Bara logga så vi ser att det funkar
     console.log("[Reels-demo] Fick plan:", JSON.stringify(plan, null, 2));
 
     return res.json({
@@ -183,10 +182,52 @@ app.post("/api/reels-plan-demo", async (req, res) => {
   }
 });
 
+// 6. /api/build-reel – fake-bygg reel utifrån plan (ingen riktig video än)
+app.post("/api/build-reel", async (req, res) => {
+  try {
+    const { plan } = req.body || {};
+
+    if (!plan) {
+      return res.status(400).json({ error: "Ingen plan mottagen" });
+    }
+
+    const style = plan.style || "okänd";
+    const totalDuration = plan.totalDuration || 0;
+
+    // Försök räkna antal klipp från första segmentet
+    let clipCount = 0;
+    if (Array.isArray(plan.segments) && plan.segments.length > 0) {
+      const firstSegment = plan.segments[0];
+      if (Array.isArray(firstSegment.clips)) {
+        clipCount = firstSegment.clips.length;
+      }
+    }
+
+    const buildId = `fake_${Date.now()}`;
+
+    console.log(
+      `[Reels-build-demo] style=${style}, total=${totalDuration}s, clips=${clipCount}, buildId=${buildId}`
+    );
+
+    return res.json({
+      ok: true,
+      message: "Fake-reel byggd (ingen riktig video än)",
+      buildId,
+      style,
+      totalDuration,
+      clipCount,
+      downloadUrl: null,
+      note: "Här kan vi senare returnera en riktig videolänk."
+    });
+  } catch (err) {
+    console.error("BUILD REEL ERROR:", err);
+    return res.status(500).json({ error: "Kunde inte bygga reel (fake)" });
+  }
+});
+
 // ---------------------- Starta servern ----------------------
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log(`[Kenai] Backend kör på port ${PORT}`);
 });
-
