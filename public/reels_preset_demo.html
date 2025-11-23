@@ -194,7 +194,7 @@
         Här testar vi hur <strong>Marvel-reel</strong> och andra stilar ska planeras innan vi kopplar på backend &amp; Supabase.
       </p>
       <p style="font-size: 12px; color:#6b7280; margin:0;">
-        Steg 1: Välj stil &amp; filer → se hur AI borde klippa upp reelen. (Endast demo, ingen upload än.)
+        Steg 1: Välj stil &amp; filer → AI borde klippa upp reelen. (Endast demo, ingen upload än.)
       </p>
     </div>
 
@@ -235,18 +235,18 @@
           <label for="targetSeconds">Mål-längd (sekunder)</label>
           <input id="targetSeconds" type="number" min="1" max="90" value="10" />
           <div class="small-muted">
-            Marvel-reel brukar ligga runt 3–5 sek. Basic kan vara längre.
+            Marvel-reel ligger ofta runt 3–5 sek. Basic kan vara längre.
           </div>
         </div>
       </div>
-     <button id="buildPlanBtn" class="primary">
-  ⚙️ Skapa reel-plan (demo)
-</button>
-<button id="sendPlanBtn" class="primary" style="margin-left:8px;" disabled>
-  📡 Skicka planen till backend (test)
-</button>
-<div class="small-muted" id="statusText"></div>
-
+      <button id="buildPlanBtn" class="primary">
+        ⚙️ Skapa reel-plan (demo)
+      </button>
+      <button id="sendPlanBtn" class="primary" style="margin-left:8px;" disabled>
+        📡 Skicka planen till backend (test)
+      </button>
+      <div class="small-muted" id="statusText"></div>
+    </div>
 
     <!-- 3. Plan-preview -->
     <div class="card">
@@ -274,20 +274,19 @@
   <script>
     // --- STATE ---
     let selectedStyle = "basic";
+    let lastPlan = null;
 
     const presetButtons = Array.from(document.querySelectorAll(".preset-btn"));
     const styleDescriptionEl = document.getElementById("styleDescription");
     const filesInput = document.getElementById("files");
     const targetSecondsInput = document.getElementById("targetSeconds");
-   const buildPlanBtn = document.getElementById("buildPlanBtn");
-   const sendPlanBtn = document.getElementById("sendPlanBtn");
-   const statusText = document.getElementById("statusText");
-   const planPreview = document.getElementById("planPreview");
-   const pillStyle = document.getElementById("pillStyle");
-
+    const buildPlanBtn = document.getElementById("buildPlanBtn");
+    const sendPlanBtn = document.getElementById("sendPlanBtn");
+    const statusText = document.getElementById("statusText");
+    const planPreview = document.getElementById("planPreview");
+    const pillStyle = document.getElementById("pillStyle");
     const pillFiles = document.getElementById("pillFiles");
     const pillDuration = document.getElementById("pillDuration");
-    let lastPlan = null;
 
     // --- PRESET HANDLING ---
     presetButtons.forEach(btn => {
@@ -334,24 +333,23 @@
 
       let target = isNaN(rawTarget) || rawTarget <= 0 ? 10 : rawTarget;
 
-      // Om Marvel-intro: sätt förslag 4 sek om användaren satt något tokigt
+      // Om Marvel-intro: sätt typiskt 4 sek om användaren satt något konstigt
       if (selectedStyle === "marvel_intro" && (rawTarget <= 0 || rawTarget > 8)) {
         target = 4;
       }
 
-        const plan = buildPlanForStyle({
-    files,
-    style: selectedStyle,
-    targetSeconds: target
-  });
+      const plan = buildPlanForStyle({
+        files,
+        style: selectedStyle,
+        targetSeconds: target
+      });
 
-  lastPlan = plan;
-  sendPlanBtn.disabled = false;
+      lastPlan = plan;
+      sendPlanBtn.disabled = false;
 
-  // uppdatera UI
-  pillFiles.innerHTML = "📂 <span>Filer: " + files.length + "</span>";
-  ...
-
+      // uppdatera UI
+      pillFiles.innerHTML = "📂 <span>Filer: " + files.length + "</span>";
+      pillDuration.innerHTML = "⏱️ <span>Total: " + plan.totalDuration.toFixed(2) + " s</span>";
 
       statusText.style.color = "#9ca3af";
       statusText.textContent = "Plan skapad – detta är vad Kenai/AI skulle skicka som plan.json till backend.";
@@ -418,7 +416,7 @@
       }
 
       if (style === "kenai_classic") {
-        // Placeholder-logik: t.ex. lite längre än Marvel, men ändå ganska punchy
+        // Placeholder-logik för din egna stil
         let perClip = targetSeconds / count;
         files.forEach((file, index) => {
           clips.push({
@@ -454,7 +452,7 @@
         });
       });
 
-           return {
+      return {
         style,
         totalDuration: parseFloat(targetSeconds.toFixed(3)),
         segments: [
