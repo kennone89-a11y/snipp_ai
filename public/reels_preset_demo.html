@@ -239,11 +239,14 @@
           </div>
         </div>
       </div>
-      <button id="buildPlanBtn" class="primary">
-        ⚙️ Skapa reel-plan (demo)
-      </button>
-      <div class="small-muted" id="statusText"></div>
-    </div>
+     <button id="buildPlanBtn" class="primary">
+  ⚙️ Skapa reel-plan (demo)
+</button>
+<button id="sendPlanBtn" class="primary" style="margin-left:8px;" disabled>
+  📡 Skicka planen till backend (test)
+</button>
+<div class="small-muted" id="statusText"></div>
+
 
     <!-- 3. Plan-preview -->
     <div class="card">
@@ -276,12 +279,15 @@
     const styleDescriptionEl = document.getElementById("styleDescription");
     const filesInput = document.getElementById("files");
     const targetSecondsInput = document.getElementById("targetSeconds");
-    const buildPlanBtn = document.getElementById("buildPlanBtn");
-    const statusText = document.getElementById("statusText");
-    const planPreview = document.getElementById("planPreview");
-    const pillStyle = document.getElementById("pillStyle");
+   const buildPlanBtn = document.getElementById("buildPlanBtn");
+   const sendPlanBtn = document.getElementById("sendPlanBtn");
+   const statusText = document.getElementById("statusText");
+   const planPreview = document.getElementById("planPreview");
+   const pillStyle = document.getElementById("pillStyle");
+
     const pillFiles = document.getElementById("pillFiles");
     const pillDuration = document.getElementById("pillDuration");
+    let lastPlan = null;
 
     // --- PRESET HANDLING ---
     presetButtons.forEach(btn => {
@@ -333,15 +339,19 @@
         target = 4;
       }
 
-      const plan = buildPlanForStyle({
-        files,
-        style: selectedStyle,
-        targetSeconds: target
-      });
+        const plan = buildPlanForStyle({
+    files,
+    style: selectedStyle,
+    targetSeconds: target
+  });
 
-      // uppdatera UI
-      pillFiles.innerHTML = "📂 <span>Filer: " + files.length + "</span>";
-      pillDuration.innerHTML = "⏱️ <span>Total: " + plan.totalDuration.toFixed(2) + " s</span>";
+  lastPlan = plan;
+  sendPlanBtn.disabled = false;
+
+  // uppdatera UI
+  pillFiles.innerHTML = "📂 <span>Filer: " + files.length + "</span>";
+  ...
+
 
       statusText.style.color = "#9ca3af";
       statusText.textContent = "Plan skapad – detta är vad Kenai/AI skulle skicka som plan.json till backend.";
@@ -444,7 +454,7 @@
         });
       });
 
-      return {
+           return {
         style,
         totalDuration: parseFloat(targetSeconds.toFixed(3)),
         segments: [
@@ -457,6 +467,41 @@
         ]
       };
     }
+
+    // --- Skicka plan till backend (demo) ---
+    sendPlanBtn.addEventListener("click", async () => {
+      if (!lastPlan) {
+        statusText.style.color = "#f97373";
+        statusText.textContent = "Ingen plan att skicka – skapa en plan först.";
+        return;
+      }
+
+      statusText.style.color = "#9ca3af";
+      statusText.textContent = "Skickar planen till backend...";
+
+      try {
+        const res = await fetch("/api/reels-plan-demo", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ plan: lastPlan })
+        });
+
+        if (!res.ok) {
+          throw new Error("Status " + res.status);
+        }
+
+        const data = await res.json();
+        statusText.style.color = "#4ade80";
+        statusText.textContent =
+          "Backend-svar: " + (data.message || "Plan mottagen ✅");
+      } catch (err) {
+        console.error("SEND PLAN ERROR:", err);
+        statusText.style.color = "#f97373";
+        statusText.textContent = "Kunde inte nå backend: " + err.message;
+      }
+    });
   </script>
 </body>
 </html>
