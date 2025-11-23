@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kenai Reels – Preset Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #101828, #020617);
+      color: #e5e7eb;
+    }
+    h1, h2, h3 {
+      margin: 0 0 12px;
+    }
+    .app {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .card {
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.8);
+      margin-bottom: 20px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #e0f2fe;
+      margin-bottom: 10px;
+    }
+    .badge span {
+      font-size: 14px;
+    }
+    .preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .preset-btn {
+      flex: 1 1 140px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      padding: 10px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      background: rgba(15,23,42,0.9);
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      transition: all 0.15s ease;
+    }
+    .preset-btn strong {
+      font-size: 13px;
+    }
+    .preset-btn small {
+      font-size: 11px;
+      opacity: 0.75;
+    }
+    .preset-btn:hover {
+      border-color: rgba(56, 189, 248, 0.7);
+      transform: translateY(-1px);
+    }
+    .preset-btn.active {
+      border-color: rgb(56, 189, 248);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.5);
+      background: radial-gradient(circle at top left, rgba(56,189,248,0.2), rgba(15,23,42,0.95));
+    }
+    label {
+      font-size: 13px;
+      display: block;
+      margin-bottom: 4px;
+      color: #9ca3af;
+    }
+    input[type="number"],
+    input[type="file"] {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      background: rgba(15, 23, 42, 0.8);
+      color: #e5e7eb;
+      font-size: 13px;
+    }
+    input[type="number"]:focus,
+    input[type="file"]:focus {
+      outline: none;
+      border-color: rgb(56, 189, 248);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .row > div {
+      flex: 1 1 200px;
+    }
+    button.primary {
+      border-radius: 999px;
+      border: none;
+      padding: 10px 18px;
+      font-size: 14px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #22d3ee, #6366f1);
+      color: white;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 15px 35px rgba(37, 99, 235, 0.5);
+      margin-top: 8px;
+    }
+    button.primary:disabled {
+      opacity: 0.4;
+      cursor: default;
+      box-shadow: none;
+    }
+    .small-muted {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+    .plan-preview {
+      font-size: 13px;
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 12px;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      padding: 10px 12px;
+      max-height: 260px;
+      overflow: auto;
+      white-space: pre;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid rgba(156, 163, 175, 0.7);
+      color: #e5e7eb;
+      margin-right: 6px;
+      margin-bottom: 4px;
+    }
+    .pill span {
+      opacity: 0.8;
+    }
+    .pill-style {
+      border-color: rgba(56,189,248,0.7);
+      color: #e0f2fe;
+    }
+    .pill-files {
+      border-color: rgba(34,197,94,0.7);
+      color: #bbf7d0;
+    }
+    .pill-duration {
+      border-color: rgba(245, 158, 11, 0.7);
+      color: #fef3c7;
+    }
+    @media (max-width: 640px) {
+      body {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <div class="badge">
+        <span>🚀</span>
+        <span>Kenai Reels – preset-hjärna</span>
+      </div>
+      <h1 style="font-size: 22px; margin-bottom: 4px;">Kenaireel – preset-demo</h1>
+      <p style="font-size: 13px; color:#9ca3af; margin:0 0 4px;">
+        Här testar vi hur <strong>Marvel-reel</strong> och andra stilar ska planeras innan vi kopplar på backend &amp; Supabase.
+      </p>
+      <p style="font-size: 12px; color:#6b7280; margin:0;">
+        Steg 1: Välj stil &amp; filer → se hur AI borde klippa upp reelen. (Endast demo, ingen upload än.)
+      </p>
+    </div>
+
+    <!-- 1. Välj preset -->
+    <div class="card">
+      <h2 style="font-size: 16px; margin-bottom: 8px;">1. Välj reel-stil</h2>
+      <div class="preset-row">
+        <button class="preset-btn active" data-style="basic">
+          <strong>Basic</strong>
+          <small>Jämn längd per klipp, ingen magi.</small>
+        </button>
+        <button class="preset-btn" data-style="marvel_intro">
+          <strong>Marvel-reel</strong>
+          <small>Snabb reklam/intro, 3–5 sek, korta klipp.</small>
+        </button>
+        <button class="preset-btn" data-style="kenai_classic">
+          <strong>Kenaireel Classic</strong>
+          <small>Placeholder för din egna signaturstil.</small>
+        </button>
+      </div>
+      <p class="small-muted" id="styleDescription">
+        Stil: <strong>Basic</strong> – bra för test. Marvel-reel = snabb reklam/intro av dina klipp.
+      </p>
+    </div>
+
+    <!-- 2. Välj filer & mål-längd -->
+    <div class="card">
+      <h2 style="font-size: 16px; margin-bottom: 8px;">2. Lägg till klipp &amp; längd</h2>
+      <div class="row">
+        <div>
+          <label for="files">Bilder/filmer (lokalt, laddas ej upp än)</label>
+          <input id="files" type="file" multiple accept="image/*,video/*" />
+          <div class="small-muted">
+            Välj några sommarbilder/klipp som vi kan planera reelen med.
+          </div>
+        </div>
+        <div>
+          <label for="targetSeconds">Mål-längd (sekunder)</label>
+          <input id="targetSeconds" type="number" min="1" max="90" value="10" />
+          <div class="small-muted">
+            Marvel-reel brukar ligga runt 3–5 sek. Basic kan vara längre.
+          </div>
+        </div>
+      </div>
+      <button id="buildPlanBtn" class="primary">
+        ⚙️ Skapa reel-plan (demo)
+      </button>
+      <div class="small-muted" id="statusText"></div>
+    </div>
+
+    <!-- 3. Plan-preview -->
+    <div class="card">
+      <h2 style="font-size: 16px; margin-bottom: 8px;">3. Förhandsgranska plan (vad AI skulle göra)</h2>
+      <div style="margin-bottom:8px;">
+        <span class="pill pill-style" id="pillStyle">
+          🎬 <span>Stil: Basic</span>
+        </span>
+        <span class="pill pill-files" id="pillFiles">
+          📂 <span>Filer: 0</span>
+        </span>
+        <span class="pill pill-duration" id="pillDuration">
+          ⏱️ <span>Total: 0.0 s</span>
+        </span>
+      </div>
+      <div id="planPreview" class="plan-preview">
+        Ingen plan ännu. Välj stil, filer och klicka på “Skapa reel-plan”.
+      </div>
+      <p class="small-muted">
+        Senare kan vi låta Kenai spara detta som <code>plan.json</code> och låta backend bygga den riktiga videon.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // --- STATE ---
+    let selectedStyle = "basic";
+
+    const presetButtons = Array.from(document.querySelectorAll(".preset-btn"));
+    const styleDescriptionEl = document.getElementById("styleDescription");
+    const filesInput = document.getElementById("files");
+    const targetSecondsInput = document.getElementById("targetSeconds");
+    const buildPlanBtn = document.getElementById("buildPlanBtn");
+    const statusText = document.getElementById("statusText");
+    const planPreview = document.getElementById("planPreview");
+    const pillStyle = document.getElementById("pillStyle");
+    const pillFiles = document.getElementById("pillFiles");
+    const pillDuration = document.getElementById("pillDuration");
+
+    // --- PRESET HANDLING ---
+    presetButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const style = btn.getAttribute("data-style");
+        selectedStyle = style;
+
+        // toggle active class
+        presetButtons.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+
+        // update description
+        let desc = "";
+        if (style === "basic") {
+          desc = "Stil: Basic – klipper upp jämnt per klipp, bra för test.";
+        } else if (style === "marvel_intro") {
+          desc = "Stil: Marvel-reel – kort, snabb reklam/intro (3–5 sek) med snabba klipp och logga i slutet.";
+        } else if (style === "kenai_classic") {
+          desc = "Stil: Kenaireel Classic – placeholder för din unika Kenai-stil (kan mixa Marvel + story osv).";
+        }
+        styleDescriptionEl.innerHTML = desc;
+
+        pillStyle.innerHTML = "🎬 <span>Stil: " + prettyStyleName(style) + "</span>";
+      });
+    });
+
+    function prettyStyleName(style) {
+      if (style === "basic") return "Basic";
+      if (style === "marvel_intro") return "Marvel-reel";
+      if (style === "kenai_classic") return "Kenaireel Classic";
+      return style;
+    }
+
+    // --- BUILD PLAN (DEMO) ---
+    buildPlanBtn.addEventListener("click", () => {
+      const files = Array.from(filesInput.files || []);
+      const rawTarget = parseFloat(targetSecondsInput.value || "0");
+
+      if (!files.length) {
+        statusText.textContent = "Välj minst en fil först.";
+        statusText.style.color = "#f97373";
+        return;
+      }
+
+      let target = isNaN(rawTarget) || rawTarget <= 0 ? 10 : rawTarget;
+
+      // Om Marvel-intro: sätt förslag 4 sek om användaren satt något tokigt
+      if (selectedStyle === "marvel_intro" && (rawTarget <= 0 || rawTarget > 8)) {
+        target = 4;
+      }
+
+      const plan = buildPlanForStyle({
+        files,
+        style: selectedStyle,
+        targetSeconds: target
+      });
+
+      // uppdatera UI
+      pillFiles.innerHTML = "📂 <span>Filer: " + files.length + "</span>";
+      pillDuration.innerHTML = "⏱️ <span>Total: " + plan.totalDuration.toFixed(2) + " s</span>";
+
+      statusText.style.color = "#9ca3af";
+      statusText.textContent = "Plan skapad – detta är vad Kenai/AI skulle skicka som plan.json till backend.";
+
+      planPreview.textContent = JSON.stringify(plan, null, 2);
+    });
+
+    function buildPlanForStyle({ files, style, targetSeconds }) {
+      const count = files.length;
+      const clips = [];
+      let clipDuration = targetSeconds / count;
+
+      if (style === "marvel_intro") {
+        // Marvel: korta klipp, max 0.18 s, minst 0.06 s
+        let ideal = targetSeconds / count;
+        let perClip = Math.min(0.18, Math.max(0.06, ideal));
+        let mainDuration = perClip * count;
+        // reservera 1 sekund för logga/outro om det får plats
+        let outroDuration = targetSeconds >= 3 ? 1.0 : 0.0;
+        let total = mainDuration + outroDuration;
+
+        // Om total blev längre än target -> justera ned perClip lite
+        if (total > targetSeconds && mainDuration > 0) {
+          const over = total - targetSeconds;
+          const adjust = over / count;
+          perClip = Math.max(0.05, perClip - adjust);
+          mainDuration = perClip * count;
+          total = mainDuration + outroDuration;
+        }
+
+        files.forEach((file, index) => {
+          clips.push({
+            index,
+            filename: file.name,
+            type: file.type.startsWith("video") ? "video" : "image",
+            duration: parseFloat(perClip.toFixed(3))
+          });
+        });
+
+        const segments = [
+          {
+            type: "montage",
+            style: "marvel_intro",
+            totalDuration: parseFloat(mainDuration.toFixed(3)),
+            clipDuration: parseFloat(perClip.toFixed(3)),
+            clips
+          }
+        ];
+
+        if (outroDuration > 0) {
+          segments.push({
+            type: "logo_outro",
+            duration: parseFloat(outroDuration.toFixed(3)),
+            text: "KENAIREEL",
+            effect: "impact_glow"
+          });
+        }
+
+        return {
+          style,
+          totalDuration: parseFloat((mainDuration + outroDuration).toFixed(3)),
+          segments
+        };
+      }
+
+      if (style === "kenai_classic") {
+        // Placeholder-logik: t.ex. lite längre än Marvel, men ändå ganska punchy
+        let perClip = targetSeconds / count;
+        files.forEach((file, index) => {
+          clips.push({
+            index,
+            filename: file.name,
+            type: file.type.startsWith("video") ? "video" : "image",
+            duration: parseFloat(perClip.toFixed(3))
+          });
+        });
+
+        return {
+          style,
+          totalDuration: parseFloat(targetSeconds.toFixed(3)),
+          segments: [
+            {
+              type: "kenai_story",
+              totalDuration: parseFloat(targetSeconds.toFixed(3)),
+              clipDuration: parseFloat(perClip.toFixed(3)),
+              clips
+            }
+          ]
+        };
+      }
+
+      // BASIC fallback
+      clipDuration = targetSeconds / count;
+      files.forEach((file, index) => {
+        clips.push({
+          index,
+          filename: file.name,
+          type: file.type.startsWith("video") ? "video" : "image",
+          duration: parseFloat(clipDuration.toFixed(3))
+        });
+      });
+
+      return {
+        style,
+        totalDuration: parseFloat(targetSeconds.toFixed(3)),
+        segments: [
+          {
+            type: "basic",
+            totalDuration: parseFloat(targetSeconds.toFixed(3)),
+            clipDuration: parseFloat(clipDuration.toFixed(3)),
+            clips
+          }
+        ]
+      };
+    }
+  </script>
+</body>
+</html>
