@@ -1,729 +1,561 @@
 <!DOCTYPE html>
 <html lang="sv">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0"
-    />
-    <title>Kenai Reels Maker</title>
-    <style>
-      :root {
-        color-scheme: dark;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <title>Kenaireel – presets (Marvel & Tarantino)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #101828, #020617);
+      color: #e5e7eb;
+    }
+    h1, h2, h3 { margin: 0 0 12px; }
+    .app { max-width: 960px; margin: 0 auto; }
 
-      * {
-        box-sizing: border-box;
-      }
+    .card {
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.8);
+      margin-bottom: 20px;
+    }
 
-      body {
-        margin: 0;
-        min-height: 100vh;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-          "Segoe UI", sans-serif;
-        background: radial-gradient(circle at top left, #1f2937 0, #020617 45%, #000 100%);
-        color: #e5e7eb;
-        display: flex;
-        justify-content: center;
-        align-items: stretch;
-      }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #e0f2fe;
+      margin-bottom: 10px;
+    }
 
-      .page {
-        width: 100%;
-        max-width: 960px;
-        margin: 0 auto;
-        padding: 24px 16px 32px;
-      }
+    .badge span { font-size: 14px; }
 
-      h1 {
-        margin: 0 0 6px;
-        font-size: 1.75rem;
-      }
+    .preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
 
-      p {
-        margin: 0 0 10px;
-        color: #9ca3af;
-        font-size: 0.9rem;
-      }
+    .preset-btn {
+      flex: 1 1 160px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      padding: 10px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      background: rgba(15,23,42,0.9);
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      transition: all 0.15s ease;
+    }
+    .preset-btn strong { font-size: 13px; }
+    .preset-btn small { font-size: 11px; opacity: 0.75; }
 
-      .card {
-        background: radial-gradient(circle at top left, #111827 0, #020617 70%);
-        border-radius: 18px;
-        padding: 18px 18px 16px;
-        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.65);
-        border: 1px solid rgba(148, 163, 184, 0.16);
-        margin-bottom: 16px;
-      }
+    .preset-btn:hover {
+      border-color: rgba(56, 189, 248, 0.7);
+      transform: translateY(-1px);
+    }
 
-      label {
-        font-size: 0.85rem;
-        color: #9ca3af;
-        display: block;
-        margin-bottom: 4px;
-      }
+    .preset-btn.active {
+      border-color: rgb(56, 189, 248);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.5);
+      background: radial-gradient(circle at top left, rgba(56,189,248,0.2), rgba(15,23,42,0.95));
+    }
 
-      input[type="file"],
-      select {
-        width: 100%;
-        max-width: 260px;
-        font-size: 0.9rem;
-        padding: 7px 9px;
-        border-radius: 999px;
-        border: 1px solid rgba(148, 163, 184, 0.4);
-        background: rgba(15, 23, 42, 0.9);
-        color: #e5e7eb;
-        outline: none;
-      }
+    label {
+      font-size: 13px;
+      display: block;
+      margin-bottom: 4px;
+      color: #9ca3af;
+    }
 
-      input[type="file"] {
-        padding: 6px 9px;
-      }
+    input[type="number"],
+    input[type="file"] {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      background: rgba(15, 23, 42, 0.8);
+      color: #e5e7eb;
+      font-size: 13px;
+    }
+    input[type="number"]:focus,
+    input[type="file"]:focus {
+      outline: none;
+      border-color: rgb(56, 189, 248);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+    }
 
-      button {
-        border: none;
-        border-radius: 999px;
-        padding: 8px 18px;
-        font-size: 0.9rem;
-        font-weight: 500;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        transition: transform 0.08s ease, box-shadow 0.08s ease,
-          opacity 0.08s ease, filter 0.08s ease;
-      }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .row > div { flex: 1 1 200px; }
 
-      button:active {
-        transform: translateY(1px) scale(0.99);
-        box-shadow: none;
-        filter: brightness(0.96);
-      }
+    button.primary {
+      border-radius: 999px;
+      border: none;
+      padding: 10px 18px;
+      font-size: 14px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #22d3ee, #6366f1);
+      color: white;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 15px 35px rgba(37, 99, 235, 0.5);
+      margin-top: 8px;
+    }
+    button.primary:disabled {
+      opacity: 0.4;
+      cursor: default;
+      box-shadow: none;
+    }
 
-      button:disabled {
-        opacity: 0.45;
-        cursor: default;
-        transform: none;
-        box-shadow: none;
-        filter: none;
-      }
+    .small-muted {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
 
-      #uploadBtn {
-        background: linear-gradient(135deg, #f97316, #f97316 40%, #fb7185);
-        color: #111827;
-        box-shadow: 0 12px 30px rgba(248, 113, 113, 0.35);
-      }
+    .plan-preview {
+      font-size: 13px;
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 12px;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      padding: 10px 12px;
+      max-height: 260px;
+      overflow: auto;
+      white-space: pre;
+    }
 
-      #buildReelBtn {
-        background: linear-gradient(135deg, #f97316, #ec4899);
-        color: #111827;
-        box-shadow: 0 12px 30px rgba(236, 72, 153, 0.45);
-      }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid rgba(156, 163, 175, 0.7);
+      color: #e5e7eb;
+      margin-right: 6px;
+      margin-bottom: 4px;
+    }
+    .pill span { opacity: 0.8; }
 
-      .log {
-        background: rgba(15, 23, 42, 0.9);
-        border-radius: 14px;
-        padding: 10px 12px;
-        font-size: 0.78rem;
-        line-height: 1.5;
-        color: #d1d5db;
-        border: 1px solid rgba(55, 65, 81, 0.9);
-        max-height: 210px;
-        overflow-y: auto;
-      }
+    .pill-style   { border-color: rgba(56,189,248,0.7); color: #e0f2fe; }
+    .pill-files   { border-color: rgba(34,197,94,0.7);  color: #bbf7d0; }
+    .pill-duration{ border-color: rgba(245,158,11,0.7); color: #fef3c7; }
 
-      .section-label {
-        font-size: 0.8rem;
-        color: #9ca3af;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        margin-bottom: 6px;
-      }
-
-      .row {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: flex-end;
-        gap: 10px;
-        margin: 8px 0 10px;
-      }
-
-      .footer {
-        margin-top: 16px;
-        font-size: 0.75rem;
-        color: #6b7280;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-
-      .badge-pill {
-        border-radius: 999px;
-        padding: 3px 9px;
-        background: rgba(15, 23, 42, 0.95);
-        border: 1px solid rgba(55, 65, 81, 0.9);
-        font-size: 0.72rem;
-      }
-
-      a {
-        color: #38bdf8;
-        text-decoration: none;
-      }
-
-      a:hover {
-        text-decoration: underline;
-      }
-
-      @media (max-width: 640px) {
-        .page {
-          padding: 18px 10px 24px;
-        }
-
-        h1 {
-          font-size: 1.4rem;
-        }
-
-        .card {
-          padding: 14px 13px 13px;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="page">
-      <header style="margin-bottom: 14px">
-        <h1>Kenai Reels Maker</h1>
-        <p>Ladda upp klipp → få en enkel reel-plan med tider.</p>
-      </header>
-
-      <!-- 1. MATERIAL -->
-      <div class="card">
-        <div class="section-label">1. Material</div>
-
-        <div class="row">
-          <div>
-            <label for="files">Bilder / videoklipp</label>
-            <input id="files" type="file" multiple />
-          </div>
-
-          <div>
-            <label for="targetLength">Mål-längd</label>
-            <select id="targetLength">
-              <option value="30" selected>30 sek</option>
-              <option value="60">60 sek</option>
-              <option value="90">90 sek</option>
-            </select>
-          </div>
-
-          <div style="margin-top: 22px">
-            <button id="uploadBtn" onclick="startUpload()">
-              ⬆️
-              <span>Ladda upp</span>
-            </button>
-          </div>
-        </div>
-
-        <div id="uploadStatus" class="log">
-          Redo. Välj klipp och klicka &quot;Ladda upp&quot;.
-        </div>
+    @media (max-width: 640px) {
+      body { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <div class="badge">
+        <span>🚀</span>
+        <span>Kenaireel – presets</span>
       </div>
-
-      <!-- 2. REEL-PLAN -->
-      <div class="card">
-        <div class="section-label">2. Reel-plan</div>
-
-        <div style="margin: 8px 0 10px">
-          <button id="buildReelBtn" onclick="buildReel()" disabled>
-            🔥
-            <span>Bygg min reel-plan</span>
-          </button>
-        </div>
-
-        <div
-          id="reelResult"
-          class="log"
-          style="margin-top: 4px; font-size: 0.86rem"
-        >
-          Inget byggt ännu. Ladda upp först.
-        </div>
-      </div>
-
-      <div class="footer">
-        <div>
-          Reels backend:
-          <code>https://snipp-ai-1.onrender.com</code>
-        </div>
-        <div>
-          <span id="backendStatus" class="badge-pill">backend...</span>
-        </div>
-      </div>
+      <h1 style="font-size: 22px; margin-bottom: 4px;">Kenai Reels Maker (Marvel & Tarantino-demo)</h1>
+      <p style="font-size: 13px; color:#9ca3af; margin:0 0 4px;">
+        Här kan du testa hur Kenai planerar reels: ladda in sommarbilder, välj stil (Marvel, Tarantino eller Kenai)
+        och få en AI-plan med klipplängder.
+      </p>
+      <p style="font-size: 12px; color:#6b7280; margin:0;">
+        Steg 1: Välj preset &amp; filer → Steg 2: Skapa plan → Steg 3: Skicka planen till backend (test).
+      </p>
     </div>
 
-   <script>
-// ====== KONFIG ======
-const BACKEND_BASE = "https://snipp-ai-1.onrender.com";
-
-const SB_URL ='https://hywwzzzxgagqhlxooekz.supabase.co'; 
-const SB_ANON ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
-
-const BUCKET = "audio";
-const MAX_TOTAL_SECONDS = 90;
-
-const fileInput = document.getElementById("files");
-const lengthSelect = document.getElementById("targetLength");
-const uploadStatusEl = document.getElementById("uploadStatus");
-const buildBtn = document.getElementById("buildReelBtn");
-const reelResultEl = document.getElementById("reelResult");
-
-function htmlEscape(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function formatSeconds(sec) {
-  sec = Math.round(sec || 0);
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  if (m <= 0) return `${s}s`;
-  return `${m}m ${s}s`;
-}
-
-function setStatus(msg) {
-  uploadStatusEl.innerHTML = msg;
-}
-
-function appendStatus(msg) {
-  uploadStatusEl.innerHTML += "<br>" + msg;
-}
-
-function setResult(msg) {
-  reelResultEl.innerHTML = htmlEscape(msg).replace(/\n/g, "<br>");
-}
-
-// ====== STEG 1: Ladda upp & skapa plan.json ======
-window.startUpload = async function startUpload() {
-  const files = fileInput.files;
-  if (!files || !files.length) {
-    setStatus("Välj minst ett klipp först.");
-    return;
-  }
-
-  if (
-    !SB_URL ||
-    !SB_ANON ||
-    SB_URL.includes("YOUR_PROJECT_ID") ||
-    SB_ANON === "YOUR_PUBLIC_ANON_KEY"
-  ) {
-    setStatus("SB_URL / SB_ANON saknas i koden (längst ned i reels.html).");
-    return;
-  }
-
-  const targetSec = parseInt(lengthSelect.value, 10) || 30;
-  const sessionId = "reel_" + Date.now();
-  window.KENAI_LAST_REELS_SESSION = sessionId;
-  buildBtn.disabled = true;
-  setResult("Inget byggt ännu. Du kan bygga efter uppladdning.");
-
-  let totalDuration = 0;
-  const planClips = [];
-
-  setStatus(`Startar uppladdning… Session: ${htmlEscape(sessionId)}`);
-
-   for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-
-    // Originalfilnamn från input
-    const originalName = file.name || `clip_${i}`;
-
-    // Plocka ut extension (t.ex. "png")
-    const extMatch = originalName.match(/\.([a-zA-Z0-9]+)$/);
-    const ext = extMatch ? extMatch[1].toLowerCase() : "dat";
-
-    // Gör ett "säkert" namn: bara a–z, 0–9, _, -
-    const base = originalName
-      .replace(/\.[^/.]+$/, "") // ta bort extension
-      .normalize("NFKD")
-      .replace(/[\u0300-\u036f]/g, "") // ta bort accent/åäö etc
-      .replace(/[^a-zA-Z0-9_-]/g, "_");
-
-    const safeName = `${base || "clip_" + i}.${ext}`;
-
-    const type =
-      ext === "png" ||
-      ext === "jpg" ||
-      ext === "jpeg" ||
-      ext === "webp" ||
-      ext === "gif"
-        ? "image"
-        : "video";
-
-    let clipDuration = 10;
-    if (totalDuration + clipDuration > MAX_TOTAL_SECONDS) {
-      clipDuration = Math.max(0, MAX_TOTAL_SECONDS - totalDuration);
-    }
-    if (clipDuration <= 0) {
-      appendStatus(
-        `⏭️ Hoppar över ${htmlEscape(
-          originalName
-        )} (max ${MAX_TOTAL_SECONDS}s totalt).`
-      );
-      continue;
-    }
-
-    totalDuration += clipDuration;
-
-    const storagePath = `reels/${sessionId}/${safeName}`;
-    const uploadUrl = `${SB_URL}/storage/v1/object/${BUCKET}/${storagePath}`;
-
-    appendStatus(`⬆️ Laddar upp ${htmlEscape(originalName)} som ${htmlEscape(safeName)}…`);
-
-    try {
-      const resp = await fetch(uploadUrl, {
-        method: "POST",
-        headers: {
-          apikey: SB_ANON,
-          authorization: `Bearer ${SB_ANON}`,
-          "x-upsert": "true"
-        },
-        body: file
-      });
-
-      if (!resp.ok) {
-        const text = await resp.text().catch(() => "");
-        appendStatus(
-          `❌ Kunde inte ladda upp ${htmlEscape(
-            originalName
-          )} (${resp.status}). ${htmlEscape(text)}`
-        );
-        continue;
-      }
-
-      appendStatus(`✅ Uppladdad: ${htmlEscape(safeName)}`);
-
-      planClips.push({
-        file: safeName,    // vi sparar det säkra namnet i planen
-        type,
-        duration: clipDuration
-      });
-    } catch (err) {
-      appendStatus(
-        `❌ Fel vid uppladdning av ${htmlEscape(originalName)}: ${htmlEscape(
-          err.message
-        )}`
-      );
-    }
-  }
-
-
-  if (!planClips.length) {
-    appendStatus("Inga klipp i planen (allt hoppades över).");
-    return;
-  }
-
-  const plan = {
-    sessionId,
-    createdAt: new Date().toISOString(),
-    targetDuration: targetSec,
-    totalDuration,
-    maxTotalSeconds: MAX_TOTAL_SECONDS,
-    clips: planClips
-  };
-
-  const planJson = JSON.stringify(plan, null, 2);
-  const planPath = `reels/${sessionId}/plan.json`;
-  const planUploadUrl = `${SB_URL}/storage/v1/object/${encodeURIComponent(
-    BUCKET
-  )}/${encodeURIComponent(planPath)}`;
-
-  appendStatus("💾 Sparar plan.json…");
-
-  try {
-    const planResp = await fetch(planUploadUrl, {
-      method: "POST",
-      headers: {
-        apikey: SB_ANON,
-        authorization: `Bearer ${SB_ANON}`,
-        "content-type": "application/json",
-        "x-upsert": "true"
-      },
-      body: planJson
-    });
-
-    if (!planResp.ok) {
-      const text = await planResp.text().catch(() => "");
-      appendStatus(
-        `❌ Kunde inte spara plan.json (${planResp.status}). ${htmlEscape(
-          text
-        )}`
-      );
-      return;
-    }
-
-    const publicPlanUrl = `${SB_URL}/storage/v1/object/public/${BUCKET}/reels/${sessionId}/plan.json`;
-
-    appendStatus(
-      `Plan sparad (${formatSeconds(
-        totalDuration
-      )}, ${planClips.length} klipp). <a href="${publicPlanUrl}" target="_blank">plan.json</a>`
-    );
-
-    buildBtn.disabled = false;
-    setResult("Uppladdning klar. Klicka \"Bygg min reel-plan\".");
-  } catch (err) {
-    appendStatus(
-      `❌ Något gick fel när plan.json skulle sparas: ${htmlEscape(
-        err.message
-      )}`
-    );
-  }
-};
-
-// ====== STEG 2: Be backend läsa plan.json ======
-window.buildReel = async function buildReel() {
-  const sessionId = window.KENAI_LAST_REELS_SESSION;
-
-  if (!sessionId) {
-    setResult("Ingen reel-session hittades. Ladda upp klipp först.");
-    return;
-  }
-
-  setResult("Bygger reel-plan, vänta…");
-  buildBtn.disabled = true;
-
-  try {
-    const resp = await fetch(`${BACKEND_BASE}/api/build-reel`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId })
-    });
-
-    let data;
-    try {
-      data = await resp.json();
-    } catch (e) {
-      throw new Error("Kunde inte läsa JSON-svar.");
-    }
-
-    console.log("build-reel response:", data);
-
-    if (!resp.ok || !data.ok) {
-      setResult(
-        "Kunde inte bygga plan:\n" +
-          (data && data.error ? data.error : `HTTP ${resp.status}`) +
-          (data && data.url ? "\nURL: " + data.url : "")
-      );
-      return;
-    }
-
-    const count = data.files ? data.files.length : 0;
-    const basePublic = data.basePublic || "(okänd URL)";
-    const totalDur = data.totalDuration || 0;
-
-    let html =
-      "✅ Reel-plan hämtad för <b>" +
-      htmlEscape(sessionId) +
-      "</b><br>" +
-      "Klipp: <b>" +
-      count +
-      "</b><br>" +
-      "Total längd: <b>" +
-      htmlEscape(formatSeconds(totalDur)) +
-      "</b><br>" +
-      "Bas-URL:<br><code>" +
-      htmlEscape(basePublic) +
-      "</code>";
-
-    if (Array.isArray(data.files) && data.files.length) {
-      html += "<br><br><b>Klipp:</b><br><ol>";
-      for (const f of data.files) {
-        const idx =
-          typeof f.index === "number" ? f.index + 1 : data.files.indexOf(f) + 1;
-        html +=
-          "<li>" +
-          htmlEscape(String(idx) + ". ") +
-          htmlEscape(f.file || "") +
-          " – " +
-          htmlEscape(f.type || "?") +
-          (f.duration
-            ? " (" + htmlEscape(formatSeconds(f.duration)) + ")"
-            : "") +
-          "</li>";
-      }
-      html += "</ol>";
-    }
-
-    html +=
-      "<br><b>Obs:</b> Den här versionen bygger bara plan (ingen video).";
-
-    reelResultEl.innerHTML = html;
-  } catch (err) {
-    console.error(err);
-    setResult("Något gick fel med build-reel: " + err.message);
-  } finally {
-    buildBtn.disabled = false;
-  }
-};
-
-// ====== Health-check badge ======
-async function checkBackend() {
-  const badge = document.getElementById("backendStatus");
-  try {
-    const resp = await fetch(`${BACKEND_BASE}/api/health`);
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-    const data = await resp.json();
-    console.log("health:", data);
-    badge.textContent = "backend OK";
-    badge.style.backgroundColor = "#0b9444";
-    badge.style.color = "#e5e7eb";
-  } catch (e) {
-    badge.textContent = "backend OFFLINE";
-    badge.style.backgroundColor = "#b91c1c";
-    badge.style.color = "#fee2e2";
-  }
-}
-
-checkBackend();
-</script>
-        <!-- Kenai Reels – trendidéer & hashtags -->
-   <section id="trend-tools" style="margin-top: 2rem; padding: 1rem; border-top: 1px solid #333;">
-    <h2>Trend-idéer & hashtags</h2>
-    <p style="font-size: 0.9rem; opacity: 0.8;">
-        Skriv kort om din nisch/målgrupp och klicka sedan på knappen för att hämta idéer & hashtags.
-        T.ex. "svensk tiktok, gym, pengar, motivation".
-    </p>
-
-    <label for="trendNiche" style="display:block; font-size: 0.85rem; margin-top: 0.5rem; opacity: 0.9;">
-        Din nisch / målgrupp:
-    </label>
-    <input
-        id="trendNiche"
-        type="text"
-        placeholder="svensk tiktok, gym, pengar, motivation"
-        style="width: 100%; margin-top: 0.25rem; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid #333; background: #050712; color: #fff; font-size: 0.9rem;"
-    />
-
-    <button id="fetchTrendsBtn" style="margin-top: 0.75rem; padding: 0.5rem 1rem; cursor: pointer;">
-        Hämta trend-idéer
-    </button>
-
-    <div id="trendResults" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 1rem;">
-        <!-- Här fylls trenderna in via JS -->
+    <!-- 1. Välj preset -->
+    <div class="card">
+      <h2 style="font-size: 16px; margin-bottom: 8px;">1. Välj reel-stil</h2>
+      <div class="preset-row">
+        <button class="preset-btn active" data-style="basic">
+          <strong>Basic</strong>
+          <small>Jämn längd per klipp, ingen magi.</small>
+        </button>
+        <button class="preset-btn" data-style="marvel_intro">
+          <strong>Marvel-reel</strong>
+          <small>Snabb intro/reklam, 3–5 sek, korta klipp + logga.</small>
+        </button>
+        <button class="preset-btn" data-style="tarantino_cut">
+          <strong>Tarantino-cut</strong>
+          <small>Non-linear, smash cuts, lång opening shot.</small>
+        </button>
+        <button class="preset-btn" data-style="kenai_classic">
+          <strong>Kenaireel Classic</strong>
+          <small>Placeholder för din egen Kenai-stil.</small>
+        </button>
+      </div>
+      <p class="small-muted" id="styleDescription">
+        Stil: <strong>Basic</strong> – bra för test. Marvel/Tarantino/Kenai ger olika klippkänsla.
+      </p>
     </div>
-</section>
 
+    <!-- 2. Filer & mål-längd -->
+    <div class="card">
+      <h2 style="font-size: 16px; margin-bottom: 8px;">2. Lägg till klipp &amp; längd</h2>
+      <div class="row">
+        <div>
+          <label for="files">Bilder/filmer (lokalt, laddas ej upp än)</label>
+          <input id="files" type="file" multiple accept="image/*,video/*" />
+          <div class="small-muted">
+            Välj några sommarbilder/klipp som vi kan planera reelen med.
+          </div>
+        </div>
+        <div>
+          <label for="targetSeconds">Mål-längd (sekunder)</label>
+          <input id="targetSeconds" type="number" min="1" max="90" value="10" />
+          <div class="small-muted">
+            Marvel/Tarantino brukar ligga runt 3–8 sek. Basic kan vara längre.
+          </div>
+        </div>
+      </div>
+      <button id="buildPlanBtn" class="primary">
+        ⚙️ Skapa reel-plan (demo)
+      </button>
+      <button id="sendPlanBtn" class="primary" style="margin-left:8px;" disabled>
+        📡 Skicka planen till backend (test)
+      </button>
+      <div class="small-muted" id="statusText"></div>
+    </div>
 
-    <script>
-    // Kenai Reels – hämta trender (YouTube + AI + nisch) från /api/trends
-    document.addEventListener("DOMContentLoaded", () => {
-        const btn = document.getElementById("fetchTrendsBtn");
-        const container = document.getElementById("trendResults");
-        const nicheInput = document.getElementById("trendNiche");
+    <!-- 3. Plan-preview -->
+    <div class="card">
+      <h2 style="font-size: 16px; margin-bottom: 8px;">3. Förhandsgranska plan (vad AI skulle göra)</h2>
+      <div style="margin-bottom:8px;">
+        <span class="pill pill-style" id="pillStyle">
+          🎬 <span>Stil: Basic</span>
+        </span>
+        <span class="pill pill-files" id="pillFiles">
+          📂 <span>Filer: 0</span>
+        </span>
+        <span class="pill pill-duration" id="pillDuration">
+          ⏱️ <span>Total: 0.0 s</span>
+        </span>
+      </div>
+      <div id="planPreview" class="plan-preview">
+        Ingen plan ännu. Välj stil, filer och klicka på “Skapa reel-plan”.
+      </div>
+      <p class="small-muted">
+        Senare kan vi spara detta som <code>plan.json</code> och låta backend bygga den riktiga videon.
+      </p>
+    </div>
+  </div>
 
-        if (!btn || !container) return;
+  <script>
+    // --- STATE ---
+    let selectedStyle = "basic";
+    let lastPlan = null;
 
-        btn.addEventListener("click", async () => {
-            btn.disabled = true;
-            const originalText = btn.textContent;
-            btn.textContent = "Hämtar...";
-            container.textContent = "Hämtar trender...";
+    const presetButtons   = Array.from(document.querySelectorAll(".preset-btn"));
+    const styleDescriptionEl = document.getElementById("styleDescription");
+    const filesInput      = document.getElementById("files");
+    const targetSecondsInput = document.getElementById("targetSeconds");
+    const buildPlanBtn    = document.getElementById("buildPlanBtn");
+    const sendPlanBtn     = document.getElementById("sendPlanBtn");
+    const statusText      = document.getElementById("statusText");
+    const planPreview     = document.getElementById("planPreview");
+    const pillStyle       = document.getElementById("pillStyle");
+    const pillFiles       = document.getElementById("pillFiles");
+    const pillDuration    = document.getElementById("pillDuration");
 
-            try {
-                const niche = nicheInput ? nicheInput.value.trim() : "";
-                const url = niche
-                    ? `/api/trends?niche=${encodeURIComponent(niche)}`
-                    : "/api/trends";
+    // --- PRESET HANDLING ---
+    presetButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const style = btn.getAttribute("data-style");
+        selectedStyle = style;
 
-                const res = await fetch(url);
-                if (!res.ok) throw new Error("Fel från servern");
+        presetButtons.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
 
-                const data = await res.json();
+        let desc = "";
+        if (style === "basic") {
+          desc = "Stil: Basic – klipper upp jämnt per klipp, bra för test.";
+        } else if (style === "marvel_intro") {
+          desc = "Stil: Marvel-reel – kort, snabb intro/reklam (3–5 sek) med snabba klipp och logga i slutet.";
+        } else if (style === "tarantino_cut") {
+          desc = "Stil: Tarantino-cut – längre opening shot, sen non-linear smash cuts mellan klippen.";
+        } else if (style === "kenai_classic") {
+          desc = "Stil: Kenaireel Classic – placeholder för din unika Kenai-stil (mix av story + tempo).";
+        }
+        styleDescriptionEl.innerHTML = desc;
+        pillStyle.innerHTML = "🎬 <span>Stil: " + prettyStyleName(style) + "</span>";
+      });
+    });
 
-                if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
-                    container.textContent = "Inga trender hittades.";
-                    return;
-                }
+    function prettyStyleName(style) {
+      if (style === "basic") return "Basic";
+      if (style === "marvel_intro") return "Marvel-reel";
+      if (style === "tarantino_cut") return "Tarantino-cut";
+      if (style === "kenai_classic") return "Kenaireel Classic";
+      return style;
+    }
 
-                container.innerHTML = data.items
-                    .map((item, index) => {
-                        const title = item.title || "Okänd titel";
-                        const idea = item.idea || "";
-                        const hashtags = Array.isArray(item.hashtags)
-                            ? item.hashtags.join(" ")
-                            : "";
+    // --- BUILD PLAN (DEMO) ---
+    buildPlanBtn.addEventListener("click", () => {
+      const files = Array.from(filesInput.files || []);
+      const rawTarget = parseFloat(targetSecondsInput.value || "0");
 
-                        return `
-                            <div class="trend-item" style="border: 1px solid #333; padding: 0.75rem; border-radius: 8px; display: flex; flex-direction: column; gap: 0.5rem;">
-                                <div>
-                                    <h3 style="margin: 0 0 0.25rem 0;">${index + 1}. ${title}</h3>
-                                    <p style="margin: 0 0 0.5rem 0; font-size: 0.9rem;">${idea}</p>
-                                    <p style="margin: 0; font-size: 0.85rem;">
-                                        <strong>Hashtags:</strong> ${hashtags}
-                                    </p>
-                                </div>
-                                <div style="display: flex; justify-content: flex-end;">
-                                    <button
-                                        class="trend-copy-btn"
-                                        data-hashtags="${hashtags}"
-                                        style="font-size: 0.8rem; padding: 0.3rem 0.7rem; cursor: pointer; border-radius: 999px; border: 1px solid #555; background: #111;"
-                                    >
-                                        Kopiera hashtags
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                    })
-                    .join("");
+      if (!files.length) {
+        statusText.textContent = "Välj minst en fil först.";
+        statusText.style.color = "#f97373";
+        return;
+      }
 
-                // Lägg till click-handlers för "Kopiera hashtags"-knappar
-                const copyButtons = container.querySelectorAll(".trend-copy-btn");
+      let target = isNaN(rawTarget) || rawTarget <= 0 ? 10 : rawTarget;
 
-                copyButtons.forEach((copyBtn) => {
-                    copyBtn.addEventListener("click", async () => {
-                        const hashtagsText = copyBtn.dataset.hashtags || "";
-                        const originalBtnText = copyBtn.textContent;
+      if ((selectedStyle === "marvel_intro" || selectedStyle === "tarantino_cut") &&
+          (rawTarget <= 0 || rawTarget > 12)) {
+        target = 6;
+      }
 
-                        try {
-                            if (navigator.clipboard && navigator.clipboard.writeText) {
-                                await navigator.clipboard.writeText(hashtagsText);
-                            } else {
-                                // Fallback om Clipboard API inte finns
-                                const tempInput = document.createElement("textarea");
-                                tempInput.value = hashtagsText;
-                                document.body.appendChild(tempInput);
-                                tempInput.select();
-                                document.execCommand("copy");
-                                document.body.removeChild(tempInput);
-                            }
+      const plan = buildPlanForStyle({ files, style: selectedStyle, targetSeconds: target });
 
-                            copyBtn.disabled = true;
-                            copyBtn.textContent = "Kopierat!";
-                            setTimeout(() => {
-                                copyBtn.disabled = false;
-                                copyBtn.textContent = originalBtnText;
-                            }, 1200);
-                        } catch (e) {
-                            console.error("Kunde inte kopiera hashtags:", e);
-                            copyBtn.textContent = "Fel vid kopiering";
-                            setTimeout(() => {
-                                copyBtn.textContent = originalBtnText;
-                            }, 1500);
-                        }
-                    });
-                });
-            } catch (err) {
-                console.error(err);
-                container.textContent = "Kunde inte hämta trender just nu.";
-            } finally {
-                btn.disabled = false;
-                btn.textContent = originalText;
-            }
+      lastPlan = plan;
+      sendPlanBtn.disabled = false;
+
+      pillFiles.innerHTML    = "📂 <span>Filer: " + files.length + "</span>";
+      pillDuration.innerHTML = "⏱️ <span>Total: " + plan.totalDuration.toFixed(2) + " s</span>";
+
+      statusText.style.color = "#9ca3af";
+      statusText.textContent =
+        "Plan skapad – detta är vad Kenai/AI skulle skicka som plan.json till backend.";
+
+      planPreview.textContent = JSON.stringify(plan, null, 2);
+    });
+
+    function buildPlanForStyle({ files, style, targetSeconds }) {
+      const count = files.length;
+      const clips = [];
+      let clipDuration = targetSeconds / count;
+
+      // MARVEL INTRO
+      if (style === "marvel_intro") {
+        let ideal = targetSeconds / count;
+        let perClip = Math.min(0.18, Math.max(0.06, ideal));
+        let mainDuration = perClip * count;
+        let outroDuration = targetSeconds >= 3 ? 1.0 : 0.0;
+        let total = mainDuration + outroDuration;
+
+        if (total > targetSeconds && mainDuration > 0) {
+          const over = total - targetSeconds;
+          const adjust = over / count;
+          perClip = Math.max(0.05, perClip - adjust);
+          mainDuration = perClip * count;
+          total = mainDuration + outroDuration;
+        }
+
+        files.forEach((file, index) => {
+          clips.push({
+            index,
+            filename: file.name,
+            type: file.type.startsWith("video") ? "video" : "image",
+            duration: parseFloat(perClip.toFixed(3))
+          });
         });
-    });
-</script>
 
+        const segments = [
+          {
+            type: "montage",
+            style: "marvel_intro",
+            totalDuration: parseFloat(mainDuration.toFixed(3)),
+            clipDuration: parseFloat(perClip.toFixed(3)),
+            clips
+          }
+        ];
+
+        if (outroDuration > 0) {
+          segments.push({
+            type: "logo_outro",
+            duration: parseFloat(outroDuration.toFixed(3)),
+            text: "KENAIREEL",
+            effect: "impact_glow"
+          });
+        }
+
+        return {
+          style,
+          totalDuration: parseFloat((mainDuration + outroDuration).toFixed(3)),
+          segments
+        };
+      }
+
+      // TARANTINO CUT
+      if (style === "tarantino_cut") {
+        if (count === 1) {
+          const only = files[0];
+          const d = parseFloat(targetSeconds.toFixed(3));
+          clips.push({
+            index: 0,
+            filename: only.name,
+            type: only.type.startsWith("video") ? "video" : "image",
+            duration: d
+          });
+          return {
+            style,
+            totalDuration: d,
+            segments: [
+              {
+                type: "tarantino_cut",
+                mode: "single_shot",
+                colorGrade: "high_contrast",
+                transition: "slow_push_in",
+                totalDuration: d,
+                clips
+              }
+            ]
+          };
+        }
+
+        const pivotIndex = Math.floor(count / 2);
+        const introDuration = Math.min(3, targetSeconds * 0.4);
+        const remaining = Math.max(0.5, targetSeconds - introDuration);
+        const perOther = remaining / (count - 1);
+
+        const indices = [...Array(count).keys()];
+        indices.splice(pivotIndex, 1);
+        for (let i = indices.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
+        const order = [pivotIndex, ...indices];
+
+        order.forEach((idx, orderPos) => {
+          const file = files[idx];
+          const isIntro = orderPos === 0;
+          const dur = isIntro ? introDuration : perOther;
+          clips.push({
+            index: idx,
+            filename: file.name,
+            type: file.type.startsWith("video") ? "video" : "image",
+            role: isIntro ? "opening_shot" : "smash_cut",
+            duration: parseFloat(dur.toFixed(3))
+          });
+        });
+
+        const total = introDuration + perOther * (count - 1);
+
+        return {
+          style,
+          totalDuration: parseFloat(total.toFixed(3)),
+          segments: [
+            {
+              type: "tarantino_cut",
+              narrativeMode: "non_linear",
+              colorGrade: "high_contrast",
+              transition: "smash_cut",
+              totalDuration: parseFloat(total.toFixed(3)),
+              clips,
+              playOrder: order
+            }
+          ]
+        };
+      }
+
+      // KENAIREEL CLASSIC (placeholder)
+      if (style === "kenai_classic") {
+        let perClip = targetSeconds / count;
+        files.forEach((file, index) => {
+          clips.push({
+            index,
+            filename: file.name,
+            type: file.type.startsWith("video") ? "video" : "image",
+            duration: parseFloat(perClip.toFixed(3))
+          });
+        });
+
+        return {
+          style,
+          totalDuration: parseFloat(targetSeconds.toFixed(3)),
+          segments: [
+            {
+              type: "kenai_story",
+              totalDuration: parseFloat(targetSeconds.toFixed(3)),
+              clipDuration: parseFloat(perClip.toFixed(3)),
+              clips
+            }
+          ]
+        };
+      }
+
+      // BASIC fallback
+      clipDuration = targetSeconds / count;
+      files.forEach((file, index) => {
+        clips.push({
+          index,
+          filename: file.name,
+          type: file.type.startsWith("video") ? "video" : "image",
+          duration: parseFloat(clipDuration.toFixed(3))
+        });
+      });
+
+      return {
+        style,
+        totalDuration: parseFloat(targetSeconds.toFixed(3)),
+        segments: [
+          {
+            type: "basic",
+            totalDuration: parseFloat(targetSeconds.toFixed(3)),
+            clipDuration: parseFloat(clipDuration.toFixed(3)),
+            clips
+          }
+        ]
+      };
+    }
+
+    // --- Skicka plan till backend (demo) ---
+    sendPlanBtn.addEventListener("click", async () => {
+      if (!lastPlan) {
+        statusText.style.color = "#f97373";
+        statusText.textContent = "Ingen plan att skicka – skapa en plan först.";
+        return;
+      }
+
+      statusText.style.color = "#9ca3af";
+      statusText.textContent = "Skickar planen till backend...";
+
+      try {
+        const res = await fetch("/api/reels-plan-demo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ plan: lastPlan })
+        });
+
+        if (!res.ok) {
+          throw new Error("Status " + res.status);
+        }
+
+        const data = await res.json();
+        statusText.style.color = "#4ade80";
+        statusText.textContent =
+          "Backend-svar: " + (data.message || "Plan mottagen ✅");
+      } catch (err) {
+        console.error("SEND PLAN ERROR:", err);
+        statusText.style.color = "#f97373";
+        statusText.textContent = "Kunde inte nå backend: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
