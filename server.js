@@ -11,7 +11,14 @@ import OpenAI from "openai";
 import PDFDocument from "pdfkit";
 
 dotenv.config();
+
+// 🔑 Skapa OpenAI-klienten (saknades – gav "client is not defined")
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
 const app = express();
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
