@@ -156,11 +156,17 @@ app.post("/api/trends-backend", async (req, res) => {
       }
     ];
 
-    // Skicka tillbaka i samma format som frontend förväntar sig
-    return res.json({ trends: mockTrends });
-  } catch (err) {
-    console.error("TRENDS ERROR:", err);
-    return res.status(500).json({ error: "Kunde inte generera trender" });
-  }
+      // Skicka tillbaka i samma format som frontend förväntar sig
+  return res.json({ trends: mockTrends });
+} catch (err) {
+  console.error("TRENDS ERROR:", err);
+  return res.status(500).json({ error: "Kunde inte generera trender" });
+}
 });
 
+// ---------------------- Starta servern ----------------------
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`[Kenai] Backend kör på port ${PORT}`);
+});
