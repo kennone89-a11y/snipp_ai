@@ -1040,73 +1040,58 @@ body {
   window.addEventListener("load", () => {
     const oldFn = window.summarizeAudio; // gamla funktionen
 
-    async function summarizeAudioNew() {
-      const input = document.getElementById("audioUrl");
-      const summaryBox = document.getElementById("summary");
+  // ================== AI: transkribera & sammanfatta (ny) ==================
+async function summarizeAudioNew(evt) {
+  if (evt && evt.preventDefault) evt.preventDefault();
 
-      if (!input) {
-        alert("Hittar inte fältet för ljudlänken. Ladda om sidan och testa igen.");
-        return;
-      }
+  const url = audioUrlInput.value.trim();
 
-      const url = (input.value || "").trim();
+  if (!url) {
+    alert(
+      "Ingen ljud-URL hittad.\n\nSpela in & ladda upp först, eller klistra in länken manuellt i rutan ovan."
+    );
+    return;
+  }
 
-      if (!url) {
-        alert("Ingen ljud-URL hittad. Spela in & ladda upp först så att länken hamnar i rutan.");
-        return;
-      }
+  if (summaryBox) {
+    summaryBox.value =
+      "Kenai tänker... transkriberar & sammanfattar ljudet åt dig...";
+  }
 
-      if (summaryBox) {
-        summaryBox.value = "Kenai tänker... transkriberar & sammanfattar ljudet...";
-      }
+  try {
+    const res = await fetch("/api/summarize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
 
-      try {
-        console.log("[Kenai] Skickar till /api/summarize:", url);
+    const data = await res.json();
 
-        // Skicka både 'url' och 'audioUrl' ifall backend förväntar något av dom
-        const payload = { url, audioUrl: url };
-
-        const res = await fetch("/api/summarize", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          const msg = data && data.error ? data.error : "Okänt fel från servern";
-          throw new Error(msg);
-        }
-
-        const text =
-          data.summary ||
-          data.text ||
-          data.fullSummary ||
-          (Array.isArray(data.chapters)
-            ? data.chapters
-                .map((c) => `• ${c.title}\n${c.summary || ""}`)
-                .join("\n\n")
-            : JSON.stringify(data, null, 2));
-
-        if (summaryBox) {
-          summaryBox.value = text;
-        } else {
-          alert("AI-svar mottaget, men text-rutan hittades inte.");
-          console.log("AI-svar:", text);
-        }
-      } catch (err) {
-        console.error("[Kenai] Summarize error (patch):", err);
-        if (summaryBox) {
-          summaryBox.value =
-            "AI-sammanfattning misslyckades:\n" + (err.message || String(err));
-        } else {
-          alert(
-            "AI-sammanfattning misslyckades: " + (err.message || String(err))
-          );
-        }
-      }
+    if (!res.ok) {
+      const msg = data.error || "Okänt fel från servern";
+      throw new Error(msg);
     }
+
+    const text =
+      data.summary ||
+      (typeof data === "string" ? data : JSON.stringify(data, null, 2));
+
+    if (summaryBox) {
+      summaryBox.value = text;
+    } else {
+      alert("AI-sammanfattning klar:\n\n" + text);
+    }
+  } catch (err) {
+    console.error("[Kenai] Summarize error:", err);
+    const msg = (err && err.message) || String(err);
+
+    if (summaryBox) {
+      summaryBox.value = "AI-sammanfattning misslyckades: " + msg;
+    } else {
+      alert("AI-sammanfattning misslyckades: " + msg);
+    }
+  }
+}
 
     // Byt ut lyssnaren på knappen: ta bort gamla funktionen, lägg till nya
     const btn = document.getElementById("btnSummarize");
