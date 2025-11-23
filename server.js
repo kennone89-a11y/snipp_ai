@@ -128,12 +128,7 @@ app.post("/api/export-pdf", async (req, res) => {
   }
 });
 
-// ===============================
-// 4. /api/send-summary-email – mock
-// ===============================
-// 3. /api/trends-backend – enkel mock
-// ===============================
-
+// 4. /api/trends-backend – enkel mock
 app.post("/api/trends-backend", async (req, res) => {
   try {
     const { niche } = req.body || {};
@@ -156,12 +151,36 @@ app.post("/api/trends-backend", async (req, res) => {
       }
     ];
 
-      // Skicka tillbaka i samma format som frontend förväntar sig
-  return res.json({ trends: mockTrends });
-} catch (err) {
-  console.error("TRENDS ERROR:", err);
-  return res.status(500).json({ error: "Kunde inte generera trender" });
-}
+    // Skicka tillbaka i samma format som frontend förväntar sig
+    return res.json({ trends: mockTrends });
+  } catch (err) {
+    console.error("TRENDS ERROR:", err);
+    return res.status(500).json({ error: "Kunde inte generera trender" });
+  }
+});
+
+// 5. /api/reels-plan-demo – tar emot plan från preset-demo (ingen riktig render ännu)
+app.post("/api/reels-plan-demo", async (req, res) => {
+  try {
+    const { plan } = req.body || {};
+
+    if (!plan) {
+      return res.status(400).json({ error: "Ingen plan mottagen" });
+    }
+
+    // Bara logga så vi ser att det funkar
+    console.log("[Reels-demo] Fick plan:", JSON.stringify(plan, null, 2));
+
+    return res.json({
+      ok: true,
+      message: "Plan mottagen i backend",
+      receivedStyle: plan.style || null,
+      totalDuration: plan.totalDuration || null
+    });
+  } catch (err) {
+    console.error("REELS PLAN DEMO ERROR:", err);
+    return res.status(500).json({ error: "Kunde inte ta emot plan" });
+  }
 });
 
 // ---------------------- Starta servern ----------------------
@@ -170,3 +189,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`[Kenai] Backend kör på port ${PORT}`);
 });
+
