@@ -1022,10 +1022,78 @@ body {
       }
     }
 
-    // ***** EVENT LISTENERS *****
- btnStart.addEventListener("click", startRecording);
- btnStop.addEventListener("click", stopRecording);
- btnUpload.addEventListener("click", uploadToSupabase);
- btnSummarize.addEventListener("click", summarizeAudio);
- btnPdf.addEventListener("click", exportPdf);
- btnEmail.addEventListener("click", sendEmail);
+   // ***** EVENT LISTENERS *****
+  btnStart.addEventListener("click", startRecording);
+  btnStop.addEventListener("click", stopRecording);
+  btnUpload.addEventListener("click", uploadToSupabase);
+  btnSummarize.addEventListener("click", summarizeAudio);
+  btnPdf.addEventListener("click", exportPdf);
+  btnEmail.addEventListener("click", sendEmail);
+</script>
+
+<div style="position:fixed;bottom:10px;right:10px;color:red;z-index:9999;font-weight:bold;">
+  DEBUG 123 – från public/recorder.html
+</div>
+
+<script>
+  // Ny version av summarizeAudio som skickar { url } till backend
+  async function summarizeAudio() {
+    const input = document.getElementById("audioUrl");
+    const summaryBox = document.getElementById("summary");
+
+    if (!input) {
+      alert("Hittar inte fältet för ljudlänken. Ladda om sidan och testa igen.");
+      return;
+    }
+
+    const url = (input.value || "").trim();
+
+    if (!url) {
+      alert("Ingen ljud-URL hittad. Spela in & ladda upp först så att länken hamnar i rutan.");
+      return;
+    }
+
+    if (summaryBox) {
+      summaryBox.value = "Kenai tänker... transkriberar & sammanfattar ljudet...";
+    }
+
+    try {
+      const res = await fetch("/api/summarize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        const msg = data && data.error ? data.error : "Okänt fel från servern";
+        throw new Error(msg);
+      }
+
+      const text =
+        data.summary ||
+        data.text ||
+        data.fullSummary ||
+        JSON.stringify(data, null, 2);
+
+      if (summaryBox) {
+        summaryBox.value = text;
+      } else {
+        alert("AI-svar mottaget, men text-rutan hittades inte.");
+        console.log("AI-svar:", text);
+      }
+    } catch (err) {
+      console.error("Summarize error:", err);
+      if (summaryBox) {
+        summaryBox.value =
+          "AI-sammanfattning misslyckades:\n" + (err.message || String(err));
+      } else {
+        alert("AI-sammanfattning misslyckades: " + (err.message || String(err)));
+      }
+    }
+  }
+</script>
+
+</body>
+</html>
