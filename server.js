@@ -1,286 +1,318 @@
-// server.js – Kenai backend (stabil version)
- 
-// ===============================
-// Imports & setup
-// ===============================
+// server.js – Kenai backend (ren, stabil version)
+
 import dotenv from "dotenv";
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 import OpenAI from "openai";
 import PDFDocument from "pdfkit";
 
 dotenv.config();
 
-// 🔑 Skapa OpenAI-klienten (saknades – gav "client is not defined")
+// --- OpenAI-klient ---
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// --- Grundsetup / paths ---
 const app = express();
-
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Enkel CORS-middleware utan paket
+// --- CORS utan paket ---
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept"
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
   );
   res.setHeader(
     "Access-Control-Allow-Methods",
-    "GET, POST, OPTIONS"
+    "GET, POST, PUT, PATCH, DELETE, OPTIONS"
   );
 
   if (req.method === "OPTIONS") {
     return res.sendStatus(200);
   }
-
   next();
 });
 
-app.use(express.json());
-app.use(express.static("public"));
+// --- Body-parsing ---
+app.use(express.json({ limit: "25mb" }));
+app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
+// --- Statiska filer (frontend) ---
+app.use(express.static(path.join(__dirname, "public")));
 
-// ===============================
-// 1. ROOT (index.html om du vill)
-// ===============================
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+// ----------------- Hjälpfunktioner -----------------
 
-// ===============================
-// 2. /api/summarize – ljud → text → sammanfattning
-// ===============================
-// --- AI-sammanfattning från ljud (ny version med gpt-4o-audio-preview) ---
-app.post("/api/summarize", async (req, res) => {
+/**
+ * Ladda ner en fil från URL till temporär fil.
+ * Returnerar den lokala sökvägen.
+ */
+async function downloadToTempFile(fileUrl, extension = ".webm") {
+  const tempDir = path.join(__dirname, "tmp");
+  await fs.promises.mkdir(tempDir, { recursive: true });
+
+  const tempPath = path.join(
+    tempDir,
+    `audio-${Date.now()}-${Math.random().toString(16).slice(2)}${extension}`
+  );
+
+  const response = await fetch(fileUrl);
+  if (!response.ok || !response.body) {
+    throw new Error(
+      `Kunde inte hämta fil från URL (status ${response.status})`
+    );
+  }
+
+  await new Promise((resolve, reject) => {
+    const fileStream = fs.createWriteStream(tempPath);
+    response.body.pipe(fileStream);
+    response.body.on("error", reject);
+    fileStream.on("finish", resolve);
+  });
+
+  return tempPath;
+}
+
+/**
+ * Gemensam logik för ljud → Whisper → GPT-sammanfattning
+ */
+async function handleSummarizeRequest(req, res) {
   try {
     const { url } = req.body || {};
 
-    if (!url || typeof url !== "string") {
-      console.error("[Kenai] /api/summarize – ingen URL i body.");
+    if (!url) {
+      console.error("[Kenai] summarize – ingen URL i body");
       return res.status(400).json({ error: "Ingen ljud-URL mottagen." });
     }
 
-    console.log("[Kenai] /api/summarize – fick URL:", url);
+    console.log("[Kenai] summarize – startar med URL:", url);
 
-    // 1) Hämta ljudfilen från Supabase
-    const audioRes = await fetch(url);
-    if (!audioRes.ok) {
-      console.error("[Kenai] Kunde inte hämta ljudfilen:", audioRes.status, audioRes.statusText);
-      return res
-        .status(400)
-        .json({ error: "Kunde inte hämta ljudfilen från Supabase." });
-    }
+    // 1) Ladda ner filen till temp
+    const tempPath = await downloadToTempFile(url, ".webm");
+    console.log("[Kenai] Fil nedladdad till:", tempPath);
 
-    const arrayBuffer = await audioRes.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const base64Audio = buffer.toString("base64");
+    // 2) Transkribera med Whisper
+    const transcription = await client.audio.transcriptions.create({
+      model: "whisper-1",
+      file: fs.createReadStream(tempPath),
+      response_format: "verbose_json",
+      temperature: 0,
+    });
 
-    // 2) Skicka in ljudet till GPT-4o audio-preview med input_audio
-    console.log("[Kenai] Skickar ljud till OpenAI (gpt-4o-audio-preview) ...");
+    const transcriptText = transcription.text || "";
+    console.log(
+      "[Kenai] Transkript klart, längd:",
+      transcriptText.length,
+      "tecken"
+    );
 
+    // 3) Sammanfatta med GPT
     const completion = await client.chat.completions.create({
-      model: "gpt-4o-audio-preview",
-      modalities: ["text"],
-      // audio-fältet styr egentligen TTS-utdata; vi ignorerar ljud-svaret.
-      audio: { voice: "alloy", format: "wav" },
+      model: "gpt-4o-mini",
+      temperature: 0.3,
       messages: [
         {
+          role: "system",
+          content:
+            "Du är en svensk assistent som sammanfattar ljudinspelningar. " +
+            "Skriv först en kort sammanfattning (2–4 meningar), " +
+            "sedan 3–7 punktlistor med de viktigaste sakerna, " +
+            "och avsluta med 'Nästa steg:' om det passar.",
+        },
+        {
           role: "user",
-          content: [
-            {
-              type: "text",
-              text:
-                "Du får en ljudfil som input_audio. " +
-                "1) Transkribera allt tal så exakt som möjligt på originalspråk (oftast svenska). " +
-                "2) Skriv sedan en tydlig sammanfattning på svenska (2–6 meningar). " +
-                'Svara EXAKT i JSON-format: {\"transcript\": \"...\", \"summary\": \"...\"} utan extra text.',
-            },
-            {
-              type: "input_audio",
-              input_audio: {
-                data: base64Audio,
-                // Våra filer är .webm från webbinspelaren
-                format: "webm",
-              },
-            },
-          ],
+          content: transcriptText || "Transkriptet är tomt.",
         },
       ],
     });
 
-    const choice = completion.choices?.[0];
-    let content = choice?.message?.content;
-
-    let text;
-    if (typeof content === "string") {
-      text = content;
-    } else if (Array.isArray(content)) {
-      // ibland returneras content som delar
-      text = content
-        .map((part) => (typeof part.text === "string" ? part.text : ""))
-        .join("");
-    } else {
-      text = JSON.stringify(content ?? "");
-    }
-
-    let transcript = "";
-    let summary = "";
-
-    try {
-      const parsed = JSON.parse(text);
-      transcript = parsed.transcript || "";
-      summary = parsed.summary || "";
-    } catch (jsonErr) {
-      console.warn("[Kenai] Kunde inte parsa JSON från modellen, returnerar råtext.");
-      summary = text;
-    }
-
-    if (!summary && !transcript) {
-      summary = "Kunde inte läsa något innehåll från modellen.";
-    }
-
-    console.log("[Kenai] /api/summarize – klar.");
+    const summary =
+      completion.choices?.[0]?.message?.content ||
+      "Kunde inte generera sammanfattning.";
 
     return res.json({
-      transcript,
+      ok: true,
+      transcript: transcriptText,
       summary,
     });
   } catch (err) {
     console.error("[Kenai] SUMMARY ERROR:", err);
-    return res.status(502).json({
-      error: "Serverfel vid AI-sammanfattning.",
-      detail: err?.message || String(err),
-    });
+    return res
+      .status(500)
+      .json({ error: "Serverfel vid AI-sammanfattning." });
   }
+}
+
+// ----------------- Routes -----------------
+
+// Enkel healthcheck
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true, time: new Date().toISOString() });
 });
 
+// --- AI-sammanfattning (alla tre pekar på samma logik) ---
+app.post("/api/summarize", handleSummarizeRequest);
+app.post("/api/summarize2", handleSummarizeRequest);
+app.post("/api/summarize3", handleSummarizeRequest);
 
-// ===============================
-// 3. /api/export-pdf – text → PDF
-// ===============================
-app.post("/api/export-pdf", async (req, res) => {
+// --- PDF-export av sammanfattning ---
+app.post("/api/export-pdf", (req, res) => {
   try {
-    const { text } = req.body;
+    const { text } = req.body || {};
+    const safeText = text || "Ingen sammanfattning mottagen.";
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", "attachment; filename=summary.pdf");
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="kenai-sammanfattning.pdf"'
+    );
 
     const doc = new PDFDocument();
     doc.pipe(res);
-    doc.fontSize(14).text(text || "");
+
+    doc.fontSize(18).text("Kenai – sammanfattning", { underline: true });
+    doc.moveDown();
+    doc.fontSize(12).text(safeText);
+
     doc.end();
   } catch (err) {
-    console.error("PDF ERROR:", err);
-    res.status(500).json({ error: "Kunde inte generera PDF" });
+    console.error("[Kenai] PDF ERROR:", err);
+    res.status(500).json({ error: "Kunde inte skapa PDF." });
   }
 });
 
-// 4. /api/trends-backend – enkel mock
+// --- Mock-mail (loggar bara, skickar inget på riktigt) ---
+app.post("/api/send-summary-email", async (req, res) => {
+  try {
+    const { email, text } = req.body || {};
+    console.log("[Kenai] mock-email →", email, "med text-längd:", (text || "")
+      .length);
+
+    // Här skulle riktig mail-integration ligga (SendGrid, etc)
+    return res.json({ ok: true, sent: false, mock: true });
+  } catch (err) {
+    console.error("[Kenai] EMAIL ERROR:", err);
+    res.status(500).json({ error: "Mail-funktionen misslyckades (mock)." });
+  }
+});
+
+// --- Reels preset-demo: tar emot plan och skickar tillbaka den ---
+app.post("/api/reels-plan-demo", async (req, res) => {
+  try {
+    const body = req.body || {};
+    console.log("[Kenai Reels] /api/reels-plan-demo request:", body);
+
+    // Vi gör bara en enkel "eko" + lite metadata
+    const items = Array.isArray(body.items) ? body.items : [];
+    const totalDuration = items.reduce(
+      (sum, item) => sum + (Number(item.duration) || 0),
+      0
+    );
+
+    const plan = {
+      style: body.style || "basic",
+      targetDuration: Number(body.targetDuration) || totalDuration || 10,
+      items,
+      totalDuration,
+      createdAt: new Date().toISOString(),
+    };
+
+    return res.json({ ok: true, plan });
+  } catch (err) {
+    console.error("[Kenai Reels] PLAN DEMO ERROR:", err);
+    res.status(500).json({ error: "Kunde inte skapa demo-plan." });
+  }
+});
+
+// --- Reels build-reel: läser plan.json från Supabase och summerar ---
+app.post("/api/build-reel", async (req, res) => {
+  try {
+    const { planUrl, plan } = req.body || {};
+    let reelPlan = plan;
+
+    if (!reelPlan && planUrl) {
+      console.log("[Kenai Reels] Hämtar plan från URL:", planUrl);
+      const response = await fetch(planUrl);
+      if (!response.ok) {
+        throw new Error("Kunde inte hämta plan.json från URL.");
+      }
+      reelPlan = await response.json();
+    }
+
+    if (!reelPlan) {
+      return res
+        .status(400)
+        .json({ error: "Ingen plan eller planUrl mottagen." });
+    }
+
+    const segments = Array.isArray(reelPlan.segments)
+      ? reelPlan.segments
+      : Array.isArray(reelPlan.items)
+      ? reelPlan.items
+      : [];
+
+    const clipCount = segments.length;
+    const totalDuration = segments.reduce(
+      (sum, seg) => sum + (Number(seg.duration) || 0),
+      0
+    );
+
+    const result = {
+      ok: true,
+      clipCount,
+      totalDuration,
+      plan: reelPlan,
+    };
+
+    return res.json(result);
+  } catch (err) {
+    console.error("[Kenai Reels] BUILD REEL ERROR:", err);
+    res.status(500).json({ error: "Kunde inte bygga reel-plan." });
+  }
+});
+
+// --- Trender & hashtags – enkel mock ---
 app.post("/api/trends-backend", async (req, res) => {
   try {
-    const { niche } = req.body || {};
+    const niche = (req.body?.niche || "").trim() || "din nisch";
 
     const mockTrends = [
       {
         title: "Snabb hook på 3 sekunder",
-        idea: `Börja med en stark fråga inom ${niche || "din nisch"} direkt första sekunden.`,
-        hashtags: "#kenai #reels #hook #viral"
+        idea: `Börja med en stark fråga inom ${niche} direkt första sekunden.`,
+        hashtags: "#kenai #reels #hook #viral",
       },
       {
         title: "Före / efter",
-        idea: `Visa ett kort "före" och direkt efter ett "efter" resultat inom ${niche || "din nisch"}.`,
-        hashtags: "#beforeafter #transformation #reels"
+        idea: `Visa ett kort "före" och direkt efter ett "efter" resultat inom ${niche}.`,
+        hashtags: "#beforeafter #transformation #reels",
       },
       {
         title: "1 grej du gör fel",
-        idea: `Berätta om ett vanligt misstag folk gör inom ${niche || "din nisch"} och hur man löser det.`,
-        hashtags: "#tips #mistakes #learn"
-      }
+        idea: `Berätta om ett vanligt misstag folk gör inom ${niche} och hur man löser det.`,
+        hashtags: "#tips #mistakes #learn",
+      },
     ];
 
-    // Skicka tillbaka i samma format som frontend förväntar sig
     return res.json({ trends: mockTrends });
   } catch (err) {
-    console.error("TRENDS ERROR:", err);
-    return res.status(500).json({ error: "Kunde inte generera trender" });
+    console.error("[Kenai] TRENDS ERROR:", err);
+    res.status(500).json({ error: "Kunde inte generera trender." });
   }
 });
 
-// 5. /api/reels-plan-demo – tar emot plan från preset-demo (ingen riktig render ännu)
-app.post("/api/reels-plan-demo", async (req, res) => {
-  try {
-    const { plan } = req.body || {};
-
-    if (!plan) {
-      return res.status(400).json({ error: "Ingen plan mottagen" });
-    }
-
-    console.log("[Reels-demo] Fick plan:", JSON.stringify(plan, null, 2));
-
-    return res.json({
-      ok: true,
-      message: "Plan mottagen i backend",
-      receivedStyle: plan.style || null,
-      totalDuration: plan.totalDuration || null
-    });
-  } catch (err) {
-    console.error("REELS PLAN DEMO ERROR:", err);
-    return res.status(500).json({ error: "Kunde inte ta emot plan" });
-  }
+// Fångar alla andra routes och serverar index.html (om behövs)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// 6. /api/build-reel – fake-bygg reel utifrån plan (ingen riktig video än)
-app.post("/api/build-reel", async (req, res) => {
-  try {
-    const { plan } = req.body || {};
-
-    if (!plan) {
-      return res.status(400).json({ error: "Ingen plan mottagen" });
-    }
-
-    const style = plan.style || "okänd";
-    const totalDuration = plan.totalDuration || 0;
-
-    // Försök räkna antal klipp från första segmentet
-    let clipCount = 0;
-    if (Array.isArray(plan.segments) && plan.segments.length > 0) {
-      const firstSegment = plan.segments[0];
-      if (Array.isArray(firstSegment.clips)) {
-        clipCount = firstSegment.clips.length;
-      }
-    }
-
-    const buildId = `fake_${Date.now()}`;
-
-    console.log(
-      `[Reels-build-demo] style=${style}, total=${totalDuration}s, clips=${clipCount}, buildId=${buildId}`
-    );
-
-    return res.json({
-      ok: true,
-      message: "Fake-reel byggd (ingen riktig video än)",
-      buildId,
-      style,
-      totalDuration,
-      clipCount,
-      downloadUrl: null,
-      note: "Här kan vi senare returnera en riktig videolänk."
-    });
-  } catch (err) {
-    console.error("BUILD REEL ERROR:", err);
-    return res.status(500).json({ error: "Kunde inte bygga reel (fake)" });
-  }
-});
-
-// ---------------------- Starta servern ----------------------
+// ----------------- Starta servern -----------------
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
-  console.log(`[Kenai] Backend kör på port ${PORT}`);
+  console.log(`Kenai backend kör på port ${PORT}`);
 });
