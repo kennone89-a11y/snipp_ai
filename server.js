@@ -56,19 +56,18 @@ app.get("/api/health", (req, res) => {
   res.json({ ok: true, message: "Kenai backend är igång" });
 });
 
-    // Tillåt både audioUrl och url från frontend
-    const { audioUrl, url } = req.body || {};
+  // Tillåt både audiourl, audioUrl och url från frontend
+const { audiourl, audioUrl, url } = req.body || {};
+const targetUrl = audiourl || audioUrl || url;
 
-    // Frontend (recorder.html) skickar idag { url: "https://..." }
-    // men vi stödjer båda fältnamnen:
-    const targetUrl = audioUrl || url;
+console.log("[Kenai] summarize - start med URL:", targetUrl, "body:", req.body);
+if (!targetUrl) {
+  console.error("[Kenai] summarize - ingen URL i body", req.body);
+  return res.status(400).json({ error: "Ingen ljud-URL skickad." });
+}
 
-    console.log("[Kenai] summarize – start med URL:", targetUrl, "body:", req.body);
+console.log("[Kenai] summarize - startar med URL:", targetUrl);
 
-    if (!targetUrl) {
-      console.error("[Kenai] summarize – ingen URL i body:", req.body);
-      return res.status(400).json({ error: "Ingen ljud-URL skickad." });
-    }
 
 
     console.log("[Kenai] summarize – startar med URL:", url);
