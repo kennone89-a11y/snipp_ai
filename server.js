@@ -56,64 +56,110 @@ app.get("/", (req, res) => {
 // ===============================
 // 2. /api/summarize – ljud → text → sammanfattning
 // ===============================
+// --- AI-sammanfattning från ljud (ny version med gpt-4o-audio-preview) ---
 app.post("/api/summarize", async (req, res) => {
   try {
-    const { url } = req.body;
+    const { url } = req.body || {};
 
-    if (!url) {
+    if (!url || typeof url !== "string") {
+      console.error("[Kenai] /api/summarize – ingen URL i body.");
       return res.status(400).json({ error: "Ingen ljud-URL mottagen." });
     }
 
-    console.log("[Kenai] Hämtar ljud från:", url);
+    console.log("[Kenai] /api/summarize – fick URL:", url);
 
-    // Hämta ljudfilen från Supabase (eller annan publik URL)
+    // 1) Hämta ljudfilen från Supabase
     const audioRes = await fetch(url);
     if (!audioRes.ok) {
-      throw new Error("Kunde inte hämta ljudfil från Supabase");
+      console.error("[Kenai] Kunde inte hämta ljudfilen:", audioRes.status, audioRes.statusText);
+      return res
+        .status(400)
+        .json({ error: "Kunde inte hämta ljudfilen från Supabase." });
     }
+
     const arrayBuffer = await audioRes.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    const base64Audio = buffer.toString("base64");
 
-    console.log("[Kenai] Fil hämtad, skickar till OpenAI...");
+    // 2) Skicka in ljudet till GPT-4o audio-preview med input_audio
+    console.log("[Kenai] Skickar ljud till OpenAI (gpt-4o-audio-preview) ...");
 
-    // 1) Transkribera med Whisper
-    const transcript = await client.audio.transcriptions.create({
-      file: buffer,
-      model: "gpt-4o-transcribe",
-      response_format: "text",
-    });
-
-    console.log("[Kenai] Transkribering klar.");
-
-    // 2) Sammanfatta texten på svenska
-    const chat = await client.chat.completions.create({
-      model: "gpt-4.1-mini",
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-audio-preview",
+      modalities: ["text"],
+      // audio-fältet styr egentligen TTS-utdata; vi ignorerar ljud-svaret.
+      audio: { voice: "alloy", format: "wav" },
       messages: [
         {
-          role: "system",
-          content:
-            "Du är en assistent som sammanfattar ljud på svenska. Skriv kortfattat, tydligt och enkelt.",
-        },
-        {
           role: "user",
-          content: transcript,
+          content: [
+            {
+              type: "text",
+              text:
+                "Du får en ljudfil som input_audio. " +
+                "1) Transkribera allt tal så exakt som möjligt på originalspråk (oftast svenska). " +
+                "2) Skriv sedan en tydlig sammanfattning på svenska (2–6 meningar). " +
+                'Svara EXAKT i JSON-format: {\"transcript\": \"...\", \"summary\": \"...\"} utan extra text.',
+            },
+            {
+              type: "input_audio",
+              input_audio: {
+                data: base64Audio,
+                // Våra filer är .webm från webbinspelaren
+                format: "webm",
+              },
+            },
+          ],
         },
       ],
     });
 
-    const summary = chat.choices[0].message.content;
+    const choice = completion.choices?.[0];
+    let content = choice?.message?.content;
 
-    console.log("[Kenai] Sammanfattning genererad.");
+    let text;
+    if (typeof content === "string") {
+      text = content;
+    } else if (Array.isArray(content)) {
+      // ibland returneras content som delar
+      text = content
+        .map((part) => (typeof part.text === "string" ? part.text : ""))
+        .join("");
+    } else {
+      text = JSON.stringify(content ?? "");
+    }
+
+    let transcript = "";
+    let summary = "";
+
+    try {
+      const parsed = JSON.parse(text);
+      transcript = parsed.transcript || "";
+      summary = parsed.summary || "";
+    } catch (jsonErr) {
+      console.warn("[Kenai] Kunde inte parsa JSON från modellen, returnerar råtext.");
+      summary = text;
+    }
+
+    if (!summary && !transcript) {
+      summary = "Kunde inte läsa något innehåll från modellen.";
+    }
+
+    console.log("[Kenai] /api/summarize – klar.");
 
     return res.json({
       transcript,
       summary,
     });
   } catch (err) {
-    console.error("SUMMARY ERROR:", err);
-    return res.status(500).json({ error: err.message || "Okänt fel" });
+    console.error("[Kenai] SUMMARY ERROR:", err);
+    return res.status(502).json({
+      error: "Serverfel vid AI-sammanfattning.",
+      detail: err?.message || String(err),
+    });
   }
 });
+
 
 // ===============================
 // 3. /api/export-pdf – text → PDF
