@@ -471,30 +471,24 @@
         setStatus('Skickar till AI för transkribering...');
         summaryEl.value = 'AI jobbar...';
 
-        const backendBase = window.location.origin; // t.ex. https://snipp-ai-1.onrender.com
-        const res = await fetch(`${backendBase}/api/summarize`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ audioUrl: publicUrl })
+       const backendBase = window.location.origin;
 
-            audioUrl,
-            language: 'sv',
-          }),
-        });
+const resp = await fetch(`${backendBase}/api/summarize`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ audioUrl: publicUrl }), // <-- VIKTIGT: exakt så här
+});
 
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`Backend-fel: ${res.status} ${text}`);
-        }
+const raw = await resp.text();
+let json;
+try { json = JSON.parse(raw); }
+catch { throw new Error(`Backend gav inte JSON (${resp.status}): ${raw.slice(0,200)}`); }
 
-        const json = await res.json();
-        if (!json.ok) {
-          throw new Error(json.error || 'Okänt AI-fel');
-        }
+if (!resp.ok) throw new Error(json.error || `Backend-fel: ${resp.status}`);
 
-        summaryEl.removeAttribute('readonly');
-        summaryEl.value = json.summary || '(Ingen sammanfattning returnerades.)';
-        summaryEl.setAttribute('readonly', 'readonly');
+summaryEl.value = json.summary || "";
+summaryEl.dataset.transcript = json.transcript || "";
+
 
         setStatus('AI-sammanfattning klar');
         setLog('Transkription & sammanfattning lyckades.');
