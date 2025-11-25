@@ -476,7 +476,8 @@
 const resp = await fetch(`${backendBase}/api/summarize`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ audioUrl: publicUrl }), // <-- VIKTIGT: exakt så här
+  body: JSON.stringify({ url: publicUrl })
+ // <-- VIKTIGT: exakt så här
 });
 
 const raw = await resp.text();
