@@ -475,7 +475,8 @@
         const res = await fetch(`${backendBase}/api/summarize`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          body: JSON.stringify({ audioUrl: publicUrl })
+
             audioUrl,
             language: 'sv',
           }),
