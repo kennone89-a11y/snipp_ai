@@ -1,11 +1,11 @@
-// server.js — Kenai backend (stabil)
-// ESM (package.json: "type": "module")
+// server.js — Kenai backend (stable)
+// ESM ("type":"module")
 
 import dotenv from "dotenv";
 import express from "express";
 import path from "path";
 import fs from "fs";
-import os from "os";
+import { promises as fsp } from "fs";
 import { fileURLToPath } from "url";
 import OpenAI from "openai";
 import PDFDocument from "pdfkit";
@@ -18,173 +18,229 @@ const PORT = process.env.PORT || 10000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// -------- CORS (utan cors-paket) --------
+// -------------------------
+// CORS (utan cors-paket)
+// -------------------------
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  // Tillåt din app + lokalt + fallback (du kan strama åt senare)
-  const allowlist = new Set([
-    "https://app.kenai.technology",
-    "https://kenai.technology",
-    "http://localhost:3000",
-    "http://localhost:5173",
-  ]);
-
-  // Om origin finns och är allowlisted, spegla den. Annars tillåt ändå (för debug).
-  res.setHeader("Access-Control-Allow-Origin", allowlist.has(origin) ? origin : "*");
-  res.setHeader("Vary", "Origin");
-
-  res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, apikey, x-upsert");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
 });
 
-// -------- Body parsers --------
-app.use(express.json({ limit: "2mb" })); // vi skickar URL + text (inte själva ljudfilen)
-app.use(express.urlencoded({ extended: true }));
+// Body parsers
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// -------- OpenAI client --------
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-// -------- Static hosting --------
+// Static frontend
 app.use(express.static(path.join(__dirname, "public")));
 
+// Root -> recorder
 app.get("/", (req, res) => {
-  // Om du vill: ändra till index.html, men recorder.html är fine
-  res.redirect("/recorder.html");
+  res.sendFile(path.join(__dirname, "public", "recorder.html"));
 });
 
+// Health
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, message: "Kenai backend är igång" });
 });
 
-// -------- Helpers --------
-async function downloadToTempFile(fileUrl) {
-  const r = await fetch(fileUrl);
+// -------------------------
+// OpenAI client
+// -------------------------
+if (!process.env.OPENAI_API_KEY) {
+  console.warn("⚠️ OPENAI_API_KEY saknas i environment variables på Render.");
+}
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const TRANSCRIBE_MODEL = process.env.OPENAI_TRANSCRIBE_MODEL || "whisper-1";
+const CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini";
+
+// -------------------------
+// Helpers
+// -------------------------
+function pickAudioUrl(req) {
+  const body = req.body || {};
+  const q = req.query || {};
+
+  // Stöd flera fältnamn för att frontend ibland glider:
+  return (
+    body.audioUrl ||
+    body.url ||
+    body.audio_url ||
+    body.publicUrl ||
+    body.public_url ||
+    body.fileUrl ||
+    body.file_url ||
+    q.audioUrl ||
+    q.url ||
+    q.publicUrl ||
+    null
+  );
+}
+
+function extFromUrlOrType(url, contentType = "") {
+  const u = String(url || "").toLowerCase();
+  const ct = String(contentType || "").toLowerCase();
+
+  // url först
+  if (u.includes(".webm")) return ".webm";
+  if (u.includes(".wav")) return ".wav";
+  if (u.includes(".m4a")) return ".m4a";
+  if (u.includes(".mp3")) return ".mp3";
+  if (u.includes(".mp4")) return ".mp4";
+
+  // content-type fallback
+  if (ct.includes("audio/webm")) return ".webm";
+  if (ct.includes("audio/wav") || ct.includes("audio/x-wav")) return ".wav";
+  if (ct.includes("audio/mp4") || ct.includes("audio/m4a")) return ".m4a";
+  if (ct.includes("audio/mpeg")) return ".mp3";
+
+  // default
+  return ".webm";
+}
+
+async function downloadToTmp(audioUrl) {
+  const r = await fetch(audioUrl);
   if (!r.ok) {
     const txt = await r.text().catch(() => "");
-    throw new Error(`Kunde inte hämta ljudfil. status=${r.status} body=${txt.slice(0, 200)}`);
+    throw new Error(`Kunde inte hämta ljudfil. HTTP ${r.status}. ${txt.slice(0, 120)}`);
   }
 
   const contentType = r.headers.get("content-type") || "";
-  // Gissa filändelse lite snällt
-  let ext = ".bin";
-  if (contentType.includes("audio/webm")) ext = ".webm";
-  else if (contentType.includes("audio/wav")) ext = ".wav";
-  else if (contentType.includes("audio/mpeg")) ext = ".mp3";
-  else if (contentType.includes("audio/mp4")) ext = ".m4a";
+  const buf = Buffer.from(await r.arrayBuffer()); // <-- ingen .pipe (fixar "response.body.pipe...")
+  const ext = extFromUrlOrType(audioUrl, contentType);
 
-  const ab = await r.arrayBuffer();
-  const buf = Buffer.from(ab);
+  const tmpPath = path.join("/tmp", `kenai-audio-${Date.now()}${ext}`);
+  await fsp.writeFile(tmpPath, buf);
 
-  const tmpPath = path.join(os.tmpdir(), `kenai-audio-${Date.now()}${ext}`);
-  await fs.promises.writeFile(tmpPath, buf);
-  return tmpPath;
+  return { tmpPath, contentType, size: buf.length };
 }
 
-// -------- API: summarize --------
+async function transcribeFile(tmpPath) {
+  const fileStream = fs.createReadStream(tmpPath);
+
+  const result = await openai.audio.transcriptions.create({
+    file: fileStream,
+    model: TRANSCRIBE_MODEL,
+  });
+
+  return (result && result.text ? result.text : "").trim();
+}
+
+async function summarizeSv(transcript) {
+  const prompt = `Här är en transkribering. Skapa en svensk sammanfattning.
+
+Krav:
+- Börja med 5–10 bullet points med viktigaste punkterna.
+- Lägg sedan "TL;DR:" med 1–2 meningar.
+- Inga hallucinationer. Om något är oklart, skriv det.
+
+TRANSKRIBERING:
+${transcript}`;
+
+  const r = await openai.chat.completions.create({
+    model: CHAT_MODEL,
+    temperature: 0.2,
+    messages: [
+      { role: "system", content: "Du är en svensk, tydlig assistent som skriver korta, korrekta sammanfattningar." },
+      { role: "user", content: prompt },
+    ],
+  });
+
+  return (r.choices?.[0]?.message?.content || "").trim();
+}
+
+// -------------------------
+// API: summarize
+// -------------------------
 app.post("/api/summarize", async (req, res) => {
   try {
-    const { audioUrl, url } = req.body || {};
-    const targetUrl = audioUrl || url;
+    const audioUrl = pickAudioUrl(req);
 
-    console.log("[Kenai] summarize - body:", req.body);
-    console.log("[Kenai] summarize - url:", targetUrl);
+    console.log("[Kenai] /api/summarize body:", req.body);
+    console.log("[Kenai] /api/summarize url:", audioUrl);
 
-    if (!targetUrl) {
+    if (!audioUrl) {
       return res.status(400).json({ error: "Ingen ljud-URL skickad." });
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({ error: "OPENAI_API_KEY saknas på servern (Render Env Vars)." });
+    const { tmpPath, size, contentType } = await downloadToTmp(audioUrl);
+    console.log("[Kenai] Ljud nedladdat:", { tmpPath, size, contentType });
+
+    const transcript = await transcribeFile(tmpPath);
+    if (!transcript) {
+      await fsp.unlink(tmpPath).catch(() => {});
+      return res.status(500).json({ error: "Transkribering blev tom. Kontrollera ljudformat/URL." });
     }
 
-    // 1) Hämta ljud från Supabase public URL → spara tempfil
-    const tmpFile = await downloadToTempFile(targetUrl);
+    const summary = await summarizeSv(transcript);
 
-    // 2) Transkribera
-    const transcriptResp = await client.audio.transcriptions.create({
-      file: fs.createReadStream(tmpFile),
-      model: "whisper-1",
-      // språk-hint (valfritt)
-      language: "sv",
-    });
-
-    const transcript = transcriptResp?.text || "";
-
-    // 3) Sammanfatta
-    const chat = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content:
-            "Du är en svensk assistent som skriver tydliga, korta sammanfattningar. Returnera både: (1) en sammanfattning i punktform och (2) en superkort one-liner.",
-        },
-        {
-          role: "user",
-          content: `Här är transkriberingen:\n\n${transcript}\n\nSvara på svenska.`,
-        },
-      ],
-      temperature: 0.2,
-    });
-
-    const summary = chat?.choices?.[0]?.message?.content?.trim() || "";
-
-    // 4) Städa tempfil
-    fs.promises.unlink(tmpFile).catch(() => {});
-
-    return res.json({ transcript, summary });
+    await fsp.unlink(tmpPath).catch(() => {});
+    return res.json({ ok: true, audioUrl, transcript, summary });
   } catch (err) {
     console.error("[Kenai] SUMMARY ERROR:", err);
-    return res.status(500).json({ error: err?.message || "Serverfel vid AI-sammanfattning." });
+    return res.status(500).json({ error: err?.message || "Okänt serverfel" });
   }
 });
 
-// -------- API: export pdf --------
+// -------------------------
+// API: export pdf
+// -------------------------
 app.post("/api/export-pdf", async (req, res) => {
   try {
     const { summary = "", transcript = "" } = req.body || {};
+    if (!summary.trim() && !transcript.trim()) {
+      return res.status(400).json({ error: "Inget innehåll att exportera." });
+    }
 
-    const doc = new PDFDocument({ margin: 50 });
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", 'attachment; filename="kenai-summary.pdf"');
 
+    const doc = new PDFDocument({ margin: 50 });
     doc.pipe(res);
 
     doc.fontSize(18).text("Kenai – Sammanfattning", { underline: true });
     doc.moveDown();
 
-    doc.fontSize(12).text("Sammanfattning:");
-    doc.moveDown(0.5);
-    doc.fontSize(11).text(summary || "(Ingen sammanfattning)");
-    doc.moveDown();
+    if (summary.trim()) {
+      doc.fontSize(14).text("Sammanfattning");
+      doc.moveDown(0.5);
+      doc.fontSize(11).text(summary);
+      doc.moveDown();
+    }
 
-    doc.fontSize(12).text("Transkript:");
-    doc.moveDown(0.5);
-    doc.fontSize(9).text(transcript || "(Inget transkript)");
+    if (transcript.trim()) {
+      doc.fontSize(14).text("Transkribering");
+      doc.moveDown(0.5);
+      doc.fontSize(10).text(transcript);
+      doc.moveDown();
+    }
 
     doc.end();
   } catch (err) {
     console.error("[Kenai] PDF ERROR:", err);
-    res.status(500).json({ error: err?.message || "Kunde inte skapa PDF." });
+    res.status(500).json({ error: err?.message || "PDF-fel" });
   }
 });
 
-// -------- API: send email (mock) --------
+// -------------------------
+// API: send email (mock)
+// -------------------------
 app.post("/api/send-summary-email", async (req, res) => {
   try {
-    const { email, summary } = req.body || {};
-    console.log("[Kenai] MOCK EMAIL:", { email, summaryLen: (summary || "").length });
-    res.json({ ok: true, message: "Mock: email loggad på servern." });
+    const { to, summary = "", transcript = "" } = req.body || {};
+    if (!to) return res.status(400).json({ error: "E-post saknas." });
+
+    console.log("[Kenai] MOCK EMAIL ->", { to, summaryLen: summary.length, transcriptLen: transcript.length });
+    return res.json({ ok: true, message: "Mock: mail loggat på servern." });
   } catch (err) {
-    res.status(500).json({ error: err?.message || "Fel vid mail (mock)." });
+    console.error("[Kenai] EMAIL ERROR:", err);
+    return res.status(500).json({ error: err?.message || "Mail-fel" });
   }
 });
 
 app.listen(PORT, () => {
-  console.log("Kenai backend kör på port", PORT);
+  console.log(`Kenai backend kör på port ${PORT}`);
 });
