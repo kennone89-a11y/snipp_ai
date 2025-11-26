@@ -59,6 +59,7 @@ app.post("/api/timestamps", (req, res) => {
   return res.json(exampleResponse);
 });
 
+
   } catch (err) {
     console.error("Oväntat fel i /api/timestamps:", err);
 
