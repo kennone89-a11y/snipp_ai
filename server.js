@@ -43,7 +43,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.post("/api/timestamps", (req, res) => {
   const { url } = req.body;
 
-  console.log("Received URL for timestamps:", url);
+  console.log("Received URL for timestamps:", url); 
 
   const exampleResponse = {
     url,
