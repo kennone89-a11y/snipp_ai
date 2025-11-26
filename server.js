@@ -38,11 +38,12 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve /public
 app.use(express.static(path.join(__dirname, "public")));
-// Kenai Timestamps – stabil fejk-prototyp (ingen AI än)
+
+// Kenai Timestamps – stabil prototyp (ingen AI)
 app.post("/api/timestamps", (req, res) => {
   const { url } = req.body;
 
-  console.log("Received URL for timestamps (FEJK):", url);
+  console.log("Received URL for timestamps:", url);
 
   const exampleResponse = {
     url,
@@ -53,28 +54,11 @@ app.post("/api/timestamps", (req, res) => {
       { time: "09:10", title: "Sammanfattning & call-to-action" }
     ],
     summary:
-      "Detta är en stabil fejk-sammanfattning för prototypen. I den riktiga Kenai Timestamps kommer AI:n att analysera videons innehåll och generera kapitel, beskrivning och hashtags automatiskt."
+      "Detta är en stabil placeholder för prototypen. I riktiga Kenai Timestamps kommer AI ta videons innehåll och automatiskt skapa kapitel, beskrivning och hashtags."
   };
 
-  return res.json(exampleResponse);
+  res.json(exampleResponse);
 });
-
-
-
-    // absolut sista nödfallback – men fortfarande 200 OK
-    return res.json({
-      url,
-      chapters: [
-        { time: "00:00", title: "Intro (nödfallback)" },
-        { time: "01:00", title: "Mitten (nödfallback)" },
-        { time: "02:00", title: "Avslut (nödfallback)" }
-      ],
-      summary:
-        "Ett oväntat fel uppstod i servern. Detta är ett nödfallback-svar så att användaren inte får 500-fel."
-    });
-  }
-});
-
 
     const raw = completion.choices[0].message.content;
     let parsed;
