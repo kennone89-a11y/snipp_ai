@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kenai Timestamps – Prototype</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #020617;
+      color: #e5e7eb;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      background: #020617;
+      border-radius: 24px;
+      padding: 24px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow:
+        0 0 0 1px rgba(148, 163, 184, 0.15),
+        0 18px 45px rgba(15, 23, 42, 0.9);
+    }
+
+    .logo {
+      font-weight: 700;
+      font-size: 20px;
+      margin-bottom: 16px;
+    }
+
+    .logo span {
+      background: linear-gradient(135deg, #22d3ee, #4f46e5, #a855f7);
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin: 0 0 8px;
+    }
+
+    p {
+      margin: 0 0 16px;
+      color: #9ca3af;
+      font-size: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+      color: #9ca3af;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 14px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #22d3ee;
+      box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.4);
+    }
+
+    button {
+      margin-top: 12px;
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      background: linear-gradient(135deg, #22d3ee, #4f46e5, #a855f7);
+      color: white;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: wait;
+    }
+
+    .output {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid #1f2937;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+
+    .chapter {
+      margin-bottom: 8px;
+    }
+
+    .timestamp {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      color: #22d3ee;
+      margin-right: 4px;
+    }
+
+    .summary-title {
+      margin-top: 12px;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo"><span>Kenai</span> Timestamps (prototype)</div>
+    <h1>Generera kapitel från YouTube-URL</h1>
+    <p>Skriv in en YouTube-länk så skapar Kenai ett exempel på kapitel + sammanfattning.</p>
+
+    <label for="url">YouTube-URL</label>
+    <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=..." />
+
+    <button id="generateBtn">Generera timestamps</button>
+
+    <div id="output" class="output"></div>
+  </div>
+
+  <script>
+    const btn = document.getElementById("generateBtn");
+    const output = document.getElementById("output");
+    const urlInput = document.getElementById("url");
+
+    btn.addEventListener("click", async () => {
+      const url = urlInput.value.trim();
+      if (!url) {
+        alert("Skriv in en YouTube-URL först.");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Genererar...";
+
+      try {
+        const res = await fetch("/api/timestamps", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url })
+        });
+
+        if (!res.ok) {
+          throw new Error("Fel från servern");
+        }
+
+        const data = await res.json();
+
+        // Visa kapitel + sammanfattning
+        output.innerHTML = "";
+
+        if (data.chapters && data.chapters.length) {
+          data.chapters.forEach(ch => {
+            const div = document.createElement("div");
+            div.className = "chapter";
+            div.innerHTML = `<span class="timestamp">${ch.time}</span>${ch.title}`;
+            output.appendChild(div);
+          });
+        }
+
+        if (data.summary) {
+          const summaryTitle = document.createElement("div");
+          summaryTitle.className = "summary-title";
+          summaryTitle.textContent = "Sammanfattning:";
+          output.appendChild(summaryTitle);
+
+          const summaryText = document.createElement("div");
+          summaryText.textContent = data.summary;
+          output.appendChild(summaryText);
+        }
+      } catch (err) {
+        console.error(err);
+        output.textContent = "Något gick fel. Testa igen.";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Generera timestamps";
+      }
+    });
+  </script>
+</body>
+</html>
