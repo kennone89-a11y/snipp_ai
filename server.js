@@ -60,33 +60,6 @@ app.post("/api/timestamps", (req, res) => {
   res.json(exampleResponse);
 });
 
-    const raw = completion.choices[0].message.content;
-    let parsed;
-
-    try {
-      parsed = JSON.parse(raw);
-    } catch (e) {
-      console.error("Kunde inte parsa JSON från AI:", raw);
-      return res.status(500).json({ error: "Kunde inte tolka AI-svaret." });
-    }
-
-    if (!parsed.chapters || !parsed.summary) {
-      return res.status(500).json({ error: "AI-svaret saknar chapters eller summary." });
-    }
-
-    return res.json({
-      url,
-      chapters: parsed.chapters,
-      summary: parsed.summary
-    });
-  } catch (err) {
-    console.error("Fel från OpenAI i /api/timestamps:", err);
-    return res.status(500).json({ error: "AI-fel. Försök igen senare." });
-  }
-});
-
-
-
 // ---- Health ----
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, message: "Kenai backend är igång" });
