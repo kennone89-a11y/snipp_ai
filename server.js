@@ -38,6 +38,30 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve /public
 app.use(express.static(path.join(__dirname, "public")));
+// Kenai Timestamps – fejk-prototyp endpoint
+app.post("/api/timestamps", (req, res) => {
+  const { url } = req.body;
+
+  console.log("Received URL for timestamps:", url);
+
+  // Här ska det senare bli riktig AI-logik.
+  // Just nu skickar vi tillbaka ett exempel-svar.
+
+  const exampleResponse = {
+    url,
+    chapters: [
+      { time: "00:00", title: "Intro & hook" },
+      { time: "01:23", title: "Bakgrund & story" },
+      { time: "04:50", title: "Huvudpoängen i videon" },
+      { time: "09:10", title: "Sammanfattning & call-to-action" }
+    ],
+    summary:
+      "Detta är en fejk-sammanfattning bara för prototypen. I den riktiga Kenai Timestamps kommer AI:n att analysera videons hela innehåll, hitta de viktigaste delarna och generera både kapitel, beskrivning och hashtags automatiskt."
+  };
+
+  res.json(exampleResponse);
+});
+
 
 // ---- Health ----
 app.get("/api/health", (req, res) => {
