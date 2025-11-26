@@ -279,6 +279,106 @@ async function openaiSummarize(transcript) {
   }
   return text;
 }
+async function openaiTimestamps(videoUrl) {
+  const key = requireOpenAiKey();
+  const model =
+    process.env.OPENAI_TIMESTAMPS_MODEL ||
+    process.env.OPENAI_SUMMARY_MODEL ||
+    "gpt-4o-mini";
+
+  const body = {
+    model,
+    input: [
+      {
+        role: "system",
+        content:
+          "Du är Kenai Timestamps, ett verktyg som hjälper kreatörer att strukturera YouTube-videor. " +
+          "Du ska ALLTID svara som ren JSON med fälten 'chapters' (lista) och 'summary' (sträng). " +
+          "Inga andra fält, ingen extra text."
+      },
+      {
+        role: "user",
+        content:
+          "Utgå från denna YouTube-URL och gissa en rimlig struktur på videon.\n" +
+          "Skapa 4–10 kapitel och en kort sammanfattning på svenska.\n\n" +
+          "Returnera EXAKT detta JSON-format:\n" +
+          "{\n" +
+          '  \"chapters\": [\n' +
+          '    { \"time\": \"00:00\", \"title\": \"Intro & hook\" }\n' +
+          "  ],\n" +
+          '  \"summary\": \"Kort sammanfattning här...\"\n' +
+          "}\n\n" +
+          "Skriv INGENTING annat än denna JSON.\n\n" +
+          "YouTube-URL: " +
+          videoUrl
+      }
+    ]
+  };
+
+  const r = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+
+  const j = await r.json().catch(() => ({}));
+
+  // Om OpenAI svarar med fel -> fallback
+  if (!r.ok) {
+    const msg = j.error?.message || "Timestamps-förfrågan misslyckades (OpenAI).";
+    console.error("OpenAI /responses fel (timestamps):", msg, j);
+    return {
+      chapters: [
+        { time: "00:00", title: "Intro & hook (fallback)" },
+        { time: "01:23", title: "Bakgrund & story (fallback)" },
+        { time: "04:50", title: "Huvudpoängen (fallback)" },
+        { time: "09:10", title: "Sammanfattning & CTA (fallback)" }
+      ],
+      summary:
+        "AI-svaret misslyckades, så detta är ett fallback-exempel. I vanliga fall genereras riktiga kapitel och sammanfattning från videons innehåll."
+    };
+  }
+
+  // Använd samma helper som i openaiSummarizer
+  const raw = extractResponsesText(j) || "";
+  let parsed;
+
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    console.error("Kunde inte parsa JSON från AI (timestamps):", raw);
+    return {
+      chapters: [
+        { time: "00:00", title: "Intro & hook (fallback-parse)" },
+        { time: "01:23", title: "Bakgrund & story (fallback-parse)" },
+        { time: "04:50", title: "Huvudpoängen (fallback-parse)" },
+        { time: "09:10", title: "Sammanfattning & CTA (fallback-parse)" }
+      ],
+      summary:
+        "AI-svaret gick inte att tolka som korrekt JSON, så detta är ett fallback-exempel."
+    };
+  }
+
+  if (!Array.isArray(parsed.chapters) || !parsed.summary) {
+    console.error("AI-svar saknar chapters/summary (timestamps):", parsed);
+    return {
+      chapters: [
+        { time: "00:00", title: "Intro & hook (fallback-format)" },
+        { time: "01:23", title: "Bakgrund & story (fallback-format)" },
+        { time: "04:50", title: "Huvudpoängen (fallback-format)" },
+        { time: "09:10", title: "Sammanfattning & CTA (fallback-format)" }
+      ],
+      summary:
+        "AI-svaret saknade chapters eller summary i rätt format, så detta är ett fallback-exempel."
+    };
+  }
+
+  return parsed; // { chapters: [...], summary: "..." }
+}
+
 
 // ---- Summarize endpoint ----
 // Tar emot { url } eller { audioUrl } från frontend
