@@ -38,29 +38,70 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve /public
 app.use(express.static(path.join(__dirname, "public")));
-// Kenai Timestamps – fejk-prototyp endpoint
-app.post("/api/timestamps", (req, res) => {
+// Kenai Timestamps – riktig AI-version (utan YouTube-API än)
+app.post("/api/timestamps", async (req, res) => {
   const { url } = req.body;
 
-  console.log("Received URL for timestamps:", url);
+  if (!url) {
+    return res.status(400).json({ error: "Ingen URL skickades in." });
+  }
 
-  // Här ska det senare bli riktig AI-logik.
-  // Just nu skickar vi tillbaka ett exempel-svar.
+  console.log("Received URL for timestamps (AI):", url);
 
-  const exampleResponse = {
-    url,
-    chapters: [
-      { time: "00:00", title: "Intro & hook" },
-      { time: "01:23", title: "Bakgrund & story" },
-      { time: "04:50", title: "Huvudpoängen i videon" },
-      { time: "09:10", title: "Sammanfattning & call-to-action" }
-    ],
-    summary:
-      "Detta är en fejk-sammanfattning bara för prototypen. I den riktiga Kenai Timestamps kommer AI:n att analysera videons hela innehåll, hitta de viktigaste delarna och generera både kapitel, beskrivning och hashtags automatiskt."
-  };
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "Du är Kenai Timestamps, ett verktyg som hjälper kreatörer att strukturera YouTube-videor. " +
+            "Du ska ALLTID svara som ren JSON med fälten 'chapters' (lista) och 'summary' (sträng). " +
+            "Inga andra fält, ingen extra text."
+        },
+        {
+          role: "user",
+          content:
+            `Använd enbart den här URL:en och din allmänna kunskap för att gissa en rimlig struktur på videon.\n` +
+            `Skapa 4–8 kapitel och en sammanfattning på svenska.\n\n` +
+            `Returnera EXAKT detta JSON-format:\n` +
+            `{\n` +
+            `  "chapters": [\n` +
+            `    { "time": "00:00", "title": "Intro & hook" }\n` +
+            `  ],\n` +
+            `  "summary": "Kort sammanfattning här..."\n` +
+            `}\n\n` +
+            `YouTube-URL: ${url}`
+        }
+      ]
+    });
 
-  res.json(exampleResponse);
+    const raw = completion.choices[0].message.content;
+    let parsed;
+
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      console.error("Kunde inte parsa JSON från AI:", raw);
+      return res.status(500).json({ error: "Kunde inte tolka AI-svaret." });
+    }
+
+    if (!parsed.chapters || !parsed.summary) {
+      return res.status(500).json({ error: "AI-svaret saknar chapters eller summary." });
+    }
+
+    return res.json({
+      url,
+      chapters: parsed.chapters,
+      summary: parsed.summary
+    });
+  } catch (err) {
+    console.error("Fel från OpenAI i /api/timestamps:", err);
+    return res.status(500).json({ error: "AI-fel. Försök igen senare." });
+  }
 });
+
 
 
 // ---- Health ----
