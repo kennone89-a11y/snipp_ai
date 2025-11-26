@@ -38,39 +38,27 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve /public
 app.use(express.static(path.join(__dirname, "public")));
-// Kenai Timestamps – AI + robust fallback
-app.post("/api/timestamps", async (req, res) => {
+// Kenai Timestamps – stabil fejk-prototyp (ingen AI än)
+app.post("/api/timestamps", (req, res) => {
   const { url } = req.body;
 
-  if (!url) {
-    return res.status(400).json({ error: "Ingen URL skickades in." });
-  }
+  console.log("Received URL for timestamps (FEJK):", url);
 
-  console.log("Received URL for timestamps (AI):", url);
+  const exampleResponse = {
+    url,
+    chapters: [
+      { time: "00:00", title: "Intro & hook" },
+      { time: "01:23", title: "Bakgrund & story" },
+      { time: "04:50", title: "Huvudpoängen i videon" },
+      { time: "09:10", title: "Sammanfattning & call-to-action" }
+    ],
+    summary:
+      "Detta är en stabil fejk-sammanfattning för prototypen. I den riktiga Kenai Timestamps kommer AI:n att analysera videons innehåll och generera kapitel, beskrivning och hashtags automatiskt."
+  };
 
-  try {
-    // anropa hjälpfunktionen vi lade till nyss
-    const result = await openaiTimestamps(url);
+  return res.json(exampleResponse);
+});
 
-    // säkerställ att vi alltid har något att skicka tillbaka
-    const chapters = Array.isArray(result?.chapters)
-      ? result.chapters
-      : [
-          { time: "00:00", title: "Intro (fallback route)" },
-          { time: "01:00", title: "Mitten (fallback route)" },
-          { time: "02:00", title: "Avslut (fallback route)" }
-        ];
-
-    const summary =
-      typeof result?.summary === "string" && result.summary.trim()
-        ? result.summary
-        : "AI-svaret saknade sammanfattning, detta är en fallback från routen.";
-
-    return res.json({
-      url,
-      chapters,
-      summary
-    });
   } catch (err) {
     console.error("Oväntat fel i /api/timestamps:", err);
 
