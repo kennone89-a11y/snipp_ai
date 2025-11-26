@@ -60,8 +60,6 @@ app.post("/api/timestamps", (req, res) => {
 });
 
 
-  } catch (err) {
-    console.error("Oväntat fel i /api/timestamps:", err);
 
     // absolut sista nödfallback – men fortfarande 200 OK
     return res.json({
