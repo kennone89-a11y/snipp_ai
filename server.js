@@ -38,7 +38,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve /public
 app.use(express.static(path.join(__dirname, "public")));
-// Kenai Timestamps – riktig AI-version (utan YouTube-API än)
+// Kenai Timestamps – AI + robust fallback
 app.post("/api/timestamps", async (req, res) => {
   const { url } = req.body;
 
@@ -49,33 +49,45 @@ app.post("/api/timestamps", async (req, res) => {
   console.log("Received URL for timestamps (AI):", url);
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content:
-            "Du är Kenai Timestamps, ett verktyg som hjälper kreatörer att strukturera YouTube-videor. " +
-            "Du ska ALLTID svara som ren JSON med fälten 'chapters' (lista) och 'summary' (sträng). " +
-            "Inga andra fält, ingen extra text."
-        },
-        {
-          role: "user",
-          content:
-            `Använd enbart den här URL:en och din allmänna kunskap för att gissa en rimlig struktur på videon.\n` +
-            `Skapa 4–8 kapitel och en sammanfattning på svenska.\n\n` +
-            `Returnera EXAKT detta JSON-format:\n` +
-            `{\n` +
-            `  "chapters": [\n` +
-            `    { "time": "00:00", "title": "Intro & hook" }\n` +
-            `  ],\n` +
-            `  "summary": "Kort sammanfattning här..."\n` +
-            `}\n\n` +
-            `YouTube-URL: ${url}`
-        }
-      ]
+    // anropa hjälpfunktionen vi lade till nyss
+    const result = await openaiTimestamps(url);
+
+    // säkerställ att vi alltid har något att skicka tillbaka
+    const chapters = Array.isArray(result?.chapters)
+      ? result.chapters
+      : [
+          { time: "00:00", title: "Intro (fallback route)" },
+          { time: "01:00", title: "Mitten (fallback route)" },
+          { time: "02:00", title: "Avslut (fallback route)" }
+        ];
+
+    const summary =
+      typeof result?.summary === "string" && result.summary.trim()
+        ? result.summary
+        : "AI-svaret saknade sammanfattning, detta är en fallback från routen.";
+
+    return res.json({
+      url,
+      chapters,
+      summary
     });
+  } catch (err) {
+    console.error("Oväntat fel i /api/timestamps:", err);
+
+    // absolut sista nödfallback – men fortfarande 200 OK
+    return res.json({
+      url,
+      chapters: [
+        { time: "00:00", title: "Intro (nödfallback)" },
+        { time: "01:00", title: "Mitten (nödfallback)" },
+        { time: "02:00", title: "Avslut (nödfallback)" }
+      ],
+      summary:
+        "Ett oväntat fel uppstod i servern. Detta är ett nödfallback-svar så att användaren inte får 500-fel."
+    });
+  }
+});
+
 
     const raw = completion.choices[0].message.content;
     let parsed;
