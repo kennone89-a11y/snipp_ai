@@ -81,6 +81,10 @@
       <div class="field">
         <div class="sub" style="margin:10px 0 6px">AI-sammanfattning</div>
         <textarea id="summary" placeholder="Sammanfattningen dyker upp här när AI är klar..."></textarea>
+        <p id="ai-status" style="font-size: 12px; color: #8cd9ff; margin-top: 6px; min-height: 1.2em;">
+  <!-- AI-status visas här -->
+</p>
+
       </div>
 
       <div class="footer">
@@ -110,8 +114,9 @@ const runBtn   = document.getElementById("runBtn");
 const pdfBtn   = document.getElementById("pdfBtn");
 const mailBtn  = document.getElementById("mailBtn");
 const emailInput = document.getElementById("emailInput");
-
 const statusEl = document.getElementById("status");
+const statusEl = document.getElementById("status");
+const aiStatusEl = document.getElementById("ai-status");
 const logEl = document.getElementById("log");
 const timerEl = document.getElementById("timer");
 const player = document.getElementById("player");
@@ -228,6 +233,9 @@ async function uploadToSupabase(blob){
 
 async function callSummarize(url){
   setStatus("Skickar till AI för transkribering…");
+    if (aiStatusEl) {
+    aiStatusEl.textContent = "AI jobbar… vänta lite 🔄";
+  }
   const backendBase = window.location.origin;
 
   const res = await fetch(`${backendBase}/api/summarize`, {
@@ -245,7 +253,12 @@ async function callSummarize(url){
     const msg = (json && (json.error || json.message)) ? (json.error || json.message) : txt;
     throw new Error(`Backend-fel: ${res.status} ${String(msg).slice(0, 300)}`);
   }
-  if (!json?.summary) throw new Error("Okänt AI-fel: saknar summary i svar.");
+    if (!json?.summary) throw new Error("Okänt AI-fel: saknar summary i svar.");
+
+  if (aiStatusEl) {
+    aiStatusEl.textContent = "";
+  }
+
   return json;
 }
 
@@ -273,13 +286,10 @@ async function uploadAndSummarize(){
     pdfBtn.disabled = false;
     mailBtn.disabled = false;
     setLog("Transkription & sammanfattning lyckades.");
-  }catch(err){
-    console.error(err);
-    setStatus("Fel vid transkribering");
-    setLog(err.message || String(err));
-    runBtn.disabled = false;
-  }
-}
+     if (aiStatusEl) {
+      aiStatusEl.textContent = "Kunde inte hämta svar från AI 💀";
+    }
+
 
 async function downloadPdf(){
   try{
