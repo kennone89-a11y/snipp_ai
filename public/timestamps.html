@@ -2,192 +2,388 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <title>Kenai Timestamps – Prototype</title>
+  <title>Kenai Timestamps – AI-kapitel från YouTube</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #020617;
-      color: #e5e7eb;
+    * {
+      box-sizing: border-box;
       margin: 0;
+      padding: 0;
+    }
+
+    body {
       min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      background: radial-gradient(circle at top, #07111f 0, #02040a 40%, #000000 100%);
+      color: #f5f5f5;
       display: flex;
       align-items: center;
       justify-content: center;
-    }
-
-    .card {
-      background: #020617;
-      border-radius: 24px;
       padding: 24px;
-      max-width: 500px;
+    }
+
+    .page {
+      max-width: 900px;
       width: 100%;
+      border-radius: 24px;
+      padding: 28px 24px 32px;
+      background: rgba(5, 10, 25, 0.96);
+      border: 1px solid rgba(90, 200, 250, 0.25);
       box-shadow:
-        0 0 0 1px rgba(148, 163, 184, 0.15),
-        0 18px 45px rgba(15, 23, 42, 0.9);
+        0 0 40px rgba(0, 0, 0, 0.9),
+        0 0 60px rgba(88, 180, 255, 0.25);
+      backdrop-filter: blur(16px);
     }
 
-    .logo {
-      font-weight: 700;
-      font-size: 20px;
-      margin-bottom: 16px;
-    }
-
-    .logo span {
-      background: linear-gradient(135deg, #22d3ee, #4f46e5, #a855f7);
-      -webkit-background-clip: text;
-      color: transparent;
+    header {
+      margin-bottom: 18px;
     }
 
     h1 {
-      font-size: 24px;
-      margin: 0 0 8px;
+      font-size: 22px;
+      margin-bottom: 4px;
     }
 
-    p {
-      margin: 0 0 16px;
-      color: #9ca3af;
-      font-size: 14px;
+    .subtitle {
+      font-size: 13px;
+      color: #a8b7cc;
+      margin-bottom: 12px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(90, 200, 250, 0.4);
+      background: rgba(0, 10, 30, 0.7);
+      color: #8cd9ff;
+      margin-bottom: 8px;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #5ac8fa, #007aff);
+      box-shadow: 0 0 8px #5ac8fa;
     }
 
     label {
+      font-size: 12px;
+      color: #a8b7cc;
       display: block;
-      font-size: 13px;
       margin-bottom: 4px;
-      color: #9ca3af;
     }
 
-    input {
+    input[type="text"] {
       width: 100%;
-      padding: 10px 12px;
       border-radius: 12px;
-      border: 1px solid #1f2937;
-      background: #020617;
+      border: 1px solid rgba(100, 120, 150, 0.6);
+      background: rgba(3, 10, 25, 0.9);
       color: #e5e7eb;
-      font-size: 14px;
-      outline: none;
+      font-size: 13px;
+      padding: 9px 12px;
     }
 
-    input:focus {
-      border-color: #22d3ee;
-      box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.4);
+    input[type="text"]::placeholder {
+      color: #6b7280;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
     }
 
     button {
-      margin-top: 12px;
-      width: 100%;
-      padding: 10px 14px;
-      border-radius: 999px;
       border: none;
-      font-size: 14px;
-      font-weight: 600;
+      border-radius: 999px;
+      padding: 9px 16px;
+      font-size: 13px;
+      font-weight: 500;
       cursor: pointer;
-      background: linear-gradient(135deg, #22d3ee, #4f46e5, #a855f7);
-      color: white;
+      background: #1f2937;
+      color: #e5e7eb;
+      transition: transform 0.12s ease-out, box-shadow 0.12s ease-out, background 0.12s ease-out, opacity 0.12s ease-out;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, #007aff, #5ac8fa);
+      color: #fff;
+      box-shadow: 0 0 14px rgba(0, 122, 255, 0.5);
     }
 
     button:disabled {
       opacity: 0.5;
-      cursor: wait;
+      cursor: default;
+      box-shadow: none;
     }
 
-    .output {
-      margin-top: 20px;
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 0 18px rgba(120, 200, 255, 0.7);
+    }
+
+    .section {
+      margin-top: 18px;
       padding-top: 16px;
-      border-top: 1px solid #1f2937;
-      font-size: 13px;
-      white-space: pre-wrap;
+      border-top: 1px solid rgba(100, 120, 150, 0.4);
     }
 
-    .chapter {
+    .section-title {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #8cd9ff;
       margin-bottom: 8px;
     }
 
-    .timestamp {
-      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      color: #22d3ee;
-      margin-right: 4px;
+    textarea {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid rgba(100, 120, 150, 0.6);
+      background: rgba(3, 10, 25, 0.9);
+      color: #e5e7eb;
+      font-size: 13px;
+      padding: 9px 12px;
+      resize: vertical;
+      min-height: 120px;
+      white-space: pre-wrap;
     }
 
-    .summary-title {
-      margin-top: 12px;
-      font-weight: 600;
-      color: #e5e7eb;
+    .cols {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        padding: 20px 16px 24px;
+      }
+      .cols {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .status-row {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #9ca3af;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    #ai-status {
+      color: #8cd9ff;
+      min-height: 1.2em;
+    }
+
+    a.back-link {
+      font-size: 11px;
+      color: #9ca3af;
+      text-decoration: none;
+    }
+
+    a.back-link:hover {
+      text-decoration: underline;
+      color: #d1d5db;
     }
   </style>
 </head>
 <body>
-  <div class="card">
-    <div class="logo"><span>Kenai</span> Timestamps (prototype)</div>
-    <h1>Generera kapitel från YouTube-URL</h1>
-    <p>Skriv in en YouTube-länk så skapar Kenai ett exempel på kapitel + sammanfattning.</p>
+  <main class="page">
+    <header>
+      <div class="badge">
+        <span class="badge-dot"></span>
+        Kenai · Timestamps
+      </div>
+      <h1>Skapa AI-kapitel från YouTube</h1>
+      <p class="subtitle">
+        Klistra in en YouTube-länk så skapar Kenai kapitel, sammanfattning och text du kan
+        klistra in direkt i YouTube-beskrivningen.
+      </p>
+    </header>
 
-    <label for="url">YouTube-URL</label>
-    <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=..." />
+    <section>
+      <label for="urlInput">YouTube-länk eller annan video-URL</label>
+      <input id="urlInput" type="text" placeholder="https://www.youtube.com/watch?v=..." />
+      <div class="row">
+        <button id="generateBtn" class="primary">
+          ⏱ Skapa kapitel
+        </button>
+        <button id="copyChaptersBtn">Kopiera kapitel</button>
+        <button id="copySummaryBtn">Kopiera sammanfattning</button>
+        <span style="font-size: 11px; color: #6b7280; margin-left:auto;">
+          <a href="index.html" class="back-link">← Tillbaka till Kenai-hubben</a>
+        </span>
+      </div>
+    </section>
 
-    <button id="generateBtn">Generera timestamps</button>
-
-    <div id="output" class="output"></div>
-  </div>
+    <section class="section">
+      <div class="section-title">Resultat</div>
+      <div class="cols">
+        <div>
+          <label for="chaptersOutput">Kapitel (YouTube-format)</label>
+          <textarea id="chaptersOutput" placeholder="00:00 Intro&#10;03:12 Första ämnet&#10;..."></textarea>
+        </div>
+        <div>
+          <label for="summaryOutput">Sammanfattning</label>
+          <textarea id="summaryOutput" placeholder="Kort sammanfattning av videon..."></textarea>
+        </div>
+      </div>
+      <div class="status-row">
+        <span id="status">Klistra in en länk och tryck “Skapa kapitel”.</span>
+        <span id="ai-status"><!-- AI-status --></span>
+      </div>
+    </section>
+  </main>
 
   <script>
-    const btn = document.getElementById("generateBtn");
-    const output = document.getElementById("output");
-    const urlInput = document.getElementById("url");
+    const urlInput = document.getElementById("urlInput");
+    const generateBtn = document.getElementById("generateBtn");
+    const copyChaptersBtn = document.getElementById("copyChaptersBtn");
+    const copySummaryBtn = document.getElementById("copySummaryBtn");
+    const chaptersOutput = document.getElementById("chaptersOutput");
+    const summaryOutput = document.getElementById("summaryOutput");
+    const statusEl = document.getElementById("status");
+    const aiStatusEl = document.getElementById("ai-status");
 
-    btn.addEventListener("click", async () => {
-      const url = urlInput.value.trim();
-      if (!url) {
-        alert("Skriv in en YouTube-URL först.");
+    function setStatus(text) {
+      if (statusEl) statusEl.textContent = text;
+      console.log("STATUS:", text);
+    }
+
+    function setAIStatus(text) {
+      if (aiStatusEl) aiStatusEl.textContent = text || "";
+    }
+
+    function validateUrl(raw) {
+      const url = raw.trim();
+      if (!url) return null;
+      if (!/^https?:\/\//i.test(url)) return "Länken måste börja med http:// eller https://";
+      if (!url.includes("youtube.com") && !url.includes("youtu.be")) {
+        // vi tillåter andra URL:er, men varnar lätt
+        return null;
+      }
+      return null;
+    }
+
+    async function generateTimestamps() {
+      const raw = urlInput.value;
+      const err = validateUrl(raw);
+      if (err) {
+        setStatus(err);
         return;
       }
 
-      btn.disabled = true;
-      btn.textContent = "Genererar...";
+      const url = raw.trim();
+      const backendBase = window.location.origin;
 
       try {
-        const res = await fetch("/api/timestamps", {
+        generateBtn.disabled = true;
+        setStatus("Skickar till Kenai Timestamps...");
+        setAIStatus("AI jobbar… vänta lite 🔄");
+
+        const res = await fetch(`${backendBase}/api/timestamps`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url })
         });
 
+        const txt = await res.text();
+        let json = null;
+        try {
+          json = JSON.parse(txt);
+        } catch (_) {
+          json = null;
+        }
+
         if (!res.ok) {
-          throw new Error("Fel från servern");
+          const msg =
+            json && (json.error || json.message)
+              ? json.error || json.message
+              : txt;
+          throw new Error(String(msg).slice(0, 300));
         }
 
-        const data = await res.json();
-
-        // Visa kapitel + sammanfattning
-        output.innerHTML = "";
-
-        if (data.chapters && data.chapters.length) {
-          data.chapters.forEach(ch => {
-            const div = document.createElement("div");
-            div.className = "chapter";
-            div.innerHTML = `<span class="timestamp">${ch.time}</span>${ch.title}`;
-            output.appendChild(div);
-          });
+        // Försök vara flexibel: stöd olika svarformat
+        let chaptersText = "";
+        if (json) {
+          if (Array.isArray(json.chapters)) {
+            chaptersText = json.chapters
+              .map((c) =>
+                typeof c === "string"
+                  ? c
+                  : `${c.time || c.timestamp || ""} ${c.title || c.label || ""}`.trim()
+              )
+              .join("\n");
+          } else if (typeof json.chaptersText === "string") {
+            chaptersText = json.chaptersText;
+          } else if (typeof json.chapters === "string") {
+            chaptersText = json.chapters;
+          }
+        }
+        if (!chaptersText) {
+          chaptersText = txt; // fallback: visa råtext
         }
 
-        if (data.summary) {
-          const summaryTitle = document.createElement("div");
-          summaryTitle.className = "summary-title";
-          summaryTitle.textContent = "Sammanfattning:";
-          output.appendChild(summaryTitle);
-
-          const summaryText = document.createElement("div");
-          summaryText.textContent = data.summary;
-          output.appendChild(summaryText);
+        let summaryText = "";
+        if (json) {
+          if (typeof json.summary === "string") {
+            summaryText = json.summary;
+          } else if (typeof json.summaryText === "string") {
+            summaryText = json.summaryText;
+          }
         }
+        if (!summaryText && json && json.description) {
+          summaryText = json.description;
+        }
+
+        chaptersOutput.value = chaptersText;
+        summaryOutput.value = summaryText;
+        setStatus("Klar! Du kan nu kopiera kapitel och sammanfattning.");
+        setAIStatus("");
       } catch (err) {
         console.error(err);
-        output.textContent = "Något gick fel. Testa igen.";
+        setStatus(err.message || "Något gick fel när vi försökte skapa kapitel.");
+        setAIStatus("Kunde inte hämta svar från AI 💀");
       } finally {
-        btn.disabled = false;
-        btn.textContent = "Generera timestamps";
+        generateBtn.disabled = false;
       }
-    });
+    }
+
+    function copyToClipboard(textarea, label) {
+      if (!textarea.value.trim()) {
+        setStatus(`Inget ${label.toLowerCase()} att kopiera ännu.`);
+        return;
+      }
+      textarea.select();
+      try {
+        document.execCommand("copy");
+        setStatus(`${label} kopierade till urklipp.`);
+      } catch (err) {
+        console.error(err);
+        setStatus(`Kunde inte kopiera ${label.toLowerCase()}.`);
+      }
+    }
+
+    generateBtn.addEventListener("click", generateTimestamps);
+    copyChaptersBtn.addEventListener("click", () => copyToClipboard(chaptersOutput, "Kapitel"));
+    copySummaryBtn.addEventListener("click", () => copyToClipboard(summaryOutput, "Sammanfattning"));
   </script>
 </body>
 </html>
