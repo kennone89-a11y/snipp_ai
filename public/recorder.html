@@ -411,15 +411,19 @@
         setStatus("Laddar upp till Supabase...");
         setLog("Förbereder upload...");
 
-        const filename = `review-${Date.now()}.webm`;
-        const path = `${SUPABASE_FOLDER}/${filename}`;
+        const filename = `review-${Date.now()}.webm`; // filändelsen kan vi låta vara webm
+const path = `${SUPABASE_FOLDER}/${filename}`;
 
-        const { error: uploadError } = await sb.storage
-          .from(SUPABASE_BUCKET)
-          .upload(path, audioBlob, {
-            contentType: "audio/webm",
-            upsert: false
-          });
+// använd den riktiga typen från audioBlob
+const uploadContentType = audioBlob.type || "audio/webm";
+
+const { error: uploadError } = await sb.storage
+  .from(SUPABASE_BUCKET)
+  .upload(path, audioBlob, {
+    contentType: uploadContentType,
+    upsert: false
+  });
+
 
         if (uploadError) {
           console.error(uploadError);
