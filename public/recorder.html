@@ -354,16 +354,22 @@
           }
         };
 
-        mediaRecorder.onstop = () => {
-          stopTimer();
-          const blob = new Blob(chunks, { type: "audio/webm" });
-          audioBlob = blob;
-          const url = URL.createObjectURL(blob);
-          player.src = url;
-          player.controls = true;
-          setStatus("Inspelning klar. Lyssna & ladda upp.");
-          uploadBtn.disabled = false;
-        };
+       mediaRecorder.onstop = () => {
+  stopTimer();
+
+  // Använd den mimetype som browsern själv använde för chunks[0]
+  const mimeType = (chunks[0] && chunks[0].type) ? chunks[0].type : "audio/webm";
+  const blob = new Blob(chunks, { type: mimeType });
+  audioBlob = blob;
+
+  const url = URL.createObjectURL(blob);
+  player.src = url;
+  player.controls = true;
+
+  setStatus("Inspelning klar. Lyssna & ladda upp.");
+  uploadBtn.disabled = false;
+};
+
 
         mediaRecorder.start();
         startTimer();
