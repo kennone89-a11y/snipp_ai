@@ -230,38 +230,81 @@ async function uploadToSupabase(blob){
   return data.publicUrl;
 }
 
-async function callSummarize(url){
-  setStatus("Skickar till AI för transkribering…");
-    if (aiStatusEl) {
-    aiStatusEl.textContent = "AI jobbar… vänta lite 🔄";
-  }
-  const backendBase = window.location.origin;
-
-  const res = await fetch(`${backendBase}/api/summarize`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url }), // <-- server accepterar url eller audioUrl
-  });
-
-  // Läs alltid text först så du får riktig feltext
-  const txt = await res.text();
-  let json = null;
-  try { json = JSON.parse(txt); } catch {}
-
-  if (!res.ok) {
-    const msg = (json && (json.error || json.message)) ? (json.error || json.message) : txt;
-    throw new Error(`Backend-fel: ${res.status} ${String(msg).slice(0, 300)}`);
-  }
-    if (!json?.summary) throw new Error("Okänt AI-fel: saknar summary i svar.");
+async function callSummarize(url) {
+  setStatus("Skickar till AI för transkribering...");
 
   if (aiStatusEl) {
-    aiStatusEl.textContent = "";
+    aiStatusEl.textContent = "AI jobbar… vänta lite 🔄";
   }
 
-  return json;
+  const backendBase = window.location.origin;
+
+  let res;
+  let txt;
+  let json = null;
+
+  try {
+    res = await fetch(`${backendBase}/api/summarize`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }), // server accepterar url eller audioUrl
+    });
+
+    // Läs alltid text först så du får riktig feltext
+    txt = await res.text();
+    try {
+      json = JSON.parse(txt);
+    } catch (e) {
+      json = null;
+    }
+
+    if (!res.ok) {
+      const msg =
+        json && (json.error || json.message)
+          ? json.error || json.message
+          : txt;
+      throw new Error(
+        `Backend-fel: ${res.status}. ${String(msg).slice(0, 300)}`
+      );
+    }
+
+    if (!json || !json.summary) {
+      throw new Error("Okänt AI-fel: saknar summary i svar.");
+    }
+
+    if (aiStatusEl) {
+      aiStatusEl.textContent = "";
+    }
+
+    return json;
+  } catch (err) {
+    console.error(err);
+    if (aiStatusEl) {
+      aiStatusEl.textContent = "Kunde inte hämta svar från AI 💀";
+    }
+    throw err;
+  }
 }
 
-async function uploadAndSummarize(){
+async function uploadAndSummarize() {
+  try {
+    const url = urlInput.value.trim();
+    if (!url) {
+      throw new Error("Ingen publik URL hittad. Ladda upp först.");
+    }
+
+    const json = await callSummarize(url);
+    summaryEl.value = json.summary || "";
+    setStatus("Klar!");
+  } catch (err) {
+    console.error(err);
+    setStatus(err.message || "Något gick fel när vi försökte sammanfatta.");
+    if (aiStatusEl) {
+      aiStatusEl.textContent = "Kunde inte hämta svar från AI 💀";
+    }
+  }
+}
+
   try{
     runBtn.disabled = true;
     setLog("Laddar upp fil…");
