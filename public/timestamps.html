@@ -212,15 +212,19 @@
         Kenai · Timestamps
       </div>
       <h1>Skapa AI-kapitel från YouTube</h1>
-      <p class="subtitle">
-        Klistra in en YouTube-länk så skapar Kenai kapitel, sammanfattning och text du kan
-        klistra in direkt i YouTube-beskrivningen.
-      </p>
+<p class="subtitle">
+  Klistra in en YouTube-länk så skapar Kenai kapitel, sammanfattning och text du kan klistra in direkt i videons beskrivning.
+</p>
     </header>
 
     <section>
       <label for="urlInput">YouTube-länk eller annan video-URL</label>
-      <input id="urlInput" type="text" placeholder="https://www.youtube.com/watch?v=..." />
+<input
+  id="urlInput"
+  type="text"
+  placeholder="Klistra in en YouTube-länk här..."
+/>
+
       <div class="row">
         <button id="generateBtn" class="primary">
           ⏱ Skapa kapitel
@@ -245,10 +249,13 @@
           <textarea id="summaryOutput" placeholder="Kort sammanfattning av videon..."></textarea>
         </div>
       </div>
-      <div class="status-row">
-        <span id="status">Klistra in en länk och tryck “Skapa kapitel”.</span>
-        <span id="ai-status"><!-- AI-status --></span>
-      </div>
+      <<div class="status-row">
+  <span class="status-tip">
+    Detta är en prototyp. Snart kommer Kenai Timestamps läsa videons innehåll på riktigt och skapa kapitel, sammanfattning och förslag på beskrivning & hashtags.
+  </span>
+  <span id="aiStatus">AI-status …</span>
+</div>
+
     </section>
   </main>
 
