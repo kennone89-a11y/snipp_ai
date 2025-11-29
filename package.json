@@ -1,7 +1,7 @@
 {
   "name": "snipp-ai",
   "version": "1.0.0",
-  "description": "Kenai backend: Recorder, Timestamps, Reels",
+  "description": "Kenai backend: Recorder, Timestamps, Reels", 
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
