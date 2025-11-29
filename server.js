@@ -455,23 +455,18 @@ app.post("/api/render-reel-demo", async (req, res) => {
 
     return res.json({
       ok: true,
-      message: "Plan mottagen i backend (demo). Här skulle Kenai bygga en riktig reel.",
+      message:
+        "Plan mottagen i backend (demo). Här skulle Kenai bygga en riktig reel.",
       videoUrl: null, // sen: riktig URL till renderad video
     });
   } catch (err) {
     console.error("RENDER-REEL-DEMO ERROR:", err);
-    return res.status(500).json({ error: "Internt fel i render-reel-demo." });
+    return res
+      .status(500)
+      .json({ error: "Internt fel i render-reel-demo." });
   }
 });
 
-  } catch (err) {
-    console.error("REELS DEMO ERROR:", err);
-    return res.status(500).json({
-      ok: false,
-      error: "Internal server error in /api/reels-plan-demo.",
-    });
-  }
-});
 
 
 // ---- Trends (för att slippa 404) ----
