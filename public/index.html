@@ -2,8 +2,8 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kenai – AI-verktyg för creators</title>
+  <title>Kenai – AI Hub</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     * {
       box-sizing: border-box;
@@ -14,20 +14,22 @@
     body {
       min-height: 100vh;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-      background: radial-gradient(circle at top, #07111f 0, #02040a 40%, #000000 100%);
-      color: #f5f5f5;
+      color: #f9fafb;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 24px;
+      background:
+        linear-gradient(180deg, rgba(0,0,0,0.75), rgba(0,0,0,0.95)),
+        url("kenai-earth-mars-bg.jpg") center/cover no-repeat fixed;
     }
 
     .page {
-      max-width: 1100px;
       width: 100%;
+      max-width: 960px;
       border-radius: 24px;
-      padding: 28px 24px 32px;
-      background: rgba(5, 10, 25, 0.9);
+      padding: 24px 20px 22px;
+      background: rgba(5, 10, 25, 0.96);
       border: 1px solid rgba(90, 200, 250, 0.25);
       box-shadow:
         0 0 40px rgba(0, 0, 0, 0.9),
@@ -35,290 +37,275 @@
       backdrop-filter: blur(16px);
     }
 
-    .header {
+    header {
       display: flex;
+      align-items: flex-start;
       justify-content: space-between;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 24px;
+      gap: 12px;
+      margin-bottom: 18px;
     }
 
     .title-block {
-      max-width: 640px;
+      max-width: 70%;
     }
 
-    .badge {
+    h1 {
+      font-size: 24px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .beta-pill {
       display: inline-flex;
       align-items: center;
       gap: 6px;
       font-size: 11px;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.1em;
       padding: 4px 10px;
       border-radius: 999px;
-      border: 1px solid rgba(90, 200, 250, 0.4);
-      background: rgba(0, 10, 30, 0.7);
-      color: #8cd9ff;
-      margin-bottom: 10px;
-    }
-
-    .badge-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: radial-gradient(circle, #5ac8fa, #007aff);
-      box-shadow: 0 0 8px #5ac8fa;
-    }
-
-    .title-block h1 {
-      font-size: 26px;
-      line-height: 1.2;
+      border: 1px solid rgba(248, 250, 252, 0.18);
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
       margin-bottom: 6px;
     }
 
-    .title-block p {
-      font-size: 14px;
-      color: #b0c4d8;
+    .beta-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #22c55e, #16a34a);
+      box-shadow: 0 0 10px #22c55e;
     }
 
-    .brand-mark {
-      text-align: right;
+    .subtitle {
+      font-size: 13px;
+      color: #cbd5f5;
+      margin-bottom: 8px;
+    }
+
+    .vision {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    .version {
       font-size: 11px;
-      color: #7b8ca3;
+      color: #6b7280;
+      text-align: right;
+      margin-top: 4px;
     }
 
-    .brand-mark span {
-      font-weight: 600;
-      color: #8cd9ff;
-    }
-
-    .tools-grid {
+    .tools {
+      margin-top: 18px;
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 16px;
-      margin-top: 10px;
+      gap: 12px;
     }
 
-    @media (max-width: 900px) {
-      .tools-grid {
+    @media (max-width: 800px) {
+      .title-block {
+        max-width: 100%;
+      }
+      .tools {
         grid-template-columns: 1fr;
       }
-      .header {
+      header {
         flex-direction: column;
-        align-items: flex-start;
       }
-      .brand-mark {
-        text-align: left;
+      body {
+        padding: 16px;
       }
     }
 
     .tool-card {
-      position: relative;
-      padding: 18px 16px 18px;
-      border-radius: 20px;
-      border: 1px solid rgba(90, 200, 250, 0.18);
-      background: radial-gradient(circle at top left, rgba(90, 200, 250, 0.18), transparent 55%),
-                  rgba(5, 10, 25, 0.96);
-      box-shadow: 0 0 24px rgba(0, 0, 0, 0.6);
+      border-radius: 18px;
+      padding: 14px 12px 13px;
+      background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 55%),
+                  rgba(10, 16, 35, 0.96);
+      border: 1px solid rgba(148, 163, 184, 0.3);
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, border-color 0.15s ease-out, background 0.15s ease-out;
+      gap: 6px;
     }
 
-    .tool-card:hover {
-      transform: translateY(-4px);
-      border-color: rgba(120, 220, 255, 0.7);
-      box-shadow:
-        0 0 30px rgba(88, 180, 255, 0.6),
-        0 0 10px rgba(0, 0, 0, 0.9);
-      background: radial-gradient(circle at top, rgba(120, 220, 255, 0.22), transparent 60%),
-                  rgba(2, 6, 18, 0.98);
-    }
-
-    .tool-label {
+    .tool-eyebrow {
       font-size: 11px;
-      letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: #8cd9ff;
+      letter-spacing: 0.1em;
+      color: #94a3b8;
     }
 
     .tool-title {
-      font-size: 18px;
+      font-size: 15px;
       font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tool-emoji {
+      font-size: 17px;
     }
 
     .tool-desc {
-      font-size: 13px;
-      color: #a7b8cf;
+      font-size: 12px;
+      color: #9ca3af;
+      min-height: 32px;
     }
 
-    .tool-meta {
-      font-size: 11px;
-      color: #7f92ab;
-    }
-
-    .tool-meta strong {
-      color: #c7e5ff;
-    }
-
-    .tool-actions {
-      margin-top: 6px;
+    .tool-footer {
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
       gap: 8px;
     }
 
-    .tool-link {
+    .tag {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      color: #9ca3af;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
       display: inline-flex;
       align-items: center;
-      justify-content: center;
-      gap: 6px;
-      font-size: 13px;
-      font-weight: 500;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: none;
+      gap: 4px;
+      background: #111827;
+      color: #e5e7eb;
+      transition: transform 0.12s ease-out, box-shadow 0.12s ease-out, background 0.12s ease-out, opacity 0.12s ease-out;
       text-decoration: none;
-      cursor: pointer;
-      background: linear-gradient(135deg, #007aff, #5ac8fa);
-      color: #ffffff;
-      box-shadow: 0 0 16px rgba(0, 122, 255, 0.6);
-      transition: transform 0.12s ease-out, box-shadow 0.12s ease-out, filter 0.12s ease-out;
     }
 
-    .tool-link span.icon {
-      font-size: 15px;
+    .btn.primary {
+      background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+      color: #0b1120;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.7);
     }
 
-    .tool-link:hover {
+    .btn:Hover {
       transform: translateY(-1px);
-      filter: brightness(1.05);
-      box-shadow: 0 0 20px rgba(0, 150, 255, 0.7);
+      box-shadow: 0 0 18px rgba(148, 163, 184, 0.4);
     }
 
-    .tool-link.secondary {
-      background: transparent;
-      border: 1px solid rgba(120, 220, 255, 0.5);
-      box-shadow: none;
-      color: #c7e5ff;
+    .btn.primary:hover {
+      box-shadow: 0 0 22px rgba(56, 189, 248, 0.9);
+    }
+
+    footer {
+      margin-top: 14px;
       font-size: 11px;
-      padding: 6px 10px;
-    }
-
-    .tool-link.secondary:hover {
-      background: rgba(3, 20, 40, 0.9);
-      box-shadow: 0 0 12px rgba(120, 220, 255, 0.5);
-    }
-
-    .footer-note {
-      margin-top: 18px;
-      font-size: 11px;
-      color: #6f8198;
+      color: #6b7280;
       display: flex;
       justify-content: space-between;
       gap: 8px;
       flex-wrap: wrap;
     }
 
-    .footer-note span {
-      opacity: 0.9;
+    footer a {
+      color: #9ca3af;
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+      color: #e5e7eb;
     }
   </style>
 </head>
 <body>
   <main class="page">
-    <header class="header">
+    <header>
       <div class="title-block">
-        <div class="badge">
-          <span class="badge-dot"></span>
-          KENAI · CREATOR ENGINE
+        <div class="beta-pill">
+          <span class="beta-dot"></span>
+          Kenai · Beta
         </div>
-        <h1>Välj ditt Kenai-verktyg</h1>
-        <p>
-          Spela in, klipp och förstå ditt innehåll snabbare. Välj om du vill
-          spela in en röst, skapa timestamps från YouTube, eller låta Kenai
-          hjälpa dig att bygga en reel.
+        <h1>Kenai – AI Hub</h1>
+        <p class="subtitle">
+          Tre smarta verktyg för ljud, video och länkar. Allt samlat på ett ställe.
+        </p>
+        <p class="vision">
+          Kenai är din AI-motor för ljud, video och länkar. Spela in, ladda upp eller klistra in en URL –
+          Kenai skapar automatiskt sammanfattningar, kapitel, reel-planer och klara idéer åt dig.
+          Perfekt för poddar, möten, YouTube och creators som vill jobba smartare.
         </p>
       </div>
-      <div class="brand-mark">
-        <div><span>Kenai</span> · app.kenai.technology</div>
-        <div>“Framtidens Google Translate – fast för ljud & video.”</div>
+      <div style="text-align:right; min-width: 120px;">
+        <div class="version">Kenai v0.1</div>
+        <div class="version">“Sound to Story”</div>
       </div>
     </header>
 
-    <section class="tools-grid">
-      <!-- RECORDER -->
+    <section class="tools">
+      <!-- Recorder -->
       <article class="tool-card">
-        <div class="tool-label">Verktyg · Röstsammanfattning</div>
-        <div class="tool-title">Kenai Recorder</div>
-        <div class="tool-desc">
-          Spela in din röst och få en automatiskt sammanfattning på svenska.
-          Perfekt för möten, poddar, idéer eller snabba anteckningar.
+        <div class="tool-eyebrow">Verktyg 1</div>
+        <div class="tool-title">
+          <span class="tool-emoji">🎙️</span>
+          <span>AI-Recorder</span>
         </div>
-        <div class="tool-meta">
-          <strong>Output:</strong> text + sammanfattning + PDF-export.
-        </div>
-        <div class="tool-actions">
-          <a href="recorder.html" class="tool-link">
-            <span class="icon">🎤</span>
-            <span>Öppna Recorder</span>
-          </a>
-          <a href="recorder.html" class="tool-link secondary">
-            Testa direkt
+        <p class="tool-desc">
+          Spela in ljud, ladda upp till molnet och låt Kenai transkribera och sammanfatta åt dig på svenska.
+        </p>
+        <div class="tool-footer">
+          <span class="tag">Podcast · Möten · Ljudbok</span>
+          <a href="recorder.html" class="btn primary">
+            Öppna Recorder →
           </a>
         </div>
       </article>
 
-      <!-- TIMESTAMPS -->
+      <!-- Timestamps -->
       <article class="tool-card">
-        <div class="tool-label">Verktyg · YouTube / Länkar</div>
-        <div class="tool-title">Kenai Timestamps</div>
-        <div class="tool-desc">
-          Klistra in en YouTube-länk och låt Kenai skapa kapitel, sammanfattning
-          och förslag på beskrivning och hashtags.
+        <div class="tool-eyebrow">Verktyg 2</div>
+        <div class="tool-title">
+          <span class="tool-emoji">⏱️</span>
+          <span>AI-Timestamps</span>
         </div>
-        <div class="tool-meta">
-          <strong>Output:</strong> kapitel + sammanfattning + textförslag.
-        </div>
-        <div class="tool-actions">
-          <a href="timestamps.html" class="tool-link">
-            <span class="icon">⏱</span>
-            <span>Öppna Timestamps</span>
-          </a>
-          <a href="timestamps.html" class="tool-link secondary">
-            Klistra in länk
+        <p class="tool-desc">
+          Klistra in en YouTube- eller video-länk och få kapitel, sammanfattning och text som passar i beskrivningen.
+        </p>
+        <div class="tool-footer">
+          <span class="tag">YouTube · Kapitel</span>
+          <a href="timestamps.html" class="btn">
+            Öppna Timestamps →
           </a>
         </div>
       </article>
 
-      <!-- REELS -->
+      <!-- Reels -->
       <article class="tool-card">
-        <div class="tool-label">Verktyg · Reels / Shorts</div>
-        <div class="tool-title">Kenai Reels Maker</div>
-        <div class="tool-desc">
-          Ladda upp bilder och klipp, välj längd och låt Kenai planera en reel
-          med ordning, tempo och trend-idéer.
+        <div class="tool-eyebrow">Verktyg 3</div>
+        <div class="tool-title">
+          <span class="tool-emoji">🎬</span>
+          <span>AI-Reels (demo)</span>
         </div>
-        <div class="tool-meta">
-          <strong>Output:</strong> reel-plan + idéer + hashtags.
-        </div>
-        <div class="tool-actions">
-          <a href="reels.html" class="tool-link">
-            <span class="icon">🎬</span>
-            <span>Öppna Reels Maker</span>
-          </a>
-          <a href="reels.html" class="tool-link secondary">
-            Ladda upp klipp
+        <p class="tool-desc">
+          Ladda upp klipp & bilder, välj stil (Marvel/Tarantino/Kenai) och låt Kenai planera en kort, dynamisk reel åt dig.
+        </p>
+        <div class="tool-footer">
+          <span class="tag">Reels · Shorts · TikTok</span>
+          <a href="reels.html" class="btn">
+            Öppna Reels →
           </a>
         </div>
       </article>
     </section>
 
-    <footer class="footer-note">
-      <span>Tips: börja med Recorder om du vill fånga idéer snabbt.</span>
-      <span>Byggd med ❤️ av Kenneth + Kenai.</span>
+    <footer>
+      <span>Allt är i beta – funktioner kan ändras, brytas och förbättras från dag till dag.</span>
+      <span>Byggt av Kenneth + Kenai.</span>
     </footer>
   </main>
 </body>
