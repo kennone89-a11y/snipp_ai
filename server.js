@@ -435,6 +435,43 @@ app.post("/api/build-reel", async (req, res) => {
     res.status(500).json({ error: "Serverfel i build-reel." });
   }
 });
+// --- Kenai Reels: demo-endpoint för att ta emot plan.json direkt från frontend ---
+app.post("/api/reels-plan-demo", (req, res) => {
+  try {
+    const body = req.body || {};
+    const plan = body.plan;
+
+    if (!plan) {
+      return res.status(400).json({
+        ok: false,
+        error: "Missing 'plan' in request body.",
+      });
+    }
+
+    console.log("REELS DEMO PLAN RECEIVED:", {
+      style: plan.style,
+      segments: Array.isArray(plan.segments) ? plan.segments.length : 0,
+      totalDuration: plan.totalDuration,
+    });
+
+    return res.json({
+      ok: true,
+      message: "Reels demo-plan mottagen ✅",
+      summary: {
+        style: plan.style || "unknown",
+        segments: Array.isArray(plan.segments) ? plan.segments.length : 0,
+        totalDuration: plan.totalDuration ?? null,
+      },
+    });
+  } catch (err) {
+    console.error("REELS DEMO ERROR:", err);
+    return res.status(500).json({
+      ok: false,
+      error: "Internal server error in /api/reels-plan-demo.",
+    });
+  }
+});
+
 
 // ---- Trends (för att slippa 404) ----
 app.post("/api/trends-backend", async (req, res) => {
