@@ -435,34 +435,35 @@ app.post("/api/build-reel", async (req, res) => {
     res.status(500).json({ error: "Serverfel i build-reel." });
   }
 });
-// --- Kenai Reels: demo-endpoint för att ta emot plan.json direkt från frontend ---
-app.post("/api/reels-plan-demo", (req, res) => {
+// --- Render reel demo (tar emot plan, loggar, svarar OK) ---
+app.post("/api/render-reel-demo", async (req, res) => {
   try {
-    const body = req.body || {};
-    const plan = body.plan;
+    const plan = req.body.plan;
 
     if (!plan) {
-      return res.status(400).json({
-        ok: false,
-        error: "Missing 'plan' in request body.",
-      });
+      return res.status(400).json({ error: "Plan saknas i body." });
     }
 
-    console.log("REELS DEMO PLAN RECEIVED:", {
-      style: plan.style,
-      segments: Array.isArray(plan.segments) ? plan.segments.length : 0,
-      totalDuration: plan.totalDuration,
-    });
+    // Logga planen i backend så vi ser att det funkar
+    console.log("RENDER-REEL-DEMO: plan mottagen:");
+    console.log(JSON.stringify(plan, null, 2));
+
+    // Här i framtiden:
+    // 1) Hämta filer från Supabase
+    // 2) Bygga riktig video
+    // 3) Ladda upp videon och skicka tillbaka en URL
 
     return res.json({
       ok: true,
-      message: "Reels demo-plan mottagen ✅",
-      summary: {
-        style: plan.style || "unknown",
-        segments: Array.isArray(plan.segments) ? plan.segments.length : 0,
-        totalDuration: plan.totalDuration ?? null,
-      },
+      message: "Plan mottagen i backend (demo). Här skulle Kenai bygga en riktig reel.",
+      videoUrl: null, // sen: riktig URL till renderad video
     });
+  } catch (err) {
+    console.error("RENDER-REEL-DEMO ERROR:", err);
+    return res.status(500).json({ error: "Internt fel i render-reel-demo." });
+  }
+});
+
   } catch (err) {
     console.error("REELS DEMO ERROR:", err);
     return res.status(500).json({
