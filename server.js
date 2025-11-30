@@ -35,9 +35,10 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
-
-// Serve /public
+// Servera alla statiska filer i /public (html, bilder, js)
 app.use(express.static(path.join(__dirname, "public")));
+
+
 
 // Kenai Timestamps – stabil prototyp (ingen AI)
 app.post("/api/timestamps", (req, res) => {
