@@ -233,12 +233,13 @@
     <!-- UPPLADDNING -->
     <section class="section">
       <div class="section-title">2 · Ladda upp & få publik URL</div>
-      <div class="btn-row">
-        <button id="summarize-btn" onclick="summarize()" style="display:none">
-  Sammanfatta
-</button>
-      </div>
-      <label for="urlInput">Supabase public URL (fylls i automatiskt)</label>
+        <div class="btn-row">
+    <button id="uploadBtn" class="primary" onclick="uploadRecording()">
+      Ladda upp & AI-sammanfatta
+    </button>
+  </div>
+
+<label for="urlInput">Supabase public URL (fylls i automatiskt)</label>
 <input
   type="text"
   id="urlInput"
@@ -442,8 +443,11 @@ const { error: uploadError } = await sb.storage
         const { data } = sb.storage.from(SUPABASE_BUCKET).getPublicUrl(path);
         publicUrl = data.publicUrl;
         urlInput.value = publicUrl || "";
+        setStatus("Public URL hämtad. Startar AI-sammanfattning...");
+        await uploadAndSummarize();
 
-        setStatus("Uppladdning klar. Du kan nu sammanfatta.");
+
+        
         setLog("Public URL hämtad.");
         summaryBtn.disabled = !publicUrl;
       } catch (err) {
