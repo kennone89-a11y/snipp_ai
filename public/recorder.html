@@ -197,6 +197,48 @@
         padding: 20px 16px 24px;
       }
     }
+    /* AI-jobbar status */
+.ai-status {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #a6b6ff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
+  opacity: 0.9;
+}
+
+.ai-pulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: radial-gradient(circle, #46f0ff, #0070ff);
+  box-shadow: 0 0 12px rgba(80, 200, 255, 0.9);
+  animation: ai-pulse 1s ease-in-out infinite;
+}
+
+.ai-status.done .ai-pulse {
+  animation: none;
+  background: #3cff9b;
+  box-shadow: 0 0 10px rgba(60, 255, 155, 0.9);
+}
+
+@keyframes ai-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0.7;
+  }
+}
+
   </style>
 
   <!-- Supabase JS (CDN) -->
@@ -250,12 +292,25 @@
 
     </section>
 
-    <!-- SAMMANFATTNING -->
-    <section class="section">
-      <div class="section-title">3 · AI-sammanfattning</div>
-      <label for="summary">AI-sammanfattning</label>
-      <textarea id="summary" placeholder="Sammanfattningen dyker upp här när AI är klar..."></textarea>
-      <p id="ai-status"><!-- AI jobbar-status här --></p>
+   <!-- SAMMANFATTNING -->
+<section class="section">
+  <div class="section-title">3 - AI-sammanfattning</div>
+
+  <label for="summary">AI-sammanfattning</label>
+  <textarea
+    id="summary"
+    placeholder="Sammanfattningen dyker upp här när AI är klar..."
+  ></textarea>
+
+  <div id="aiStatus" class="ai-status"></div>
+
+  <div class="btn-row" style="margin-top: 6px;">
+    <button id="summaryBtn" class="secondary" style="display:none" disabled>
+      Sammanfatta
+    </button>
+  </div>
+</section>
+
       <div class="btn-row" style="margin-top: 6px;">
   <button id="summaryBtn" class="secondary" style="display:none" disabled>
     Sammanfatta
