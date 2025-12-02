@@ -534,29 +534,54 @@ hashtagsOutput.innerHTML = (json.hashtags && json.hashtags.length)
         }
 
         async function generateTimestamps() {
-          var url = (urlInput.value || '').trim();
-          if (!url) {
-            setStatus('Skriv in en URL först.');
-            urlInput.focus();
-            return;
-          }
+    var url = (urlInput.value || '').trim();
+
+    // UI: AI börjar jobba
+    aiStatusEl.textContent = 'AI jobbar… analyserar din länk 🔍';
+    generateBtnEl.disabled = true;
+    generateBtnEl.textContent = 'AI jobbar…';
+
+    if (!url) {
+        setStatus('Skriv in en URL först.');
+        urlInput.focus();
+        return;
+    }
+
 
           try {
             generateBtn.disabled = true;
             setStatus('Skickar URL till Kenai…');
             setAIStatus('AI analyserar din video/podd…', false);
 
-            var backendBase = window.location.origin;
-            var res = await fetch(backendBase + '/api/timestamps', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ url: url })
-            });
+           var backendBase = 'https://snipp-ai1.onrender.com';
+
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 20000);
+
+var res = await fetch(backendBase + '/api/timestamps', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: url }),
+    signal: controller.signal
+});
+
+clearTimeout(timeout);
+
+if (!res.ok) {
+    throw new Error('Backend-svar: ' + res.status + ' – ' + res.statusText);
+}
+
+
 
             var txt = await res.text();
             var json = null;
             try {
               json = JSON.parse(txt);
+              // UI: AI klar
+aiStatusEl.textContent = 'Klar! Timestamps genererade ✅';
+generateBtnEl.disabled = false;
+generateBtnEl.textContent = 'Generera timestamps med AI';
+
             } catch (e) {
               console.warn('Kunde inte parsa JSON, rå-text:', txt);
             }
@@ -566,6 +591,10 @@ hashtagsOutput.innerHTML = (json.hashtags && json.hashtags.length)
                 (json && (json.error || json.message)) ||
                 txt ||
                 'Okänt fel från backend.';
+                aiStatusEl.textContent = 'Fel: Kunde inte generera timestamps ❌';
+generateBtnEl.disabled = false;
+generateBtnEl.textContent = 'Försök igen';
+
               throw new Error(String(msg).slice(0, 300));
             }
 
@@ -578,10 +607,17 @@ hashtagsOutput.innerHTML = (json.hashtags && json.hashtags.length)
 
             setStatus('Klar! Timestamps genererade.');
             setAIStatus('AI-timestamps klara ✅', true);
-          } catch (err) {
-            console.error(err);
-            setStatus(err.message || 'Något gick fel när timestamps genererades.');
-            setAIStatus('Något gick fel med AI-timestamps.', true);
+          catch (err) {
+    console.error(err);
+
+    aiStatusEl.textContent = 'Fel: servern svarade inte ❌';
+    generateBtnEl.disabled = false;
+    generateBtnEl.textContent = 'Försök igen';
+
+    setStatus(err.message || 'Något gick fel när timestamps genererades.');
+    setAIStatus('AI kunde inte generera timestamp-data.', true);
+}
+
           } finally {
             generateBtn.disabled = false;
           }
