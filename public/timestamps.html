@@ -1,610 +1,646 @@
-<!DOCTYPE html>
-<html lang="sv">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Kenai Timestamps – YouTube & poddar</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+// server.js (ESM) – Kenai backend: summarize + pdf + reels + trends
+import dotenv from "dotenv";
+dotenv.config({ override: true });
 
-    <!-- Kenai favicon -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32 (1).png" />
+import express from "express";
+import path from "path";
+import fs from "fs";
+import PDFDocument from "pdfkit";
+import { fileURLToPath } from "url";
+import OpenAI from "openai";
 
-    <style>
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
 
-      body {
-        min-height: 100vh;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-          sans-serif;
-        background: radial-gradient(circle at top, #07111f 0, #02152a 40%, #000000 100%);
-        color: #f5f5ff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 24px;
-      }
 
-      a {
-        color: #7dd3fc;
-        text-decoration: none;
-      }
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-      a:hover {
-        text-decoration: underline;
-      }
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-      .page {
-        width: 100%;
-        max-width: 1000px;
-        border-radius: 24px;
-        padding: 28px 32px 32px;
-        background: rgba(5, 12, 32, 0.96);
-        border: 1px solid rgba(77, 189, 255, 0.25);
-        box-shadow: 0 40px 90px rgba(0, 0, 0, 0.9);
-      }
 
-      .back-link {
-        font-size: 12px;
-        margin-bottom: 18px;
-        opacity: 0.8;
-      }
+const app = express();
+app.set("trust proxy", 1);
 
-      h1 {
-        font-size: 24px;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: #e5f3ff;
-        margin-bottom: 6px;
-      }
+// ---- CORS (ingen cors-dependency) ----
+const ALLOWED_ORIGINS = new Set([
+  "https://app.kenai.technology",
+  "https://kenai.technology",
+  "http://localhost:3000",
+  "http://localhost:5173",
+]);
 
-      .subtitle {
-        font-size: 13px;
-        color: #aab6ff;
-        margin-bottom: 24px;
-      }
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
 
-      .section {
-        border-radius: 18px;
-        border: 1px solid rgba(120, 166, 255, 0.4);
-        background: radial-gradient(circle at top left, #0b1430 0, #050a1a 45%, #02030a 100%);
-        padding: 18px 18px 16px;
-        margin-bottom: 18px;
-      }
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  }
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-      .section-title {
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.18em;
-        color: #8cb3ff;
-        margin-bottom: 14px;
-      }
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
 
-      .row {
-        display: flex;
-        gap: 16px;
-        flex-wrap: wrap;
-      }
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: true }));
+// Servera alla statiska filer i /public (html, bilder, js)
+app.use(express.static(path.join(__dirname, "public")));
 
-      .col {
-        flex: 1 1 0;
-        min-width: 0;
-      }
 
-      label {
-        font-size: 12px;
-        color: #c2cffc;
-        display: block;
-        margin-bottom: 6px;
-      }
 
-      input[type="text"] {
-        width: 100%;
-        border-radius: 999px;
-        border: 1px solid rgba(126, 169, 255, 0.45);
-        background: rgba(2, 5, 20, 0.95);
-        color: #f6f7ff;
-        padding: 10px 16px;
-        font-size: 13px;
-        outline: none;
-      }
+// --- Kenai Timestamps: AI + fallback via fetch ---
+app.post('/api/timestamps', async (req, res) => {
+  const { url } = req.body;
 
-      input[type="text"]::placeholder {
-        color: #59607c;
-      }
+  // 1) Basvalidering
+  if (!url || typeof url !== 'string') {
+    return res.status(400).json({
+      error: 'Ingen URL skickades in till /api/timestamps.',
+    });
+  }
 
-      input[type="text"]:focus {
-        border-color: #4dd4ff;
-        box-shadow: 0 0 0 1px rgba(77, 212, 255, 0.4);
-      }
+  console.log('Kenai Timestamps: tog emot URL:', url);
 
-      .btn-row {
-        margin-top: 10px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
+  // 2) Fejkdata som fallback om OpenAI strular
+  const fallback = {
+    title: 'Exempel-titel från Kenai Timestamps (fejk)',
+    summary:
+      'Detta är en fejk-sammanfattning från Kenai Timestamps-prototypen. ' +
+      'Allt fungerar tekniskt – om AI:n inte kan svara använder vi denna fallback.',
+    hashtags: ['#kenai', '#timestamps', '#ai', '#podd', '#youtube'],
+    chapters: [
+      { time: '00:00', label: 'Intro' },
+      { time: '03:15', label: 'Viktig punkt / Hook' },
+      { time: '10:42', label: 'Huvudämne / Story' },
+      { time: '18:30', label: 'Avslutning & CTA' },
+    ],
+  };
 
-      button.primary {
-        border-radius: 999px;
-        border: none;
-        padding: 9px 18px;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        background: linear-gradient(135deg, #4ddeff, #8b6bff);
-        color: #050816;
-        box-shadow: 0 14px 40px rgba(43, 190, 255, 0.6);
-        transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
-        white-space: nowrap;
-      }
+  try {
+    // 3) Hämta API-nyckel
+    const key = requireOpenAIKey();
 
-      button.primary:hover {
-        transform: translateY(-1px);
-        filter: brightness(1.06);
-        box-shadow: 0 18px 50px rgba(82, 197, 255, 0.9);
-      }
+    // 4) Anropa OpenAI Chat Completions via fetch
+    const body = {
+      model: 'gpt-4o-mini',
+      temperature: 0.6,
+      messages: [
+        {
+          role: 'system',
+          content:
+            'Du är Kenai Timestamps, ett verktyg som hjälper creators att få ' +
+            'titel, sammanfattning, hashtags och kapitel till YouTube-videor och poddar. ' +
+            'Du får OFTA bara en URL och kan ibland inte se själva innehållet. ' +
+            'Gör då en smart, rimlig gissning baserat på titel/slug/kontext. ' +
+            'Svara ALLTID med STRIKT JSON (ingen text runtom, ingen markdown, inga kommentarer) ' +
+            'i EXAKT detta schema: ' +
+            '{ "title": "...", "summary": "...", "hashtags": ["#..."], "chapters": [ { "time": "mm:ss", "label": "..." }, ... ] }. ' +
+            'Tiderna ska alltid börja vid "00:00" och ökas i rimliga steg (t.ex. 00:00, 02:30, 05:00, 08:30 osv). ' +
+            'Sammanfattningen ska vara 3–6 meningar på svenska. Hashtags ska vara 5–10 st, relevanta och populära.'
+        },
+        {
+          role: 'user',
+          content:
+            `Video/podd-URL: ${url}\n\n` +
+            'Utgå från vad titeln och URL:en antyder. Om du inte vet exakt innehåll, ' +
+            'skapa en rimlig generell kapitelstruktur som skulle passa en sådan video/podd.'
+        },
+      ],
+    };
 
-      button.primary:disabled {
-        opacity: 0.6;
-        cursor: default;
-        transform: none;
-        box-shadow: none;
-      }
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
 
-      .hint {
-        font-size: 11px;
-        color: #7f8ab0;
-        margin-top: 6px;
-      }
+    const data = await r.json().catch(() => ({}));
 
-      .result-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
-        gap: 16px;
-      }
+    if (!r.ok) {
+      console.error('Kenai Timestamps: OpenAI-svar inte OK:', r.status, data);
+      return res.json(fallback);
+    }
 
-      .card {
-        border-radius: 16px;
-        border: 1px solid rgba(110, 160, 255, 0.35);
-        background: radial-gradient(circle at top left, #070f26 0, #050716 50%, #020309 100%);
-        padding: 16px 16px 14px;
-        min-height: 126px;
-      }
+    const raw = (data.choices?.[0]?.message?.content || '').trim();
+    console.log('Kenai Timestamps: rå OpenAI-svar:', raw);
 
-      .card-title {
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.16em;
-        color: #8da2ff;
-        margin-bottom: 10px;
-      }
+    // 5) Försök parsa JSON från modellen
+    let parsed;
+    try {
+      const cleaned = raw
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
+        .trim();
 
-      .title-output {
-        font-size: 14px;
-        font-weight: 600;
-        margin-bottom: 8px;
-        color: #f3f5ff;
-      }
+      parsed = JSON.parse(cleaned);
+    } catch (parseErr) {
+      console.error('Kenai Timestamps: kunde inte parsa JSON, använder fallback.', parseErr);
+      return res.json(fallback);
+    }
 
-      .summary-output {
-        font-size: 12px;
-        color: #b8c2ff;
-        line-height: 1.5;
-        white-space: pre-wrap;
-      }
+    // 6) Minimal sanity-check på resultatet
+    if (
+      !parsed ||
+      typeof parsed.title !== 'string' ||
+      typeof parsed.summary !== 'string' ||
+      !Array.isArray(parsed.hashtags) ||
+      !Array.isArray(parsed.chapters)
+    ) {
+      console.error('Kenai Timestamps: ogiltig struktur i AI-svar, använder fallback.');
+      return res.json(fallback);
+    }
 
-      .hashtags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
+    console.log('Kenai Timestamps: AI-svar OK, skickar vidare till frontend.');
+    return res.json(parsed);
+  } catch (err) {
+    console.error('Fel i /api/timestamps (yttersta catch):', err);
+    // Viktigt: vi skickar inte 500 här, utan vår fallback så UI alltid funkar
+    return res.json(fallback);
+  }
+});
 
-      .hashtags code {
-        font-family: inherit;
-        font-size: 11px;
-        background: rgba(20, 34, 80, 0.95);
-        border-radius: 999px;
-        padding: 4px 10px;
-        border: 1px solid rgba(149, 196, 255, 0.45);
-        color: #d9e6ff;
-      }
 
-      .chapters {
-        list-style: none;
-        margin-top: 4px;
-      }
 
-      .chapters li {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 6px 4px;
-        border-bottom: 1px solid rgba(37, 55, 104, 0.65);
-        font-size: 12px;
-        color: #d5ddff;
-      }
 
-      .chapters li:last-child {
-        border-bottom: none;
-      }
 
-      .chapter-time {
-        font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas,
-          "Liberation Mono", "Courier New", monospace;
-        font-size: 11px;
-        color: #9fd5ff;
-        min-width: 52px;
-      }
+// ---- Helpers ----
+function requireOpenAIKey() {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) {
+    const err = new Error("OPENAI_API_KEY saknas på servern.");
+    err.status = 500;
+    throw err;
+  }
 
-      .status-bar {
-        margin-top: 10px;
-        font-size: 11px;
-        color: #7b87b2;
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
-        align-items: center;
-      }
-
-      .ai-status {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 11px;
-        color: #a5b8ff;
-        min-height: 18px;
-      }
-
-      .ai-status.done {
-        color: #6efacc;
-      }
-
-      .ai-pulse {
-        width: 9px;
-        height: 9px;
-        border-radius: 999px;
-        background: radial-gradient(circle, #6efacc 0, #12f7ff 40%, #0b1836 100%);
-        box-shadow: 0 0 12px rgba(110, 250, 204, 0.9);
-        animation: ai-pulse 1.6s ease-in-out infinite;
-      }
-
-      @keyframes ai-pulse {
-        0% {
-          transform: scale(0.9);
-          opacity: 0.7;
-        }
-        50% {
-          transform: scale(1.2);
-          opacity: 1;
-        }
-        100% {
-          transform: scale(0.9);
-          opacity: 0.7;
-        }
-      }
-
-      @media (max-width: 768px) {
-        body {
-          padding: 16px;
-        }
-        .page {
-          padding: 20px 16px 22px;
-        }
-        .result-grid {
-          grid-template-columns: minmax(0, 1fr);
-        }
-      }     .chapter-timeline {
-  position: relative;
-  margin-top: 16px;
-  height: 10px;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    rgba(0, 255, 255, 0.25),
-    rgba(138, 180, 255, 0.5)
+  // DEBUG: visa VAD servern faktiskt ser (utan att läcka hela nyckeln)
+  console.log(
+    'DEBUG OPENAI_API_KEY:',
+    key.slice(0, 8), // första 8 tecknen
+    '... (length =',
+    key.length,
+    ')'
   );
-  box-shadow: 0 0 20px rgba(0, 200, 255, 0.35);
-  overflow: visible;
+
+  return key;
 }
 
-.chapter-marker {
-  position: absolute;
-  top: -4px;
-  width: 10px;
-  height: 18px;
-  border-radius: 999px;
-  background: #00f2ff;
-  box-shadow: 0 0 16px rgba(0, 242, 255, 0.9);
-  cursor: pointer;
+
+function safeUrl(u) {
+  try {
+    const url = new URL(u);
+    if (url.protocol !== "https:") return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
 }
 
-.chapter-marker .chapter-tooltip {
-  position: absolute;
-  left: 50%;
-  bottom: 30px;
-  transform: translateX(-50%) translateY(8px);
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(10, 18, 40, 0.95);
-  border: 1px solid rgba(0, 242, 255, 0.5);
-  font-size: 11px;
-  white-space: nowrap;
-  color: #e6f1ff;
-  box-shadow: 0 0 18px rgba(0, 242, 255, 0.6);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.18s ease, transform 0.18s ease;
-  z-index: 5;
+function extFromContentType(ct) {
+  const s = (ct || "").toLowerCase();
+  if (s.includes("webm")) return "webm";
+  if (s.includes("wav")) return "wav";
+  if (s.includes("mpeg")) return "mp3";
+  if (s.includes("mp3")) return "mp3";
+  if (s.includes("mp4") || s.includes("m4a")) return "m4a";
+  if (s.includes("ogg")) return "ogg";
+  return "bin";
 }
 
-.chapter-marker:hover .chapter-tooltip {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
+async function fetchAudioAsBuffer(url, maxBytes = 35 * 1024 * 1024) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 60_000);
+
+  try {
+    const r = await fetch(url, { signal: ctrl.signal });
+    if (!r.ok) {
+      const txt = await r.text().catch(() => "");
+      const e = new Error(`Kunde inte hämta ljud: ${r.status} ${txt.slice(0, 200)}`);
+      e.status = 400;
+      throw e;
+    }
+
+    const contentType = r.headers.get("content-type") || "application/octet-stream";
+    const len = Number(r.headers.get("content-length") || "0");
+    if (len && len > maxBytes) {
+      const e = new Error(`Ljudfilen är för stor (${len} bytes).`);
+      e.status = 413;
+      throw e;
+    }
+
+    const ab = await r.arrayBuffer();
+    if (ab.byteLength > maxBytes) {
+      const e = new Error(`Ljudfilen är för stor (${ab.byteLength} bytes).`);
+      e.status = 413;
+      throw e;
+    }
+
+    return { buffer: Buffer.from(ab), contentType };
+  } finally {
+    clearTimeout(t);
+  }
 }
 
-    </style>
-  </head>
-  <body>
-    <div class="page">
-      <div class="back-link">
-        <a href="index.html">&larr; Tillbaka till Kenai-hubben</a>
-      </div>
+function extractResponsesText(data) {
+  // Nya Responses kan ge output_text, annars fallbacks
+  if (typeof data?.output_text === "string" && data.output_text.trim()) return data.output_text;
 
-      <h1>AI-timestamps &amp; beskrivning för YouTube &amp; poddar</h1>
-      <p class="subtitle">
-        Klistra in en video- eller podd-URL så hjälper Kenai dig att skapa kapitel,
-        sammanfattning och hashtags – klart att klistra in direkt i beskrivningen.
-      </p>
-
-      <!-- 1 – URL -->
-      <section class="section">
-        <div class="section-title">1 – Klistra in URL</div>
-        <label for="urlInput">YouTube-länk, podd-länk eller annan publik video/podd-URL</label>
-        <input
-          id="urlInput"
-          type="text"
-          placeholder="https://www.youtube.com/watch?v=..."
-        />
-        <div class="btn-row">
-          <button id="generateBtn" class="primary">Generera timestamps med AI</button>
-        </div>
-        <p class="hint">
-          Kenai läser innehållet och föreslår kapitel, kort sammanfattning och några hashtags
-          baserat på din URL.
-        </p>
-        <div class="ai-status" id="aiStatus"></div>
-      </section>
-
-      <!-- 2 – Resultat -->
-      <section class="section">
-        <div class="section-title">2 – Resultat</div>
-
-        <div class="result-grid">
-          <div class="card">
-            <div class="card-title">Titel &amp; sammanfattning</div>
-            <div id="titleOutput" class="title-output">
-              Titel hämtas när AI är klar…
-            </div>
-            <div id="summaryOutput" class="summary-output">
-              Sammanfattning av videon/podden dyker upp här när AI är klar.
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-title">Hashtags</div>
-            <div id="hashtagsOutput" class="hashtags">
-              <code>#kenai</code>
-              <code>#ai</code>
-              <code>#timestamps</code>
-            </div>
-          </div>
-        </div>
-
-        <div class="card" style="margin-top: 16px">
-          <div class="card-title">Kapitel</div>
-          <ul id="chaptersOutput" class="chapters">
-            <div id="chapterTimeline" class="chapter-timeline"></div> 
-            <li>
-              <span class="chapter-time">00:00</span>
-              <span>Intro</span>
-            </li>
-            <li>
-              <span class="chapter-time">00:30</span>
-              <span>Exempelkapitel</span>
-            </li>
-            <li>
-              <span class="chapter-time">01:00</span>
-              <span>Avslutning</span>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <!-- Status -->
-      <div class="status-bar">
-        <span id="statusText">Redo att generera timestamps.</span>
-        <span style="opacity: 0.6; font-size: 10px"
-          >Obs. Detta är en tidig Kenai-prototyp.</span
-        >
-      </div>
-    </div>
-
-      <script>
-      (function () {
-        var urlInput = document.getElementById('urlInput');
-        var generateBtn = document.getElementById('generateBtn');
-        var aiStatusEl = document.getElementById('aiStatus');
-        var statusEl = document.getElementById('statusText');
-        var titleOutput = document.getElementById('titleOutput');
-        var summaryOutput = document.getElementById('summaryOutput');
-        var chaptersOutput = document.getElementById('chaptersOutput');
-        var hashtagsOutput = document.getElementById('hashtagsOutput');
-
-        function setStatus(msg) {
-          if (statusEl) statusEl.textContent = msg || '';
-          console.log('STATUS:', msg);
+  // djupare fallback
+  const out = data?.output;
+  if (Array.isArray(out)) {
+    const texts = [];
+    for (const item of out) {
+      const content = item?.content;
+      if (Array.isArray(content)) {
+        for (const c of content) {
+          if (typeof c?.text === "string") texts.push(c.text);
         }
+      }
+    }
+    if (texts.length) return texts.join("\n").trim();
+  }
+  return "";
+}
 
-        function setAIStatus(message, done) {
-          if (!aiStatusEl) return;
-          if (!message) {
-            aiStatusEl.textContent = '';
-            aiStatusEl.classList.remove('done');
-            return;
-          }
-          if (typeof done === 'undefined') done = false;
+async function openaiTranscribe({ buffer, contentType }) {
+  const key = requireOpenAIKey();
 
-          aiStatusEl.classList.toggle('done', !!done);
-          aiStatusEl.innerHTML =
-            '<span class="ai-pulse"></span>' +
-            '<span>' + message + '</span>';
-        }
+  // Node 18+ har FormData/File globalt
+  const ext = extFromContentType(contentType);
+  const filename = `audio.${ext}`;
+  const file = new File([buffer], filename, { type: contentType });
 
-        function renderResult(json) {
-          var title =
-            json.title ||
-            json.videoTitle ||
-            json.podcastTitle ||
-            'Ingen titel hittades automatiskt.';
+  const form = new FormData();
+  form.append("file", file);
+  form.append("model", process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe");
 
-          var summary =
-            json.summary ||
-            json.description ||
-            json.text ||
-            'Ingen sammanfattning hittades automatiskt.';
+  const r = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}` },
+    body: form,
+  });
 
-          var chapters = json.chapters || json.mockChapters || json.toc || [];
-          var hashtags = json.hashtags || json.tags || [];
+  const json = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const msg = json?.error?.message || "Transkribering misslyckades.";
+    const e = new Error(msg);
+    e.status = 502;
+    e.details = json;
+    throw e;
+  }
 
-          titleOutput.textContent = json.title || "AI: Titel kunde inte extraheras automatiskt.";
+  const text = json?.text || "";
+  if (!text.trim()) {
+    const e = new Error("Transkribering gav tomt resultat.");
+    e.status = 502;
+    throw e;
+  }
+  return text;
+}
 
-summaryOutput.textContent =
-  json.summary
-    ? json.summary
-    : `Denna video verkar innehålla flera tematiska segment. AI:n kunde inte hämta 
-        en exakt sammanfattning från källan, men här är en uppskattning:
+async function openaiSummarize(transcript) {
+  const key = requireOpenAIKey();
+  const model = process.env.OPENAI_SUMMARY_MODEL || "gpt-4o-mini";
 
-• Övergripande tema – Introduktion till ämnet och varför det är relevant.
-• Viktiga punkter – Sammanfattning av centrala idéer som presenteras i videon.
-• Slutsats – Vad tittaren ska ta med sig eller tänka vidare på.
+  const body = {
+    model,
+    input: [
+      {
+        role: "system",
+        content:
+          "Du är en svensk assistent som sammanfattar ljud. Svara på svenska.",
+      },
+      {
+        role: "user",
+        content:
+          "Gör:\n1) Kort sammanfattning (3-6 meningar)\n2) Viktiga punkter (bullets)\n3) Ev. action items (bullets)\n\nTRANSKRIPT:\n" +
+          transcript,
+      },
+    ],
+  };
 
-(OBS: Detta är en tidig prototyp av Kenai Timestamps.)`;
+  const r = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const json = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const msg = json?.error?.message || "Sammanfattning misslyckades.";
+    const e = new Error(msg);
+    e.status = 502;
+    e.details = json;
+    throw e;
+  }
+
+  const text = extractResponsesText(json);
+  if (!text.trim()) {
+    const e = new Error("Sammanfattning gav tomt resultat.");
+    e.status = 502;
+    throw e;
+  }
+  return text;
+}
+async function openaiTimestamps(videoUrl) {
+  const key = requireOpenAiKey();
+  const model =
+    process.env.OPENAI_TIMESTAMPS_MODEL ||
+    process.env.OPENAI_SUMMARY_MODEL ||
+    "gpt-4o-mini";
+
+  const body = {
+    model,
+    input: [
+      {
+        role: "system",
+        content:
+          "Du är Kenai Timestamps, ett verktyg som hjälper kreatörer att strukturera YouTube-videor. " +
+          "Du ska ALLTID svara som ren JSON med fälten 'chapters' (lista) och 'summary' (sträng). " +
+          "Inga andra fält, ingen extra text."
+      },
+      {
+        role: "user",
+        content:
+          "Utgå från denna YouTube-URL och gissa en rimlig struktur på videon.\n" +
+          "Skapa 4–10 kapitel och en kort sammanfattning på svenska.\n\n" +
+          "Returnera EXAKT detta JSON-format:\n" +
+          "{\n" +
+          '  \"chapters\": [\n' +
+          '    { \"time\": \"00:00\", \"title\": \"Intro & hook\" }\n' +
+          "  ],\n" +
+          '  \"summary\": \"Kort sammanfattning här...\"\n' +
+          "}\n\n" +
+          "Skriv INGENTING annat än denna JSON.\n\n" +
+          "YouTube-URL: " +
+          videoUrl
+      }
+    ]
+  };
+
+  const r = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+
+  const j = await r.json().catch(() => ({}));
+
+  // Om OpenAI svarar med fel -> fallback
+  if (!r.ok) {
+    const msg = j.error?.message || "Timestamps-förfrågan misslyckades (OpenAI).";
+    console.error("OpenAI /responses fel (timestamps):", msg, j);
+    return {
+      chapters: [
+        { time: "00:00", title: "Intro & hook (fallback)" },
+        { time: "01:23", title: "Bakgrund & story (fallback)" },
+        { time: "04:50", title: "Huvudpoängen (fallback)" },
+        { time: "09:10", title: "Sammanfattning & CTA (fallback)" }
+      ],
+      summary:
+        "AI-svaret misslyckades, så detta är ett fallback-exempel. I vanliga fall genereras riktiga kapitel och sammanfattning från videons innehåll."
+    };
+  }
+
+  // Använd samma helper som i openaiSummarizer
+  const raw = extractResponsesText(j) || "";
+  let parsed;
+
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    console.error("Kunde inte parsa JSON från AI (timestamps):", raw);
+    return {
+      chapters: [
+        { time: "00:00", title: "Intro & hook (fallback-parse)" },
+        { time: "01:23", title: "Bakgrund & story (fallback-parse)" },
+        { time: "04:50", title: "Huvudpoängen (fallback-parse)" },
+        { time: "09:10", title: "Sammanfattning & CTA (fallback-parse)" }
+      ],
+      summary:
+        "AI-svaret gick inte att tolka som korrekt JSON, så detta är ett fallback-exempel."
+    };
+  }
+
+  if (!Array.isArray(parsed.chapters) || !parsed.summary) {
+    console.error("AI-svar saknar chapters/summary (timestamps):", parsed);
+    return {
+      chapters: [
+        { time: "00:00", title: "Intro & hook (fallback-format)" },
+        { time: "01:23", title: "Bakgrund & story (fallback-format)" },
+        { time: "04:50", title: "Huvudpoängen (fallback-format)" },
+        { time: "09:10", title: "Sammanfattning & CTA (fallback-format)" }
+      ],
+      summary:
+        "AI-svaret saknade chapters eller summary i rätt format, så detta är ett fallback-exempel."
+    };
+  }
+
+  return parsed; // { chapters: [...], summary: "..." }
+}
 
 
-          chaptersOutput.innerHTML = '';
-          if (Object.prototype.toString.call(chapters) === '[object Array]' && chapters.length > 0) {
-            chapters.forEach(function (ch) {
-              var li = document.createElement('li');
+// ---- Summarize endpoint ----
+// Tar emot { url } eller { audioUrl } från frontend
+app.post("/api/summarize", async (req, res) => {
+  try {
+    const { url, audioUrl } = req.body || {};
+    const target = url || audioUrl;
 
-              var t = document.createElement('span');
-              t.className = 'chapter-time';
-              t.textContent = ch.time || ch.timestamp || '00:00';
+    if (!target) return res.status(400).json({ error: "Ingen ljud-URL skickad." });
 
-              var label = document.createElement('span');
-              label.textContent = ch.title || ch.label || ch.text || 'Kapitel';
+    const safe = safeUrl(target);
+    if (!safe) return res.status(400).json({ error: "URL måste vara https och giltig." });
 
-              li.appendChild(t);
-              li.appendChild(label);
-              chaptersOutput.appendChild(li);
-            });
-          } else {
-            var li = document.createElement('li');
-           li.textContent = `${c.time} – ${c.title || "Kapitel"}`;
-            chaptersOutput.appendChild(li);
-          }
-hashtagsOutput.innerHTML = (json.hashtags && json.hashtags.length)
-  ? json.hashtags.map(tag => `<code>${tag}</code>`).join("")
-  : `<code>#AI</code><code>#timestamps</code><code>#kenai</code>`;
+    console.log("[Kenai] summarize: hämtar", safe);
+
+    const audio = await fetchAudioAsBuffer(safe);
+    const transcript = await openaiTranscribe(audio);
+    const summary = await openaiSummarize(transcript);
+
+    res.json({ transcript, summary });
+  } catch (err) {
+    console.error("[Kenai] SUMMARY ERROR:", err?.message || err, err?.details || "");
+    res.status(err?.status || 500).json({ error: err?.message || "Serverfel vid AI-sammanfattning." });
+  }
+});
+
+// ---- PDF export ----
+app.post("/api/export-pdf", (req, res) => {
+  try {
+    const { summary = "", transcript = "" } = req.body || {};
+    const doc = new PDFDocument({ margin: 40 });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="kenai-sammanfattning.pdf"');
+
+    doc.pipe(res);
+
+    doc.fontSize(18).text("Kenai – Sammanfattning", { underline: true });
+    doc.moveDown();
+
+    doc.fontSize(12).text("SAMMANFATTNING:");
+    doc.moveDown(0.5);
+    doc.fontSize(11).text(summary || "(tom)", { width: 520 });
+    doc.moveDown();
+
+    doc.fontSize(12).text("TRANSKRIPT:");
+    doc.moveDown(0.5);
+    doc.fontSize(10).text(transcript || "(tom)", { width: 520 });
+
+    doc.end();
+  } catch (err) {
+    console.error("[Kenai] PDF ERROR:", err);
+    res.status(500).json({ error: "Kunde inte skapa PDF." });
+  }
+});
+
+// ---- Email (mock) ----
+app.post("/api/send-summary-email", async (req, res) => {
+  try {
+    const { to, summary, transcript } = req.body || {};
+    console.log("[Kenai] MOCK EMAIL =>", { to, summaryLen: (summary || "").length, transcriptLen: (transcript || "").length });
+    res.json({ ok: true, message: "Mock: mail skickat (loggas bara i servern)." });
+  } catch (err) {
+    res.status(500).json({ error: "Kunde inte skicka mail." });
+  }
+});
+
+// ---- Reels plan (för att slippa 404) ----
+// Tar emot { plan } eller { planUrl }
+app.post("/api/build-reel", async (req, res) => {
+  try {
+    const { plan, planUrl } = req.body || {};
+
+    let p = plan;
+    if (!p && planUrl) {
+      const safe = safeUrl(planUrl);
+      if (!safe) return res.status(400).json({ error: "planUrl måste vara https." });
+
+      const r = await fetch(safe);
+      if (!r.ok) return res.status(400).json({ error: "Kunde inte hämta planUrl." });
+      p = await r.json();
+    }
+
+    if (!p) return res.status(400).json({ error: "Ingen plan skickad." });
+
+    const items = Array.isArray(p.items) ? p.items : Array.isArray(p.clips) ? p.clips : [];
+    const total = items.reduce((sum, it) => sum + Number(it.duration || it.seconds || 0), 0);
+
+    res.json({
+      ok: true,
+      style: p.style || p.preset || "unknown",
+      itemCount: items.length,
+      totalDuration: total,
+      plan: p,
+    });
+  } catch (err) {
+    console.error("[Kenai] BUILD-REEL ERROR:", err);
+    res.status(500).json({ error: "Serverfel i build-reel." });
+  }
+});
+// --- Render reel demo (tar emot plan, loggar, svarar OK) ---
+app.post("/api/render-reel-demo", async (req, res) => {
+  try {
+    const plan = req.body.plan;
+
+    if (!plan) {
+      return res.status(400).json({ error: "Plan saknas i body." });
+    }
+
+    // Logga planen i backend så vi ser att det funkar
+    console.log("RENDER-REEL-DEMO: plan mottagen:");
+    console.log(JSON.stringify(plan, null, 2));
+
+    // Här i framtiden:
+    // 1) Hämta filer från Supabase
+    // 2) Bygga riktig video
+    // 3) Ladda upp videon och skicka tillbaka en URL
+
+    return res.json({
+      ok: true,
+      message:
+        "Plan mottagen i backend (demo). Här skulle Kenai bygga en riktig reel.",
+      videoUrl: null, // sen: riktig URL till renderad video
+    });
+  } catch (err) {
+    console.error("RENDER-REEL-DEMO ERROR:", err);
+    return res
+      .status(500)
+      .json({ error: "Internt fel i render-reel-demo." });
+  }
+});
 
 
-          if (Object.prototype.toString.call(hashtags) === '[object Array]' && hashtags.length > 0) {
-            hashtags.forEach(function (tag) {
-              var code = document.createElement('code');
-              code.textContent = tag;
-              hashtagsOutput.appendChild(code);
-            });
-          } else {
-            var code = document.createElement('code');
-            code.textContent = '#kenai';
-            hashtagsOutput.appendChild(code);
-          }
-        }
 
-        async function generateTimestamps() {
-          var url = (urlInput.value || '').trim();
-          if (!url) {
-            setStatus('Skriv in en URL först.');
-            urlInput.focus();
-            return;
-          }
+// ---- Trends (för att slippa 404) ----
+app.post("/api/trends-backend", async (req, res) => {
+  try {
+    const { niche = "" } = req.body || {};
+    const trimmed = String(niche || "").trim();
 
-          try {
-            generateBtn.disabled = true;
-            setStatus('Skickar URL till Kenai…');
-            setAIStatus('AI analyserar din video/podd…', false);
+    // Fallback om ingen OpenAI-nyckel finns
+    if (!process.env.OPENAI_API_KEY) {
+      return res.json({
+        ok: true,
+        niche: trimmed,
+        ideas: [
+          { title: "3 snabba tips", hooks: ["Du gör detta fel...", "Spara den här", "Testa idag"], hashtags: ["#tips", "#svenskttiktok", "#fyp"] },
+          { title: "Before/After", hooks: ["Före vs efter", "Skillnaden är sjuk", "Så gjorde jag"], hashtags: ["#beforeafter", "#reels", "#creator"] },
+          { title: "Storytime", hooks: ["Det här hände mig...", "Jag lovar du kommer skratta", "Lärdom:"], hashtags: ["#storytime", "#svenska", "#viral"] },
+        ],
+      });
+    }
 
-            var backendBase = window.location.origin;
-            var res = await fetch(backendBase + '/api/timestamps', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ url: url })
-            });
+    const key = requireOpenAIKey();
+    const model = process.env.OPENAI_SUMMARY_MODEL || "gpt-4o-mini";
 
-            var txt = await res.text();
-            var json = null;
-            try {
-              json = JSON.parse(txt);
-            } catch (e) {
-              console.warn('Kunde inte parsa JSON, rå-text:', txt);
-            }
+    const prompt =
+      `Ge 6 trend-IDEER för korta reels på svenska.\n` +
+      `Nisch: "${trimmed || "valfri"}"\n` +
+      `Returnera JSON array, varje objekt: {title, hook, hashtags:[...]}\n` +
+      `Hashtags: 8-12 st, utan mellanslag i tags.\n`;
 
-            if (!res.ok) {
-              var msg =
-                (json && (json.error || json.message)) ||
-                txt ||
-                'Okänt fel från backend.';
-              throw new Error(String(msg).slice(0, 300));
-            }
+    const r = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        input: [{ role: "user", content: prompt }],
+      }),
+    });
 
-            if (!json) {
-              throw new Error('Tomt svar från timestamps-backend.');
-            }
+    const json = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const msg = json?.error?.message || "Trends misslyckades.";
+      return res.status(502).json({ error: msg });
+    }
 
-            console.log('Timestamps JSON:', json);
-            renderResult(json);
+    const text = extractResponsesText(json);
+    // försök pars:a JSON array, annars skicka texten
+    let ideas = null;
+    try {
+      ideas = JSON.parse(text);
+    } catch {}
+    res.json({ ok: true, niche: trimmed, ideas: ideas || text });
+  } catch (err) {
+    console.error("[Kenai] TRENDS ERROR:", err);
+    res.status(500).json({ error: "Serverfel i trends-backend." });
+  }
+});
 
-            setStatus('Klar! Timestamps genererade.');
-            setAIStatus('AI-timestamps klara ✅', true);
-          } catch (err) {
-            console.error(err);
-            setStatus(err.message || 'Något gick fel när timestamps genererades.');
-            setAIStatus('Något gick fel med AI-timestamps.', true);
-          } finally {
-            generateBtn.disabled = false;
-          }
-        }
-
-        if (generateBtn) {
-          generateBtn.addEventListener('click', function () {
-            generateTimestamps();
-          });
-        }
-
-        if (urlInput) {
-          urlInput.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              generateTimestamps();
-            }
-          });
-        }
-      })();
-   
-
-    </script>
-  </body>
-</html>
-
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log("Kenai backend kör på port", PORT);
+});
