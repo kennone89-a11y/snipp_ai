@@ -306,13 +306,14 @@
       <a href="https://kenai.technology" class="back-link">← Tillbaka till Kenai-hubben</a>
 
       <header class="header">
-        <div class="eyebrow">Kenai Timestamps</div>
-        <h1>AI-timestamps & beskrivning för YouTube & poddar</h1>
-        <p class="sub">
-          Klistra in en video- eller podd-URL så hjälper Kenai dig att skapa
-          kapitel, sammanfattning och hashtags, redo att klistra in direkt i din
-          beskrivning.
-        </p>
+       <div class="eyebrow">Kenai Timestamps</div>
+<h1>AI-timestamps & beskrivning för YouTube & poddar</h1>
+<p class="sub">
+  Klistra in en YouTube- eller podd-länk. Kenai hjälper dig att få titel,
+  kapitel, sammanfattning och hashtags – klart att klistra in direkt i
+  beskrivningen.
+</p>
+
       </header>
 
       <!-- 1. INPUT -->
@@ -334,10 +335,10 @@
           </button>
         </div>
 
-        <p class="hint">
-          Just nu: enkel prototyp – Kenai genererar kapitel, kort sammanfattning
-          och några hashtags baserat på din URL.
-        </p>
+       <p class="hint">
+  Kenai läser innehållet och föreslår kapitel, kort sammanfattning och
+  hashtags baserat på din URL.
+</p>
 
         <div id="aiStatus" class="ai-status"></div>
       </section>
@@ -350,10 +351,11 @@
           <div class="card">
             <div class="card-title">Titel & sammanfattning</div>
             <div class="card-body">
-              <div id="titleOutput" class="title-text">Titel dyker upp här…</div>
-              <div id="summaryOutput">
-                Kort beskrivning av videon/podden dyker upp här när AI är klar.
-              </div>
+             <div id="titleOutput" class="title-text">Titel hämtas när AI är klar…</div>
+             <div id="summaryOutput">
+         Sammanfattning av videon/podden dyker upp här när AI är klar.
+        </div>
+
             </div>
           </div>
 
@@ -421,17 +423,18 @@
       }
 
       function renderResult(json) {
-        const title =
-          json.title ||
-          json.videoTitle ||
-          json.podcastTitle ||
-          "Titel kunde inte hämtas.";
+       const title =
+  json.title ||
+  json.videoTitle ||
+  json.podcastTitle ||
+  "Ingen titel hittades automatiskt.";
 
-        const summary =
-          json.summary ||
-          json.description ||
-          json.text ||
-          "Ingen sammanfattning i svaret från AI.";
+const summary =
+  json.summary ||
+  json.description ||
+  json.text ||
+  "Ingen sammanfattning hittades automatiskt.";
+
 
         const chapters =
           json.chapters ||
@@ -463,12 +466,13 @@
             li.appendChild(label);
             chaptersOutput.appendChild(li);
           }
-        } else {
-          const li = document.createElement("li");
-          li.textContent =
-            "Inga kapitel hittades i svaret – visa gärna JSON i konsolen för att se strukturen.";
-          chaptersOutput.appendChild(li);
-        }
+       } else {
+  const li = document.createElement("li");
+  li.textContent =
+    "Inga kapitel kunde skapas automatiskt för den här videon/podden.";
+  chaptersOutput.appendChild(li);
+}
+
 
         // hashtags
         hashtagsOutput.innerHTML = "";
@@ -478,12 +482,12 @@
             code.textContent = tag;
             hashtagsOutput.appendChild(code);
           }
-        } else {
-          const code = document.createElement("code");
-          code.textContent = "#kenai";
-          hashtagsOutput.appendChild(code);
-        }
-      }
+       } else {
+  const code = document.createElement("code");
+  code.textContent = "#kenai";
+  hashtagsOutput.appendChild(code);
+}
+
 
       async function generateTimestamps() {
         const url = (urlInput.value || "").trim();
