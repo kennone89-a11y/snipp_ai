@@ -356,38 +356,51 @@
     const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // DOM-element
-    const startBtn = document.getElementById("startBtn");
-    const stopBtn = document.getElementById("stopBtn");
-    const uploadBtn = document.getElementById("uploadBtn");
-    const summaryBtn = document.getElementById("summaryBtn");
-    const pdfBtn = document.getElementById("pdfBtn");
-    const mailBtn = document.getElementById("mailBtn");
-    const mailInput = document.getElementById("mailInput");
-    const timerEl = document.getElementById("timer");
-    const player = document.getElementById("player");
-    const urlInput = document.getElementById("urlInput");
-    const summaryEl = document.getElementById("summary");
-    const statusEl = document.getElementById("status");
-    const logEl = document.getElementById("log");
-    const aiStatusEl = document.getElementById("ai-status");
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+const timerEl = document.getElementById("timer");
+const player = document.getElementById("player");
+const urlInput = document.getElementById("urlInput");
+const summaryEl = document.getElementById("summary");
+const statusEl = document.getElementById("status");
+const logEl = document.getElementById("log");
+const aiStatusEl = document.getElementById("aiStatus"); // 👈 nytt id
 
-    // Inspelningstillstånd
-    let mediaRecorder = null;
-    let chunks = [];
-    let audioBlob = null;
-    let publicUrl = null;
-    let timerId = null;
-    let startTime = 0;
+// Inspelnings­tillstånd (LÅT DETTA OCH ALLT NEDAN VARA KVAR)
+let mediaRecorder = null;
+let chunks = [];
+let audioBlob = null;
+let publicUrl = null;
+let timerId = null;
+let startTime = 0;
 
-    function setStatus(t) {
-      if (statusEl) statusEl.textContent = t;
-      console.log("STATUS:", t);
-    }
+function setStatus(t) {
+  if (statusEl) statusEl.textContent = t || "";
+  console.log("STATUS:", t);
+}
 
-    function setLog(t) {
-      if (logEl) logEl.textContent = t;
-      console.log("LOG:", t);
-    }
+function setLog(t) {
+  if (logEl) logEl.textContent = t || "";
+  console.log("LOG:", t);
+}
+
+// AI-jobbar status
+function setAIStatus(message, done = false) {
+  if (!aiStatusEl) return;
+
+  if (!message) {
+    aiStatusEl.textContent = "";
+    aiStatusEl.classList.remove("done");
+    return;
+  }
+
+  aiStatusEl.classList.toggle("done", !!done);
+  aiStatusEl.innerHTML = `
+    <span class="ai-pulse"></span>
+    <span>${message}</span>
+  `;
+}
+
 
     function fmt(seconds) {
       const m = String(Math.floor(seconds / 60)).padStart(2, "0");
