@@ -2,8 +2,11 @@
 <html lang="sv">
   <head>
     <meta charset="UTF-8" />
-    <title>Kenai Timestamps – YouTube & podd</title>
+    <title>Kenai Timestamps – YouTube & poddar</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Kenai favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32 (1).png" />
 
     <style>
       * {
@@ -16,7 +19,7 @@
         min-height: 100vh;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
           sans-serif;
-        background: radial-gradient(circle at top, #07111f 0, #02132b 40%, #000 100%);
+        background: radial-gradient(circle at top, #07111f 0, #02152a 40%, #000000 100%);
         color: #f5f5ff;
         display: flex;
         align-items: center;
@@ -24,139 +27,128 @@
         padding: 24px;
       }
 
+      a {
+        color: #7dd3fc;
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
       .page {
-        max-width: 960px;
         width: 100%;
+        max-width: 1000px;
         border-radius: 24px;
-        padding: 28px 24px 32px;
-        background: rgba(5, 10, 25, 0.96);
-        border: 1px solid rgba(90, 210, 255, 0.30);
-        box-shadow:
-          0 0 60px rgba(0, 180, 255, 0.30),
-          0 40px 80px rgba(0, 0, 0, 0.85);
+        padding: 28px 32px 32px;
+        background: rgba(5, 12, 32, 0.96);
+        border: 1px solid rgba(77, 189, 255, 0.25);
+        box-shadow: 0 40px 90px rgba(0, 0, 0, 0.9);
       }
 
-      .header {
-        margin-bottom: 20px;
-      }
-
-      .eyebrow {
-        font-size: 11px;
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
+      .back-link {
+        font-size: 12px;
+        margin-bottom: 18px;
         opacity: 0.8;
-        color: #80b8ff;
-        margin-bottom: 6px;
       }
 
       h1 {
-        font-size: 26px;
-        line-height: 1.3;
+        font-size: 24px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #e5f3ff;
         margin-bottom: 6px;
       }
 
-      .sub {
+      .subtitle {
         font-size: 13px;
-        opacity: 0.8;
-        max-width: 520px;
-      }
-
-      a.back-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 12px;
-        color: #8fb4ff;
-        text-decoration: none;
-        margin-bottom: 18px;
-        opacity: 0.9;
-      }
-
-      a.back-link:hover {
-        opacity: 1;
-        text-decoration: underline;
+        color: #aab6ff;
+        margin-bottom: 24px;
       }
 
       .section {
         border-radius: 18px;
-        background: radial-gradient(circle at top left, #122547 0, #050818 55%, #02040a 100%);
-        border: 1px solid rgba(105, 160, 255, 0.5);
-        padding: 16px 16px 18px;
-        margin-bottom: 14px;
+        border: 1px solid rgba(120, 166, 255, 0.4);
+        background: radial-gradient(circle at top left, #0b1430 0, #050a1a 45%, #02030a 100%);
+        padding: 18px 18px 16px;
+        margin-bottom: 18px;
       }
 
       .section-title {
-        font-size: 12px;
-        letter-spacing: 0.16em;
+        font-size: 11px;
         text-transform: uppercase;
-        color: #84b5ff;
-        margin-bottom: 10px;
+        letter-spacing: 0.18em;
+        color: #8cb3ff;
+        margin-bottom: 14px;
+      }
+
+      .row {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .col {
+        flex: 1 1 0;
+        min-width: 0;
       }
 
       label {
-        display: block;
         font-size: 12px;
+        color: #c2cffc;
+        display: block;
         margin-bottom: 6px;
-        color: #f5f7ff;
       }
 
       input[type="text"] {
         width: 100%;
         border-radius: 999px;
-        border: 1px solid rgba(140, 190, 255, 0.6);
-        background: linear-gradient(
-          90deg,
-          rgba(4, 15, 40, 0.96),
-          rgba(5, 20, 55, 0.96)
-        );
-        padding: 11px 16px;
-        color: #f5f7ff;
+        border: 1px solid rgba(126, 169, 255, 0.45);
+        background: rgba(2, 5, 20, 0.95);
+        color: #f6f7ff;
+        padding: 10px 16px;
         font-size: 13px;
         outline: none;
       }
 
       input[type="text"]::placeholder {
-        color: rgba(180, 200, 255, 0.6);
+        color: #59607c;
       }
 
       input[type="text"]:focus {
-        border-color: #58d3ff;
-        box-shadow: 0 0 0 1px rgba(88, 211, 255, 0.6);
+        border-color: #4dd4ff;
+        box-shadow: 0 0 0 1px rgba(77, 212, 255, 0.4);
       }
 
       .btn-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
         margin-top: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
       }
 
       button.primary {
         border-radius: 999px;
         border: none;
-        font-size: 13px;
         padding: 9px 18px;
-        cursor: pointer;
-        background: linear-gradient(135deg, #3af5ff, #6e7dff);
-        color: #020510;
+        font-size: 12px;
         font-weight: 600;
-        box-shadow:
-          0 0 20px rgba(64, 215, 255, 0.7),
-          0 14px 40px rgba(0, 0, 0, 0.7);
-        transition: transform 0.12s ease, box-shadow 0.12s ease,
-          filter 0.12s ease;
+        cursor: pointer;
+        background: linear-gradient(135deg, #4ddeff, #8b6bff);
+        color: #050816;
+        box-shadow: 0 14px 40px rgba(43, 190, 255, 0.6);
+        transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+        white-space: nowrap;
       }
 
       button.primary:hover {
-        transform: translateY(-1px) scale(1.02);
-        filter: brightness(1.03);
-        box-shadow:
-          0 0 28px rgba(64, 215, 255, 0.9),
-          0 18px 50px rgba(0, 0, 0, 0.85);
+        transform: translateY(-1px);
+        filter: brightness(1.06);
+        box-shadow: 0 18px 50px rgba(82, 197, 255, 0.9);
       }
 
       button.primary:disabled {
-        opacity: 0.55;
+        opacity: 0.6;
         cursor: default;
         transform: none;
         box-shadow: none;
@@ -164,231 +156,234 @@
 
       .hint {
         font-size: 11px;
-        opacity: 0.75;
+        color: #7f8ab0;
         margin-top: 6px;
-        color: #afc6ff;
       }
 
-      .columns {
+      .result-grid {
         display: grid;
-        grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-        gap: 10px;
-      }
-
-      @media (max-width: 800px) {
-        .page {
-          padding: 22px 16px 24px;
-        }
-        .columns {
-          grid-template-columns: minmax(0, 1fr);
-        }
+        grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
+        gap: 16px;
       }
 
       .card {
         border-radius: 16px;
-        background: rgba(6, 12, 32, 0.96);
-        border: 1px solid rgba(110, 160, 255, 0.5);
-        padding: 12px 12px 14px;
+        border: 1px solid rgba(110, 160, 255, 0.35);
+        background: radial-gradient(circle at top left, #070f26 0, #050716 50%, #020309 100%);
+        padding: 16px 16px 14px;
+        min-height: 126px;
       }
 
       .card-title {
-        font-size: 12px;
+        font-size: 11px;
         text-transform: uppercase;
-        letter-spacing: 0.14em;
-        color: #8ac5ff;
-        margin-bottom: 6px;
+        letter-spacing: 0.16em;
+        color: #8da2ff;
+        margin-bottom: 10px;
       }
 
-      .card-body {
+      .title-output {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #f3f5ff;
+      }
+
+      .summary-output {
         font-size: 12px;
-        line-height: 1.6;
+        color: #b8c2ff;
+        line-height: 1.5;
         white-space: pre-wrap;
       }
 
-      .title-text {
-        font-size: 14px;
-        font-weight: 600;
-        margin-bottom: 4px;
-      }
-
-      .chapter-list {
-        list-style: none;
-        font-size: 12px;
-      }
-
-      .chapter-list li {
-        padding: 3px 0;
-        border-bottom: 1px solid rgba(60, 90, 140, 0.45);
-      }
-
-      .chapter-time {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-          "Liberation Mono", "Courier New", monospace;
-        color: #82e0ff;
-        margin-right: 6px;
-      }
-
       .hashtags {
-        font-size: 12px;
-        line-height: 1.7;
-        word-wrap: break-word;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
       }
 
       .hashtags code {
         font-family: inherit;
-        background: rgba(25, 45, 90, 0.8);
+        font-size: 11px;
+        background: rgba(20, 34, 80, 0.95);
         border-radius: 999px;
-        padding: 2px 7px;
-        margin-right: 4px;
-        display: inline-block;
-        margin-bottom: 4px;
+        padding: 4px 10px;
+        border: 1px solid rgba(149, 196, 255, 0.45);
+        color: #d9e6ff;
+      }
+
+      .chapters {
+        list-style: none;
+        margin-top: 4px;
+      }
+
+      .chapters li {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 4px;
+        border-bottom: 1px solid rgba(37, 55, 104, 0.65);
+        font-size: 12px;
+        color: #d5ddff;
+      }
+
+      .chapters li:last-child {
+        border-bottom: none;
+      }
+
+      .chapter-time {
+        font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 11px;
+        color: #9fd5ff;
+        min-width: 52px;
+      }
+
+      .status-bar {
+        margin-top: 10px;
+        font-size: 11px;
+        color: #7b87b2;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
       }
 
       .ai-status {
-        margin-top: 6px;
-        font-size: 11px;
-        color: #a6b6ff;
-        display: flex;
+        display: inline-flex;
         align-items: center;
         gap: 8px;
+        font-size: 11px;
+        color: #a5b8ff;
         min-height: 18px;
-        opacity: 0.9;
+      }
+
+      .ai-status.done {
+        color: #6efacc;
       }
 
       .ai-pulse {
         width: 9px;
         height: 9px;
         border-radius: 999px;
-        background: radial-gradient(circle, #46f0ff, #0070ff);
-        box-shadow: 0 0 10px rgba(80, 200, 255, 0.9);
-        animation: ai-pulse 1s ease-in-out infinite;
-      }
-
-      .ai-status.done .ai-pulse {
-        animation: none;
-        background: #3cff9b;
-        box-shadow: 0 0 10px rgba(60, 255, 155, 0.9);
+        background: radial-gradient(circle, #6efacc 0, #12f7ff 40%, #0b1836 100%);
+        box-shadow: 0 0 12px rgba(110, 250, 204, 0.9);
+        animation: ai-pulse 1.6s ease-in-out infinite;
       }
 
       @keyframes ai-pulse {
         0% {
-          transform: scale(0.8);
+          transform: scale(0.9);
           opacity: 0.7;
         }
         50% {
-          transform: scale(1.15);
+          transform: scale(1.2);
           opacity: 1;
         }
         100% {
-          transform: scale(0.8);
+          transform: scale(0.9);
           opacity: 0.7;
         }
       }
 
-      .status-bar {
-        margin-top: 10px;
-        font-size: 11px;
-        opacity: 0.85;
-        color: #aab8ff;
-      }
-
-      .status-label {
-        text-transform: uppercase;
-        letter-spacing: 0.18em;
-        font-size: 10px;
-        color: #7e92ff;
-        margin-right: 6px;
+      @media (max-width: 768px) {
+        body {
+          padding: 16px;
+        }
+        .page {
+          padding: 20px 16px 22px;
+        }
+        .result-grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
       }
     </style>
   </head>
   <body>
-    <main class="page">
-      <a href="https://kenai.technology" class="back-link">← Tillbaka till Kenai-hubben</a>
+    <div class="page">
+      <div class="back-link">
+        <a href="index.html">&larr; Tillbaka till Kenai-hubben</a>
+      </div>
 
-      <header class="header">
-       <div class="eyebrow">Kenai Timestamps</div>
-<h1>AI-timestamps & beskrivning för YouTube & poddar</h1>
-<p class="sub">
-  Klistra in en YouTube- eller podd-länk. Kenai hjälper dig att få titel,
-  kapitel, sammanfattning och hashtags – klart att klistra in direkt i
-  beskrivningen.
-</p>
+      <h1>AI-timestamps &amp; beskrivning för YouTube &amp; poddar</h1>
+      <p class="subtitle">
+        Klistra in en video- eller podd-URL så hjälper Kenai dig att skapa kapitel,
+        sammanfattning och hashtags – klart att klistra in direkt i beskrivningen.
+      </p>
 
-      </header>
-
-      <!-- 1. INPUT -->
+      <!-- 1 – URL -->
       <section class="section">
         <div class="section-title">1 – Klistra in URL</div>
-
-        <label for="urlInput">
-          YouTube-länk, podd-länk eller annan publik video/ljud-URL
-        </label>
+        <label for="urlInput">YouTube-länk, podd-länk eller annan publik video/podd-URL</label>
         <input
           id="urlInput"
           type="text"
           placeholder="https://www.youtube.com/watch?v=..."
         />
-
         <div class="btn-row">
-          <button id="generateBtn" class="primary">
-            Generera timestamps med AI
-          </button>
+          <button id="generateBtn" class="primary">Generera timestamps med AI</button>
         </div>
-
-       <p class="hint">
-  Kenai läser innehållet och föreslår kapitel, kort sammanfattning och
-  hashtags baserat på din URL.
-</p>
-
-        <div id="aiStatus" class="ai-status"></div>
+        <p class="hint">
+          Kenai läser innehållet och föreslår kapitel, kort sammanfattning och några hashtags
+          baserat på din URL.
+        </p>
+        <div class="ai-status" id="aiStatus"></div>
       </section>
 
-      <!-- 2. RESULTAT -->
+      <!-- 2 – Resultat -->
       <section class="section">
         <div class="section-title">2 – Resultat</div>
 
-        <div class="columns">
+        <div class="result-grid">
           <div class="card">
-            <div class="card-title">Titel & sammanfattning</div>
-            <div class="card-body">
-             <div id="titleOutput" class="title-text">Titel hämtas när AI är klar…</div>
-             <div id="summaryOutput">
-         Sammanfattning av videon/podden dyker upp här när AI är klar.
-        </div>
-
+            <div class="card-title">Titel &amp; sammanfattning</div>
+            <div id="titleOutput" class="title-output">
+              Titel hämtas när AI är klar…
+            </div>
+            <div id="summaryOutput" class="summary-output">
+              Sammanfattning av videon/podden dyker upp här när AI är klar.
             </div>
           </div>
 
           <div class="card">
             <div class="card-title">Hashtags</div>
-            <div class="card-body">
-              <div id="hashtagsOutput" class="hashtags">
-                <code>#kenai</code>
-                <code>#ai</code>
-                <code>#timestamps</code>
-              </div>
+            <div id="hashtagsOutput" class="hashtags">
+              <code>#kenai</code>
+              <code>#ai</code>
+              <code>#timestamps</code>
             </div>
           </div>
         </div>
 
-        <div class="card" style="margin-top: 10px;">
+        <div class="card" style="margin-top: 16px">
           <div class="card-title">Kapitel</div>
-          <div class="card-body">
-            <ul id="chaptersOutput" class="chapter-list">
-              <li><span class="chapter-time">00:00</span>Intro</li>
-              <li><span class="chapter-time">00:30</span>Exempelkapitel</li>
-              <li><span class="chapter-time">01:00</span>Avslutning</li>
-            </ul>
-          </div>
+          <ul id="chaptersOutput" class="chapters">
+            <li>
+              <span class="chapter-time">00:00</span>
+              <span>Intro</span>
+            </li>
+            <li>
+              <span class="chapter-time">00:30</span>
+              <span>Exempelkapitel</span>
+            </li>
+            <li>
+              <span class="chapter-time">01:00</span>
+              <span>Avslutning</span>
+            </li>
+          </ul>
         </div>
       </section>
 
+      <!-- Status -->
       <div class="status-bar">
-        <span class="status-label">STATUS</span>
         <span id="statusText">Redo att generera timestamps.</span>
+        <span style="opacity: 0.6; font-size: 10px"
+          >Obs. Detta är en tidig Kenai-prototyp.</span
+        >
       </div>
-    </main>
-        <script>
+    </div>
+
+    <script>
       const urlInput = document.getElementById("urlInput");
       const generateBtn = document.getElementById("generateBtn");
 
@@ -434,16 +429,9 @@
           json.text ||
           "Ingen sammanfattning hittades automatiskt.";
 
-        const chapters =
-          json.chapters ||
-          json.mockChapters ||
-          json.toc ||
-          [];
+        const chapters = json.chapters || json.mockChapters || json.toc || [];
 
-        const hashtags =
-          json.hashtags ||
-          json.tags ||
-          [];
+        const hashtags = json.hashtags || json.tags || [];
 
         // titel + summary
         titleOutput.textContent = title;
@@ -535,7 +523,9 @@
           setAIStatus("AI-timestamps klara ✅", true);
         } catch (err) {
           console.error(err);
-          setStatus(err.message || "Något gick fel när timestamps genererades.");
+          setStatus(
+            err.message || "Något gick fel när timestamps genererades."
+          );
           setAIStatus("Något gick fel med AI-timestamps.", true);
         } finally {
           generateBtn.disabled = false;
