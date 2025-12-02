@@ -383,163 +383,162 @@
       </div>
     </div>
 
-    <script>
-      const urlInput = document.getElementById("urlInput");
-      const generateBtn = document.getElementById("generateBtn");
+      <script>
+      (function () {
+        var urlInput = document.getElementById('urlInput');
+        var generateBtn = document.getElementById('generateBtn');
+        var aiStatusEl = document.getElementById('aiStatus');
+        var statusEl = document.getElementById('statusText');
+        var titleOutput = document.getElementById('titleOutput');
+        var summaryOutput = document.getElementById('summaryOutput');
+        var chaptersOutput = document.getElementById('chaptersOutput');
+        var hashtagsOutput = document.getElementById('hashtagsOutput');
 
-      const aiStatusEl = document.getElementById("aiStatus");
-      const statusEl = document.getElementById("statusText");
-
-      const titleOutput = document.getElementById("titleOutput");
-      const summaryOutput = document.getElementById("summaryOutput");
-      const chaptersOutput = document.getElementById("chaptersOutput");
-      const hashtagsOutput = document.getElementById("hashtagsOutput");
-
-      function setStatus(msg) {
-        if (statusEl) statusEl.textContent = msg || "";
-        console.log("STATUS:", msg);
-      }
-
-      function setAIStatus(message, done = false) {
-        if (!aiStatusEl) return;
-
-        if (!message) {
-          aiStatusEl.textContent = "";
-          aiStatusEl.classList.remove("done");
-          return;
+        function setStatus(msg) {
+          if (statusEl) statusEl.textContent = msg || '';
+          console.log('STATUS:', msg);
         }
 
-        aiStatusEl.classList.toggle("done", !!done);
-        aiStatusEl.innerHTML = `
-          <span class="ai-pulse"></span>
-          <span>${message}</span>
-        `;
-      }
+        function setAIStatus(message, done) {
+          if (!aiStatusEl) return;
+          if (!message) {
+            aiStatusEl.textContent = '';
+            aiStatusEl.classList.remove('done');
+            return;
+          }
+          if (typeof done === 'undefined') done = false;
 
-      function renderResult(json) {
-        const title =
-          json.title ||
-          json.videoTitle ||
-          json.podcastTitle ||
-          "Ingen titel hittades automatiskt.";
+          aiStatusEl.classList.toggle('done', !!done);
+          aiStatusEl.innerHTML =
+            '<span class="ai-pulse"></span>' +
+            '<span>' + message + '</span>';
+        }
 
-        const summary =
-          json.summary ||
-          json.description ||
-          json.text ||
-          "Ingen sammanfattning hittades automatiskt.";
+        function renderResult(json) {
+          var title =
+            json.title ||
+            json.videoTitle ||
+            json.podcastTitle ||
+            'Ingen titel hittades automatiskt.';
 
-        const chapters = json.chapters || json.mockChapters || json.toc || [];
+          var summary =
+            json.summary ||
+            json.description ||
+            json.text ||
+            'Ingen sammanfattning hittades automatiskt.';
 
-        const hashtags = json.hashtags || json.tags || [];
+          var chapters = json.chapters || json.mockChapters || json.toc || [];
+          var hashtags = json.hashtags || json.tags || [];
 
-        // titel + summary
-        titleOutput.textContent = title;
-        summaryOutput.textContent = summary;
+          titleOutput.textContent = title;
+          summaryOutput.textContent = summary;
 
-        // kapitel
-        chaptersOutput.innerHTML = "";
-        if (Array.isArray(chapters) && chapters.length > 0) {
-          for (const ch of chapters) {
-            const li = document.createElement("li");
-            const t = document.createElement("span");
-            t.className = "chapter-time";
-            t.textContent = ch.time || ch.timestamp || "00:00";
+          chaptersOutput.innerHTML = '';
+          if (Object.prototype.toString.call(chapters) === '[object Array]' && chapters.length > 0) {
+            chapters.forEach(function (ch) {
+              var li = document.createElement('li');
 
-            const label = document.createElement("span");
-            label.textContent = ch.title || ch.label || ch.text || "Kapitel";
+              var t = document.createElement('span');
+              t.className = 'chapter-time';
+              t.textContent = ch.time || ch.timestamp || '00:00';
 
-            li.appendChild(t);
-            li.appendChild(label);
+              var label = document.createElement('span');
+              label.textContent = ch.title || ch.label || ch.text || 'Kapitel';
+
+              li.appendChild(t);
+              li.appendChild(label);
+              chaptersOutput.appendChild(li);
+            });
+          } else {
+            var li = document.createElement('li');
+            li.textContent = 'Inga kapitel kunde skapas automatiskt för den här videon/podden.';
             chaptersOutput.appendChild(li);
           }
-        } else {
-          const li = document.createElement("li");
-          li.textContent =
-            "Inga kapitel kunde skapas automatiskt för den här videon/podden.";
-          chaptersOutput.appendChild(li);
-        }
 
-        // hashtags
-        hashtagsOutput.innerHTML = "";
-        if (Array.isArray(hashtags) && hashtags.length > 0) {
-          for (const tag of hashtags) {
-            const code = document.createElement("code");
-            code.textContent = tag;
+          hashtagsOutput.innerHTML = '';
+          if (Object.prototype.toString.call(hashtags) === '[object Array]' && hashtags.length > 0) {
+            hashtags.forEach(function (tag) {
+              var code = document.createElement('code');
+              code.textContent = tag;
+              hashtagsOutput.appendChild(code);
+            });
+          } else {
+            var code = document.createElement('code');
+            code.textContent = '#kenai';
             hashtagsOutput.appendChild(code);
           }
-        } else {
-          const code = document.createElement("code");
-          code.textContent = "#kenai";
-          hashtagsOutput.appendChild(code);
-        }
-      }
-
-      async function generateTimestamps() {
-        const url = (urlInput.value || "").trim();
-        if (!url) {
-          setStatus("Skriv in en URL först.");
-          urlInput.focus();
-          return;
         }
 
-        try {
-          generateBtn.disabled = true;
-          setStatus("Skickar URL till Kenai…");
-          setAIStatus("AI analyserar din video/podd…", false);
+        async function generateTimestamps() {
+          var url = (urlInput.value || '').trim();
+          if (!url) {
+            setStatus('Skriv in en URL först.');
+            urlInput.focus();
+            return;
+          }
 
-          const backendBase = window.location.origin;
-          const res = await fetch(backendBase + "/api/timestamps", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url }),
-          });
-
-          const txt = await res.text();
-          let json = null;
           try {
-            json = JSON.parse(txt);
-          } catch (e) {
-            console.warn("Kunde inte parsa JSON, rå-text:", txt);
+            generateBtn.disabled = true;
+            setStatus('Skickar URL till Kenai…');
+            setAIStatus('AI analyserar din video/podd…', false);
+
+            var backendBase = window.location.origin;
+            var res = await fetch(backendBase + '/api/timestamps', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: url })
+            });
+
+            var txt = await res.text();
+            var json = null;
+            try {
+              json = JSON.parse(txt);
+            } catch (e) {
+              console.warn('Kunde inte parsa JSON, rå-text:', txt);
+            }
+
+            if (!res.ok) {
+              var msg =
+                (json && (json.error || json.message)) ||
+                txt ||
+                'Okänt fel från backend.';
+              throw new Error(String(msg).slice(0, 300));
+            }
+
+            if (!json) {
+              throw new Error('Tomt svar från timestamps-backend.');
+            }
+
+            console.log('Timestamps JSON:', json);
+            renderResult(json);
+
+            setStatus('Klar! Timestamps genererade.');
+            setAIStatus('AI-timestamps klara ✅', true);
+          } catch (err) {
+            console.error(err);
+            setStatus(err.message || 'Något gick fel när timestamps genererades.');
+            setAIStatus('Något gick fel med AI-timestamps.', true);
+          } finally {
+            generateBtn.disabled = false;
           }
-
-          if (!res.ok) {
-            const msg =
-              (json && (json.error || json.message)) ||
-              txt ||
-              "Okänt fel från backend.";
-            throw new Error(String(msg).slice(0, 300));
-          }
-
-          if (!json) {
-            throw new Error("Tomt svar från timestamps-backend.");
-          }
-
-          console.log("Timestamps JSON:", json);
-
-          renderResult(json);
-
-          setStatus("Klar! Timestamps genererade.");
-          setAIStatus("AI-timestamps klara ✅", true);
-        } catch (err) {
-          console.error(err);
-          setStatus(
-            err.message || "Något gick fel när timestamps genererades."
-          );
-          setAIStatus("Något gick fel med AI-timestamps.", true);
-        } finally {
-          generateBtn.disabled = false;
         }
-      }
 
-      generateBtn.addEventListener("click", generateTimestamps);
-
-      urlInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          generateTimestamps();
+        if (generateBtn) {
+          generateBtn.addEventListener('click', function () {
+            generateTimestamps();
+          });
         }
-      });
+
+        if (urlInput) {
+          urlInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              generateTimestamps();
+            }
+          });
+        }
+      })();
     </script>
   </body>
 </html>
+
