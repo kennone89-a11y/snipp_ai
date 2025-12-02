@@ -512,16 +512,18 @@ const { error: uploadError } = await sb.storage
           throw new Error(uploadError.message || "Supabase-upload misslyckades");
         }
 
-        const { data } = sb.storage.from(SUPABASE_BUCKET).getPublicUrl(path);
-        publicUrl = data.publicUrl;
-        urlInput.value = publicUrl || "";
-        setStatus("Public URL hämtad. Startar AI-sammanfattning...");
-        await uploadAndSummarize();
+      const { data } = sb.storage.from(SUPABASE_BUCKET).getPublicUrl(path);
+publicUrl = data.publicUrl;
+urlInput.value = publicUrl || "";
 
+setStatus("Public URL hämtad. Startar AI-sammanfattning...");
+setAIStatus("AI analyserar ditt ljud...", false);
 
-        
-        setLog("Public URL hämtad.");
-        summaryBtn.disabled = !publicUrl;
+await uploadAndSummarize();
+
+setLog("Public URL hämtad.");
+
+       
       } catch (err) {
         console.error(err);
         setStatus("Uppladdning misslyckades.");
@@ -529,12 +531,13 @@ const { error: uploadError } = await sb.storage
       }
     }
 
-    async function callSummarize(url) {
-      setStatus("Skickar till AI för transkribering & sammanfattning...");
+  async function callSummarize(url) {
+  setStatus("Skickar till AI för transkribering & sammanfattning...");
+  setAIStatus("AI transkriberar & skriver din sammanfattning...", false);
 
-      if (aiStatusEl) {
-        aiStatusEl.textContent = "AI jobbar… vänta lite 🔄";
-      }
+  // ... rest ofetch /api/summarize osv ...
+}
+
 
       const backendBase = window.location.origin;
       let res, txt, json = null;
@@ -581,23 +584,27 @@ const { error: uploadError } = await sb.storage
       }
     }
 
-    async function uploadAndSummarize() {
-      try {
-        let url = publicUrl || urlInput.value.trim();
-        if (!url) {
-          throw new Error("Ingen publik URL hittad. Ladda upp först.");
-        }
-
-        const json = await callSummarize(url);
-        summaryEl.value = json.summary || "";
-        setStatus("Klar! AI-sammanfattning skapad.");
-        pdfBtn.disabled = !summaryEl.value;
-        mailBtn.disabled = !summaryEl.value;
-      } catch (err) {
-        console.error(err);
-        setStatus(err.message || "Något gick fel när vi försökte sammanfatta.");
-      }
+  async function uploadAndSummarize() {
+  try {
+    let url = publicUrl || urlInput.value.trim();
+    if (!url) {
+      throw new Error("Ingen publik URL hittad. Ladda upp först.");
     }
+
+    const json = await callSummarize(url);
+    summaryEl.value = json.summary || "";
+
+    setStatus("Klar! AI-sammanfattning skapad.");
+    setAIStatus("AI-sammanfattning klar ✅", true);
+
+    pdfBtn.disabled = !summaryEl.value;
+    mailBtn.disabled = !summaryEl.value;
+  } catch (err) {
+    console.error(err);
+    setStatus(err.message || "Något gick fel när vi försökte sammanfatta.");
+    setAIStatus("Något gick fel med AI-sammanfattningen.", true);
+  }
+}
 
     async function downloadPdf() {
       try {
