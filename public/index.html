@@ -250,14 +250,34 @@
       font-size: 11px;
       color: rgba(148, 163, 184, 0.95);
     }
+
+     .hero-logo {
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.hero-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
   </style>
 </head>
 <body>
   <main class="hub-shell">
     <header class="hub-header">
-      <div class="hub-logo">
-        <img src="/kenai-coin-main.jpg" alt="Kenai" />
-      </div>
+      <div class="hero-logo" id="kenaiLogo">
+  <img src="kenai-coin-main.jpg" alt="Kenai logga">
+</div>
       <div class="hub-title-block">
         <div class="hub-eyebrow">Kenai Hub</div>
         <div class="hub-title">AI-verktyg för ljud, video & creators</div>
@@ -335,6 +355,22 @@
         </div>
       </a>
     </section>
-  </main>
+  
+
+</main>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const logo = document.getElementById('kenaiLogo');
+    if (logo) {
+      logo.style.cursor = 'pointer';
+      logo.addEventListener('click', () => {
+        // Refreshar sidan när man klickar på loggan
+        window.location.reload();
+      });
+    }
+  });
+</script>
+
 </body>
 </html>
