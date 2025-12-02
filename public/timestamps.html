@@ -296,7 +296,46 @@
         .result-grid {
           grid-template-columns: minmax(0, 1fr);
         }
-      }
+      }     .chapter-timeline {
+  position: relative;
+  margin-top: 16px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: visible;
+}
+
+.chapter-marker {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: #4adeff;
+  cursor: pointer;
+}
+
+.chapter-marker:hover .chapter-tooltip {
+  opacity: 1;
+  transform: translate(-50%, -8px) translateY(-100%);
+  pointer-events: auto;
+}
+
+.chapter-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translate(-50%, 0);
+  background: rgba(3, 7, 18, 0.95);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  border: 1px solid rgba(74, 222, 255, 0.7);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  z-index: 5;
+}
     </style>
   </head>
   <body>
@@ -358,6 +397,7 @@
         <div class="card" style="margin-top: 16px">
           <div class="card-title">Kapitel</div>
           <ul id="chaptersOutput" class="chapters">
+            <div id="chapterTimeline" class="chapter-timeline"></div>
             <li>
               <span class="chapter-time">00:00</span>
               <span>Intro</span>
@@ -538,6 +578,8 @@
           });
         }
       })();
+   
+
     </script>
   </body>
 </html>
