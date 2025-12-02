@@ -479,8 +479,20 @@
           var chapters = json.chapters || json.mockChapters || json.toc || [];
           var hashtags = json.hashtags || json.tags || [];
 
-          titleOutput.textContent = title;
-          summaryOutput.textContent = summary;
+          titleOutput.textContent = json.title || "AI: Titel kunde inte extraheras automatiskt.";
+
+summaryOutput.textContent =
+  json.summary
+    ? json.summary
+    : `Denna video verkar innehålla flera tematiska segment. AI:n kunde inte hämta 
+        en exakt sammanfattning från källan, men här är en uppskattning:
+
+• Övergripande tema – Introduktion till ämnet och varför det är relevant.
+• Viktiga punkter – Sammanfattning av centrala idéer som presenteras i videon.
+• Slutsats – Vad tittaren ska ta med sig eller tänka vidare på.
+
+(OBS: Detta är en tidig prototyp av Kenai Timestamps.)`;
+
 
           chaptersOutput.innerHTML = '';
           if (Object.prototype.toString.call(chapters) === '[object Array]' && chapters.length > 0) {
@@ -500,11 +512,14 @@
             });
           } else {
             var li = document.createElement('li');
-            li.textContent = 'Inga kapitel kunde skapas automatiskt för den här videon/podden.';
+           li.textContent = `${c.time} – ${c.title || "Kapitel"}`;
             chaptersOutput.appendChild(li);
           }
+hashtagsOutput.innerHTML = (json.hashtags && json.hashtags.length)
+  ? json.hashtags.map(tag => `<code>${tag}</code>`).join("")
+  : `<code>#AI</code><code>#timestamps</code><code>#kenai</code>`;
 
-          hashtagsOutput.innerHTML = '';
+
           if (Object.prototype.toString.call(hashtags) === '[object Array]' && hashtags.length > 0) {
             hashtags.forEach(function (tag) {
               var code = document.createElement('code');
