@@ -1,12 +1,23 @@
-// server.js (ESM) — Kenai backend: summarize + pdf + reels + trends
+// server.js (ESM) – Kenai backend: summarize + pdf + reels + trends
+import dotenv from "dotenv";
+dotenv.config({ override: true });
+
 import express from "express";
 import path from "path";
 import fs from "fs";
 import PDFDocument from "pdfkit";
 import { fileURLToPath } from "url";
+import OpenAI from "openai";
+
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
 
 const app = express();
 app.set("trust proxy", 1);
@@ -40,31 +51,123 @@ app.use(express.static(path.join(__dirname, "public")));
 
 
 
-// Kenai Timestamps – stabil prototyp (ingen AI)
-app.post("/api/timestamps", (req, res) => {
+// --- Kenai Timestamps: AI + fallback via fetch ---
+app.post('/api/timestamps', async (req, res) => {
   const { url } = req.body;
 
-  console.log("Received URL for timestamps:", url); 
+  // 1) Basvalidering
+  if (!url || typeof url !== 'string') {
+    return res.status(400).json({
+      error: 'Ingen URL skickades in till /api/timestamps.',
+    });
+  }
 
-  const exampleResponse = {
-    url,
-    chapters: [
-      { time: "00:00", title: "Intro & hook" },
-      { time: "01:23", title: "Bakgrund & story" },
-      { time: "04:50", title: "Huvudpoängen i videon" },
-      { time: "09:10", title: "Sammanfattning & call-to-action" }
-    ],
+  console.log('Kenai Timestamps: tog emot URL:', url);
+
+  // 2) Fejkdata som fallback om OpenAI strular
+  const fallback = {
+    title: 'Exempel-titel från Kenai Timestamps (fejk)',
     summary:
-      "Detta är en stabil placeholder för prototypen. I riktiga Kenai Timestamps kommer AI ta videons innehåll och automatiskt skapa kapitel, beskrivning och hashtags."
+      'Detta är en fejk-sammanfattning från Kenai Timestamps-prototypen. ' +
+      'Allt fungerar tekniskt – om AI:n inte kan svara använder vi denna fallback.',
+    hashtags: ['#kenai', '#timestamps', '#ai', '#podd', '#youtube'],
+    chapters: [
+      { time: '00:00', label: 'Intro' },
+      { time: '03:15', label: 'Viktig punkt / Hook' },
+      { time: '10:42', label: 'Huvudämne / Story' },
+      { time: '18:30', label: 'Avslutning & CTA' },
+    ],
   };
 
-  res.json(exampleResponse);
+  try {
+    // 3) Hämta API-nyckel
+    const key = requireOpenAIKey();
+
+    // 4) Anropa OpenAI Chat Completions via fetch
+    const body = {
+      model: 'gpt-4o-mini',
+      temperature: 0.6,
+      messages: [
+        {
+          role: 'system',
+          content:
+            'Du är Kenai Timestamps, ett verktyg som hjälper creators att få ' +
+            'titel, sammanfattning, hashtags och kapitel till YouTube-videor och poddar. ' +
+            'Du får OFTA bara en URL och kan ibland inte se själva innehållet. ' +
+            'Gör då en smart, rimlig gissning baserat på titel/slug/kontext. ' +
+            'Svara ALLTID med STRIKT JSON (ingen text runtom, ingen markdown, inga kommentarer) ' +
+            'i EXAKT detta schema: ' +
+            '{ "title": "...", "summary": "...", "hashtags": ["#..."], "chapters": [ { "time": "mm:ss", "label": "..." }, ... ] }. ' +
+            'Tiderna ska alltid börja vid "00:00" och ökas i rimliga steg (t.ex. 00:00, 02:30, 05:00, 08:30 osv). ' +
+            'Sammanfattningen ska vara 3–6 meningar på svenska. Hashtags ska vara 5–10 st, relevanta och populära.'
+        },
+        {
+          role: 'user',
+          content:
+            `Video/podd-URL: ${url}\n\n` +
+            'Utgå från vad titeln och URL:en antyder. Om du inte vet exakt innehåll, ' +
+            'skapa en rimlig generell kapitelstruktur som skulle passa en sådan video/podd.'
+        },
+      ],
+    };
+
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await r.json().catch(() => ({}));
+
+    if (!r.ok) {
+      console.error('Kenai Timestamps: OpenAI-svar inte OK:', r.status, data);
+      return res.json(fallback);
+    }
+
+    const raw = (data.choices?.[0]?.message?.content || '').trim();
+    console.log('Kenai Timestamps: rå OpenAI-svar:', raw);
+
+    // 5) Försök parsa JSON från modellen
+    let parsed;
+    try {
+      const cleaned = raw
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
+        .trim();
+
+      parsed = JSON.parse(cleaned);
+    } catch (parseErr) {
+      console.error('Kenai Timestamps: kunde inte parsa JSON, använder fallback.', parseErr);
+      return res.json(fallback);
+    }
+
+    // 6) Minimal sanity-check på resultatet
+    if (
+      !parsed ||
+      typeof parsed.title !== 'string' ||
+      typeof parsed.summary !== 'string' ||
+      !Array.isArray(parsed.hashtags) ||
+      !Array.isArray(parsed.chapters)
+    ) {
+      console.error('Kenai Timestamps: ogiltig struktur i AI-svar, använder fallback.');
+      return res.json(fallback);
+    }
+
+    console.log('Kenai Timestamps: AI-svar OK, skickar vidare till frontend.');
+    return res.json(parsed);
+  } catch (err) {
+    console.error('Fel i /api/timestamps (yttersta catch):', err);
+    // Viktigt: vi skickar inte 500 här, utan vår fallback så UI alltid funkar
+    return res.json(fallback);
+  }
 });
 
-// ---- Health ----
-app.get("/api/health", (req, res) => {
-  res.json({ ok: true, message: "Kenai backend är igång" });
-});
+
+
+
 
 // ---- Helpers ----
 function requireOpenAIKey() {
@@ -74,8 +177,19 @@ function requireOpenAIKey() {
     err.status = 500;
     throw err;
   }
+
+  // DEBUG: visa VAD servern faktiskt ser (utan att läcka hela nyckeln)
+  console.log(
+    'DEBUG OPENAI_API_KEY:',
+    key.slice(0, 8), // första 8 tecknen
+    '... (length =',
+    key.length,
+    ')'
+  );
+
   return key;
 }
+
 
 function safeUrl(u) {
   try {
