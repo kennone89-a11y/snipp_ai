@@ -299,43 +299,52 @@
       }     .chapter-timeline {
   position: relative;
   margin-top: 16px;
-  height: 8px;
+  height: 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
+  background: linear-gradient(
+    90deg,
+    rgba(0, 255, 255, 0.25),
+    rgba(138, 180, 255, 0.5)
+  );
+  box-shadow: 0 0 20px rgba(0, 200, 255, 0.35);
   overflow: visible;
 }
 
 .chapter-marker {
   position: absolute;
-  top: 0;
-  width: 2px;
-  height: 100%;
-  background: #4adeff;
+  top: -4px;
+  width: 10px;
+  height: 18px;
+  border-radius: 999px;
+  background: #00f2ff;
+  box-shadow: 0 0 16px rgba(0, 242, 255, 0.9);
   cursor: pointer;
+}
+
+.chapter-marker .chapter-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%) translateY(8px);
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(10, 18, 40, 0.95);
+  border: 1px solid rgba(0, 242, 255, 0.5);
+  font-size: 11px;
+  white-space: nowrap;
+  color: #e6f1ff;
+  box-shadow: 0 0 18px rgba(0, 242, 255, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 5;
 }
 
 .chapter-marker:hover .chapter-tooltip {
   opacity: 1;
-  transform: translate(-50%, -8px) translateY(-100%);
-  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
 }
 
-.chapter-tooltip {
-  position: absolute;
-  left: 50%;
-  bottom: 100%;
-  transform: translate(-50%, 0);
-  background: rgba(3, 7, 18, 0.95);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 11px;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  border: 1px solid rgba(74, 222, 255, 0.7);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-  z-index: 5;
-}
     </style>
   </head>
   <body>
