@@ -531,58 +531,45 @@ setLog("Public URL hämtad.");
       }
     }
 
-  async function callSummarize(url) {
+ async function callSummarize(url) {
   setStatus("Skickar till AI för transkribering & sammanfattning...");
   setAIStatus("AI transkriberar & skriver din sammanfattning...", false);
 
-  // ... rest ofetch /api/summarize osv ...
+  const backendBase = window.location.origin;
+  let res, txt, json = null;
+
+  try {
+    res = await fetch(`${backendBase}/api/summarize`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+
+    txt = await res.text();
+    try {
+      json = JSON.parse(txt);
+    } catch (e) {
+      json = null;
+    }
+
+    if (!res.ok) {
+      const msg = (json && (json.error || json.message)) || txt || "Okänt fel";
+      throw new Error(`Backend-fel: ${String(msg).slice(0, 300)}`);
+    }
+
+    if (!json || !json.summary) {
+      throw new Error("Okänt AI-fel: saknar summary i svar.");
+    }
+
+    return json;
+  } catch (err) {
+    console.error(err);
+    setStatus(err.message || "Något gick fel i AI-backend.");
+    setAIStatus("Något gick fel med AI-sammanfattningen.", true);
+    throw err;
+  }
 }
 
-
-      const backendBase = window.location.origin;
-      let res, txt, json = null;
-
-      try {
-        res = await fetch(`${backendBase}/api/summarize`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url })
-        });
-
-        txt = await res.text();
-        try {
-          json = JSON.parse(txt);
-        } catch (_) {
-          json = null;
-        }
-
-        if (!res.ok) {
-          const msg =
-            json && (json.error || json.message)
-              ? json.error || json.message
-              : txt;
-          throw new Error(
-            `Backend-fel: ${res.status}. ${String(msg).slice(0, 300)}`
-          );
-        }
-
-        if (!json || !json.summary) {
-          throw new Error("Okänt AI-fel: saknar summary i svar.");
-        }
-
-        if (aiStatusEl) {
-          aiStatusEl.textContent = "";
-        }
-
-        return json;
-      } catch (err) {
-        console.error(err);
-        if (aiStatusEl) {
-          aiStatusEl.textContent = "Kunde inte hämta svar från AI 💀";
-        }
-        throw err;
-      }
-    }
 
   async function uploadAndSummarize() {
   try {
