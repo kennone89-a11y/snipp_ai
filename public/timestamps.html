@@ -448,118 +448,14 @@
         >
       </div>
     </div>
+    <span style="opacity: 0.6; font-size: 10px;">
+      Obs. Detta är en tidig Kenai-prototyp.
+    </span>
+  </div>
+</div>
 
-      <script>
-  (function () {
-  const urlInput = document.getElementById('urlInput');
-  const generateBtnEl = document.getElementById('generateBtn');
-  const aiStatusEl = document.getElementById('aiStatus');
+<script src="js/timestamps.js"></script>
+</body>
+</html>
 
-  const generateStatusEl = document.getElementById('generateStatus');
-  const generateBtnTextEl = document.getElementById('generateBtnText');
-
-
-    function renderResult(data) {
-      if (!data || typeof data !== 'object') {
-        console.warn('Tomt/ogiltigt data i renderResult:', data);
-        return;
-      }
-
-      if (titleEl && data.title) {
-        titleEl.textContent = data.title;
-      }
-
-      if (summaryEl && data.summary) {
-        summaryEl.textContent = data.summary;
-      }
-
-      if (chaptersEl && Array.isArray(data.chapters)) {
-        chaptersEl.innerHTML = '';
-        data.chapters.forEach(function (ch) {
-          const li = document.createElement('li');
-          li.textContent = (ch.time || '') + '  ' + (ch.title || '');
-          chaptersEl.appendChild(li);
-        });
-      }
-
-      if (hashtagsEl && Array.isArray(data.hashtags)) {
-        hashtagsEl.innerHTML = '';
-        data.hashtags.forEach(function (tag) {
-          const span = document.createElement('span');
-          span.className = 'hashtag-pill';
-          span.textContent = '#' + tag.replace(/^#/, '');
-          hashtagsEl.appendChild(span);
-        });
-      }
-    }
-
-    async function generateTimestamps() {
-  if (!urlInput) return;
-
-  const url = urlInput.value.trim();
-  if (!url) {
-    alert('Klistra in en video- eller podd-URL först.');
-    return;
-  }
-
-  // Visa "AI jobbar..." och lås knappen
-  if (generateBtnEl && generateBtnTextEl && generateStatusEl) {
-    generateBtnEl.disabled = true;
-    generateBtnEl.classList.add('loading');
-    generateBtnTextEl.textContent = 'AI jobbar…';
-    generateStatusEl.style.display = 'block';
-    generateStatusEl.textContent = 'Kenai analyserar din video…';
-  }
-
-  try {
-    const res = await fetch('/api/timestamps', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ url }),
-    });
-
-    if (!res.ok) {
-      throw new Error('Fel från servern: ' + res.status);
-    }
-
-    const json = await res.json();
-    console.log('Timestamps JSON:', json);
-    renderResult(json);
-  } catch (error) {
-    console.error('Fel vid timestamps-anrop:', error);
-    if (generateStatusEl) {
-      generateStatusEl.style.display = 'block';
-      generateStatusEl.textContent = 'Något gick fel. Försök igen.';
-    }
-  } finally {
-    // Återställ knappen och visa klar-text
-    if (generateBtnEl && generateBtnTextEl && generateStatusEl) {
-      generateBtnEl.disabled = false;
-      generateBtnEl.classList.remove('loading');
-      generateBtnTextEl.textContent = 'Generera timestamps med AI';
-      generateStatusEl.style.display = 'block';
-      generateStatusEl.textContent = 'Klar! Timestamps genererade ✅';
-    }
-  }
-}
-
-      generateBtnEl.addEventListener('click', function () {
-        generateTimestamps();
-      });
-    }
-
-    if (urlInput) {
-      urlInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          generateTimestamps();
-        }
-      });
-    }
-  })();
-</script>
-
-      
 
