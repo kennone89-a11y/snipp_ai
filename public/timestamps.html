@@ -385,14 +385,15 @@
         <div class="result-grid">
           <div class="card">
             <div class="card-title">Titel &amp; sammanfattning</div>
-            <div id="titleOutput" class="title-output">
+           <div id="summaryTitle" class="title-output">
               Titel hämtas när AI är klar…
             </div>
             <div id="summaryOutput" class="summary-output">
+              <p id="summaryText" class="result-summary"></p>
               Sammanfattning av videon/podden dyker upp här när AI är klar.
             </div>
           </div>
-
+ 
           <div class="card">
             <div class="card-title">Hashtags</div>
             <div id="hashtagsOutput" class="hashtags">
@@ -405,7 +406,7 @@
 
         <div class="card" style="margin-top: 16px">
           <div class="card-title">Kapitel</div>
-          <ul id="chaptersOutput" class="chapters">
+          <ul id="chaptersList" class="chapters-list">
             <div id="chapterTimeline" class="chapter-timeline"></div> 
             <li>
               <span class="chapter-time">00:00</span>
@@ -419,7 +420,6 @@
               <span class="chapter-time">01:00</span>
               <span>Avslutning</span>
             </li>
-          </ul>
         </div>
       </section>
 
