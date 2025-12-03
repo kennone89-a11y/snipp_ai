@@ -369,7 +369,17 @@
           placeholder="https://www.youtube.com/watch?v=..."
         />
         <div class="btn-row">
-          <button id="generateBtn" class="primary">Generera timestamps med AI</button>
+          <button
+  id="generateBtn"
+  class="kenai-btn"
+  onclick="generateTimestamps()"
+>
+  <span id="generateBtnText">Generera timestamps med AI</span>
+</button>
+<p id="generateStatus" style="margin-top: 8px; font-size: 12px; opacity: 0.8; display: none;">
+  Kenai analyserar din video…
+</p>
+
         </div>
         <p class="hint">
           Kenai läser innehållet och föreslår kapitel, kort sammanfattning och några hashtags
@@ -396,7 +406,7 @@
  
           <div class="card">
             <div class="card-title">Hashtags</div>
-            <div id="hashtagsOutput" class="hashtags">
+            <div id="hashtagsList" class="hashtags">
               <code>#kenai</code>
               <code>#ai</code>
               <code>#timestamps</code>
@@ -422,7 +432,7 @@
             </li>
         </div>
       </section>
-
+      </ul>
       <!-- Status -->
       <div class="status-bar">
         <span id="statusText">Redo att generera timestamps.</span>
