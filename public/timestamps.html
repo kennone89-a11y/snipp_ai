@@ -433,204 +433,118 @@
     </div>
 
       <script>
-      (function () {
-        var urlInput = document.getElementById('urlInput');
-        var generateBtn = document.getElementById('generateBtn');
-        var aiStatusEl = document.getElementById('aiStatus');
-        var statusEl = document.getElementById('statusText');
-        var titleOutput = document.getElementById('titleOutput');
-        var summaryOutput = document.getElementById('summaryOutput');
-        var chaptersOutput = document.getElementById('chaptersOutput');
-        var hashtagsOutput = document.getElementById('hashtagsOutput');
+  (function () {
+    const urlInput = document.getElementById('urlInput');
+    const generateBtnEl = document.getElementById('generateBtn');
+    const aiStatusEl = document.getElementById('aiStatus');
 
-        function setStatus(msg) {
-          if (statusEl) statusEl.textContent = msg || '';
-          console.log('STATUS:', msg);
-        }
+    const titleEl = document.getElementById('summaryTitle');
+    const summaryEl = document.getElementById('summaryText');
+    const chaptersEl = document.getElementById('chaptersList');
+    const hashtagsEl = document.getElementById('hashtagsList');
 
-        function setAIStatus(message, done) {
-          if (!aiStatusEl) return;
-          if (!message) {
-            aiStatusEl.textContent = '';
-            aiStatusEl.classList.remove('done');
-            return;
-          }
-          if (typeof done === 'undefined') done = false;
-
-          aiStatusEl.classList.toggle('done', !!done);
-          aiStatusEl.innerHTML =
-            '<span class="ai-pulse"></span>' +
-            '<span>' + message + '</span>';
-        }
-
-        function renderResult(json) {
-          var title =
-            json.title ||
-            json.videoTitle ||
-            json.podcastTitle ||
-            'Ingen titel hittades automatiskt.';
-
-          var summary =
-            json.summary ||
-            json.description ||
-            json.text ||
-            'Ingen sammanfattning hittades automatiskt.';
-
-          var chapters = json.chapters || json.mockChapters || json.toc || [];
-          var hashtags = json.hashtags || json.tags || [];
-
-          titleOutput.textContent = json.title || "AI: Titel kunde inte extraheras automatiskt.";
-
-summaryOutput.textContent =
-  json.summary
-    ? json.summary
-    : `Denna video verkar innehålla flera tematiska segment. AI:n kunde inte hämta 
-        en exakt sammanfattning från källan, men här är en uppskattning:
-
-• Övergripande tema – Introduktion till ämnet och varför det är relevant.
-• Viktiga punkter – Sammanfattning av centrala idéer som presenteras i videon.
-• Slutsats – Vad tittaren ska ta med sig eller tänka vidare på.
-
-(OBS: Detta är en tidig prototyp av Kenai Timestamps.)`;
-
-
-          chaptersOutput.innerHTML = '';
-          if (Object.prototype.toString.call(chapters) === '[object Array]' && chapters.length > 0) {
-            chapters.forEach(function (ch) {
-              var li = document.createElement('li');
-
-              var t = document.createElement('span');
-              t.className = 'chapter-time';
-              t.textContent = ch.time || ch.timestamp || '00:00';
-
-              var label = document.createElement('span');
-              label.textContent = ch.title || ch.label || ch.text || 'Kapitel';
-
-              li.appendChild(t);
-              li.appendChild(label);
-              chaptersOutput.appendChild(li);
-            });
-          } else {
-            var li = document.createElement('li');
-           li.textContent = `${c.time} – ${c.title || "Kapitel"}`;
-            chaptersOutput.appendChild(li);
-          }
-hashtagsOutput.innerHTML = (json.hashtags && json.hashtags.length)
-  ? json.hashtags.map(tag => `<code>${tag}</code>`).join("")
-  : `<code>#AI</code><code>#timestamps</code><code>#kenai</code>`;
-
-
-          if (Object.prototype.toString.call(hashtags) === '[object Array]' && hashtags.length > 0) {
-            hashtags.forEach(function (tag) {
-              var code = document.createElement('code');
-              code.textContent = tag;
-              hashtagsOutput.appendChild(code);
-            });
-          } else {
-            var code = document.createElement('code');
-            code.textContent = '#kenai';
-            hashtagsOutput.appendChild(code);
-          }
-        }
-
-        async function generateTimestamps() {
-    var url = (urlInput.value || '').trim();
-
-    // UI: AI börjar jobba
-    aiStatusEl.textContent = 'AI jobbar… analyserar din länk 🔍';
-    generateBtnEl.disabled = true;
-    generateBtnEl.textContent = 'AI jobbar…';
-
-    if (!url) {
-        setStatus('Skriv in en URL först.');
-        urlInput.focus();
+    function renderResult(data) {
+      if (!data || typeof data !== 'object') {
+        console.warn('Tomt/ogiltigt data i renderResult:', data);
         return;
+      }
+
+      if (titleEl && data.title) {
+        titleEl.textContent = data.title;
+      }
+
+      if (summaryEl && data.summary) {
+        summaryEl.textContent = data.summary;
+      }
+
+      if (chaptersEl && Array.isArray(data.chapters)) {
+        chaptersEl.innerHTML = '';
+        data.chapters.forEach(function (ch) {
+          const li = document.createElement('li');
+          li.textContent = (ch.time || '') + '  ' + (ch.title || '');
+          chaptersEl.appendChild(li);
+        });
+      }
+
+      if (hashtagsEl && Array.isArray(data.hashtags)) {
+        hashtagsEl.innerHTML = '';
+        data.hashtags.forEach(function (tag) {
+          const span = document.createElement('span');
+          span.className = 'hashtag-pill';
+          span.textContent = '#' + tag.replace(/^#/, '');
+          hashtagsEl.appendChild(span);
+        });
+      }
     }
 
+    async function generateTimestamps() {
+      if (!urlInput) return;
 
-          try {
-            generateBtn.disabled = true;
-            setStatus('Skickar URL till Kenai…');
-            setAIStatus('AI analyserar din video/podd…', false);
+      const url = urlInput.value.trim();
+      if (!url) {
+        alert('Klistra in en video- eller podd-URL först.');
+        return;
+      }
 
-           var backendBase = 'https://snipp-ai1.onrender.com';
+      if (aiStatusEl) {
+        aiStatusEl.textContent = 'AI jobbar...';
+      }
+      if (generateBtnEl) {
+        generateBtnEl.disabled = true;
+        generateBtnEl.textContent = 'AI jobbar...';
+      }
 
-const controller = new AbortController();
-const timeout = setTimeout(() => controller.abort(), 20000);
-
-    try {
-      const res = await fetch(backendBase + '/api/timestamps', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-        signal: controller.signal
-      });
-
-      clearTimeout(timeout);
-
-      const txt = await res.text();
-      let json = null;
-
-      // Försök tolka svaret som JSON
       try {
-        json = JSON.parse(txt);
-      } catch (e) {
-        console.warn('Kunde inte parsa JSON, rå-text:', txt);
+        const res = await fetch('/api/timestamps', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ url })
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error('Backend-svar: ' + res.status + ' ' + res.statusText + ' – ' + txt);
+        }
+
+        const json = await res.json();
+        console.log('Timestamps JSON:', json);
+
+        renderResult(json);
+
+        if (aiStatusEl) {
+          aiStatusEl.textContent = 'Klar! Timestamps genererade ✅';
+        }
+      } catch (error) {
+        console.error('Fel vid timestamps-anrop:', error);
+        if (aiStatusEl) {
+          aiStatusEl.textContent = 'Något gick fel. Försök igen.';
+        }
+      } finally {
+        if (generateBtnEl) {
+          generateBtnEl.disabled = false;
+          generateBtnEl.textContent = 'Generera timestamps med AI';
+        }
       }
-
-      if (!res.ok) {
-        const msg =
-          (json && (json.error || json.message)) ||
-          txt ||
-          'Okänt fel från backend.';
-
-        aiStatusEl.textContent = 'Fel: Kunde inte generera timestamps ✖';
-        generateBtnEl.disabled = false;
-        generateBtnEl.textContent = 'Försök igen';
-
-        throw new Error(String(msg).slice(0, 300));
-      }
-
-      if (!json) {
-        throw new Error('Tomt svar från timestamps-backend.');
-      }
-
-      // UI: AI klar
-      aiStatusEl.textContent = 'Klar! Timestamps genererade ✅';
-      generateBtnEl.disabled = false;
-      generateBtnEl.textContent = 'Generera timestamps med AI';
-
-      console.log('Timestamps JSON:', json);
-      renderResult(json);
-      // TODO: här uppdaterar du titel, kapitel, hashtags med json
-     
-
-    } catch (error) {
-      clearTimeout(timeout);
-      console.error('Fel vid timestamps-anrop:', error);
-      aiStatusEl.textContent = 'Något gick fel. Försök igen.';
-      generateBtnEl.disabled = false;
-      generateBtnEl.textContent = 'Generera timestamps med AI';
     }
 
-        if (generateBtn) {
-          generateBtn.addEventListener('click', function () {
-            generateTimestamps();
-          });
-        }
+    if (generateBtnEl) {
+      generateBtnEl.addEventListener('click', function () {
+        generateTimestamps();
+      });
+    }
 
-        if (urlInput) {
-          urlInput.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              generateTimestamps();
-            }
-          });
+    if (urlInput) {
+      urlInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          generateTimestamps();
         }
-      })();
-   
+      });
+    }
+  })();
+</script>
 
-    </script>
-  </body>
-</html>
+      
 
