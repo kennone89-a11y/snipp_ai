@@ -375,11 +375,17 @@
   >
     <span id="generateBtnText">Generera timestamps med AI</span>
   </button>
-</div>
+</div> 
 
-<p id="generateStatus" style="margin-top: 8px; font-size: 12px; opacity: 0.8; display: none;">
+<p
+  id="generateStatus"
+  style="margin-top: 8px; font-size: 12px; opacity: 0.8; display: none;"
+>
   Kenai analyserar din video…
 </p>
+
+</p>
+
 
         </div>
         <p class="hint">
@@ -445,14 +451,13 @@
 
       <script>
   (function () {
-    const urlInput = document.getElementById('urlInput');
-    const generateBtnEl = document.getElementById('generateBtn');
-    const aiStatusEl = document.getElementById('aiStatus');
+  const urlInput = document.getElementById('urlInput');
+  const generateBtnEl = document.getElementById('generateBtn');
+  const aiStatusEl = document.getElementById('aiStatus');
 
-    const titleEl = document.getElementById('summaryTitle');
-    const summaryEl = document.getElementById('summaryText');
-    const chaptersEl = document.getElementById('chaptersList');
-    const hashtagsEl = document.getElementById('hashtagsList');
+  const generateStatusEl = document.getElementById('generateStatus');
+  const generateBtnTextEl = document.getElementById('generateBtnText');
+
 
     function renderResult(data) {
       if (!data || typeof data !== 'object') {
@@ -488,22 +493,24 @@
       }
     }
 
-    async function generateTimestamps() {
-      if (!urlInput) return;
+     const url = urlInput.value.trim();
+  if (!url) {
+    alert('Klistra in en video- eller podd-URL först.');
+    return;
+  }
 
-      const url = urlInput.value.trim();
-      if (!url) {
-        alert('Klistra in en video- eller podd-URL först.');
-        return;
-      }
+  // Visa "AI jobbar..." och lås knappen (vid knappen)
+  if (generateBtnEl && generateBtnTextEl && generateStatusEl) {
+    generateBtnEl.disabled = true;
+    generateBtnEl.classList.add('loading');
+    generateBtnTextEl.textContent = 'AI jobbar…';
+    generateStatusEl.style.display = 'block';
+    generateStatusEl.textContent = 'Kenai analyserar din video…';
+  }
 
-      if (aiStatusEl) {
-        aiStatusEl.textContent = 'AI jobbar...';
-      }
-      if (generateBtnEl) {
-        generateBtnEl.disabled = true;
-        generateBtnEl.textContent = 'AI jobbar...';
-      }
+
+  // ---> här fortsätter din kod med try { ... }
+
 
       try {
         const res = await fetch('/api/timestamps', {
@@ -524,21 +531,24 @@
 
         renderResult(json);
 
-        if (aiStatusEl) {
-          aiStatusEl.textContent = 'Klar! Timestamps genererade ✅';
-        }
-      } catch (error) {
-        console.error('Fel vid timestamps-anrop:', error);
-        if (aiStatusEl) {
-          aiStatusEl.textContent = 'Något gick fel. Försök igen.';
-        }
-      } finally {
-        if (generateBtnEl) {
-          generateBtnEl.disabled = false;
-          generateBtnEl.textContent = 'Generera timestamps med AI';
-        }
-      }
+        
+        
+        } catch (error) {
+    console.error('Fel vid timestamps-anrop:', error);
+    if (generateStatusEl) {
+      generateStatusEl.style.display = 'block';
+      generateStatusEl.textContent = 'Något gick fel. Försök igen.';
     }
+    } finally {
+    if (generateBtnEl && generateBtnTextEl && generateStatusEl) {
+      generateBtnEl.disabled = false;
+      generateBtnEl.classList.remove('loading');
+      generateBtnTextEl.textContent = 'Generera timestamps med AI';
+      generateStatusEl.style.display = 'block';
+      generateStatusEl.textContent = 'Klar! Timestamps genererade ✅';
+    }
+  }
+
 
     if (generateBtnEl) {
       generateBtnEl.addEventListener('click', function () {
