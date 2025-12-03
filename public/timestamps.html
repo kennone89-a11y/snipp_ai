@@ -558,70 +558,60 @@ hashtagsOutput.innerHTML = (json.hashtags && json.hashtags.length)
 const controller = new AbortController();
 const timeout = setTimeout(() => controller.abort(), 20000);
 
-var res = await fetch(backendBase + '/api/timestamps', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url: url }),
-    signal: controller.signal
-});
+    try {
+      const res = await fetch(backendBase + '/api/timestamps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+        signal: controller.signal
+      });
 
-clearTimeout(timeout);
+      clearTimeout(timeout);
 
-if (!res.ok) {
-    throw new Error('Backend-svar: ' + res.status + ' – ' + res.statusText);
-}
+      const txt = await res.text();
+      let json = null;
 
+      // Försök tolka svaret som JSON
+      try {
+        json = JSON.parse(txt);
+      } catch (e) {
+        console.warn('Kunde inte parsa JSON, rå-text:', txt);
+      }
 
+      if (!res.ok) {
+        const msg =
+          (json && (json.error || json.message)) ||
+          txt ||
+          'Okänt fel från backend.';
 
-            var txt = await res.text();
-            var json = null;
-            try {
-              json = JSON.parse(txt);
-              // UI: AI klar
-aiStatusEl.textContent = 'Klar! Timestamps genererade ✅';
-generateBtnEl.disabled = false;
-generateBtnEl.textContent = 'Generera timestamps med AI';
+        aiStatusEl.textContent = 'Fel: Kunde inte generera timestamps ✖';
+        generateBtnEl.disabled = false;
+        generateBtnEl.textContent = 'Försök igen';
 
-            } catch (e) {
-              console.warn('Kunde inte parsa JSON, rå-text:', txt);
-            }
+        throw new Error(String(msg).slice(0, 300));
+      }
 
-            if (!res.ok) {
-              var msg =
-                (json && (json.error || json.message)) ||
-                txt ||
-                'Okänt fel från backend.';
-                aiStatusEl.textContent = 'Fel: Kunde inte generera timestamps ❌';
-generateBtnEl.disabled = false;
-generateBtnEl.textContent = 'Försök igen';
+      if (!json) {
+        throw new Error('Tomt svar från timestamps-backend.');
+      }
 
-              throw new Error(String(msg).slice(0, 300));
-            }
+      // UI: AI klar
+      aiStatusEl.textContent = 'Klar! Timestamps genererade ✅';
+      generateBtnEl.disabled = false;
+      generateBtnEl.textContent = 'Generera timestamps med AI';
 
-            if (!json) {
-              throw new Error('Tomt svar från timestamps-backend.');
-            }
+      console.log('Timestamps JSON:', json);
+      renderResult(json);
+      // TODO: här uppdaterar du titel, kapitel, hashtags med json
+     
 
-            console.log('Timestamps JSON:', json);
-            renderResult(json);
-
-            setStatus('Klar! Timestamps genererade.');
-            setAIStatus('AI-timestamps klara ✅', true);
-          catch (err) {
-    console.error(err);
-
-    aiStatusEl.textContent = 'Fel: servern svarade inte ❌';
-    generateBtnEl.disabled = false;
-    generateBtnEl.textContent = 'Försök igen';
-
-    setStatus(err.message || 'Något gick fel när timestamps genererades.');
-    setAIStatus('AI kunde inte generera timestamp-data.', true);
-}
-
-          } finally {
-            generateBtn.disabled = false;
-          }
-        }
+    } catch (error) {
+      clearTimeout(timeout);
+      console.error('Fel vid timestamps-anrop:', error);
+      aiStatusEl.textContent = 'Något gick fel. Försök igen.';
+      generateBtnEl.disabled = false;
+      generateBtnEl.textContent = 'Generera timestamps med AI';
+    }
 
         if (generateBtn) {
           generateBtn.addEventListener('click', function () {
