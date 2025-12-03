@@ -493,13 +493,16 @@
       }
     }
 
-     const url = urlInput.value.trim();
+    async function generateTimestamps() {
+  if (!urlInput) return;
+
+  const url = urlInput.value.trim();
   if (!url) {
     alert('Klistra in en video- eller podd-URL först.');
     return;
   }
 
-  // Visa "AI jobbar..." och lås knappen (vid knappen)
+  // Visa "AI jobbar..." och lås knappen
   if (generateBtnEl && generateBtnTextEl && generateStatusEl) {
     generateBtnEl.disabled = true;
     generateBtnEl.classList.add('loading');
@@ -508,38 +511,30 @@
     generateStatusEl.textContent = 'Kenai analyserar din video…';
   }
 
+  try {
+    const res = await fetch('/api/timestamps', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url }),
+    });
 
-  // ---> här fortsätter din kod med try { ... }
+    if (!res.ok) {
+      throw new Error('Fel från servern: ' + res.status);
+    }
 
-
-      try {
-        const res = await fetch('/api/timestamps', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ url })
-        });
-
-        if (!res.ok) {
-          const txt = await res.text();
-          throw new Error('Backend-svar: ' + res.status + ' ' + res.statusText + ' – ' + txt);
-        }
-
-        const json = await res.json();
-        console.log('Timestamps JSON:', json);
-
-        renderResult(json);
-
-        
-        
-        } catch (error) {
+    const json = await res.json();
+    console.log('Timestamps JSON:', json);
+    renderResult(json);
+  } catch (error) {
     console.error('Fel vid timestamps-anrop:', error);
     if (generateStatusEl) {
       generateStatusEl.style.display = 'block';
       generateStatusEl.textContent = 'Något gick fel. Försök igen.';
     }
-    } finally {
+  } finally {
+    // Återställ knappen och visa klar-text
     if (generateBtnEl && generateBtnTextEl && generateStatusEl) {
       generateBtnEl.disabled = false;
       generateBtnEl.classList.remove('loading');
@@ -548,9 +543,8 @@
       generateStatusEl.textContent = 'Klar! Timestamps genererade ✅';
     }
   }
+}
 
-
-    if (generateBtnEl) {
       generateBtnEl.addEventListener('click', function () {
         generateTimestamps();
       });
