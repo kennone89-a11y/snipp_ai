@@ -1,461 +1,589 @@
 <!DOCTYPE html>
 <html lang="sv">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Kenai Timestamps – YouTube & poddar</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+<head>
+  <meta charset="UTF-8" />
+  <title>Kenai Timestamps</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #040614;
+      --bg-soft: #0b1020;
+      --accent: #40e0ff;
+      --accent-soft: rgba(64, 224, 255, 0.15);
+      --text-main: #f7f7ff;
+      --text-muted: #9aa0c2;
+      --border-subtle: #1b2238;
+      --error: #ff5370;
+    }
 
-    <!-- Kenai favicon -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32 (1).png" />
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-    <style>
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
+    body {
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #151b35 0, #040614 55%, #000 100%);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .brand-logo {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 20%, #40e0ff, #6f6bff 45%, #111 100%);
+      box-shadow: 0 0 16px rgba(64, 224, 255, 0.6);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .brand-logo::after {
+      content: "";
+      position: absolute;
+      inset: 20%;
+      border-radius: 999px;
+      border: 2px solid rgba(0, 0, 0, 0.4);
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.7) inset;
+    }
+
+    .top-links {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+    }
+
+    .top-link {
+      border-radius: 999px;
+      padding: 6px 12px;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: 0.15s ease;
+    }
+
+    .top-link:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(64, 224, 255, 0.06);
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, #151c3a 0, #060814 55%, #040614 100%);
+      border-radius: 20px;
+      padding: 22px 20px 18px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      box-shadow:
+        0 30px 80px rgba(0, 0, 0, 0.8),
+        0 0 0 1px rgba(151, 202, 255, 0.07);
+      backdrop-filter: blur(20px);
+    }
+
+    .card-header {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 999px;
+      padding: 4px 10px;
+      border: 1px solid rgba(64, 224, 255, 0.4);
+      width: fit-content;
+    }
+
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 6px rgba(64, 224, 255, 0.8);
+    }
+
+    h1 {
+      font-size: 24px;
+      letter-spacing: 0.03em;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      max-width: 520px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      gap: 18px;
+    }
+
+    @media (max-width: 780px) {
+      .layout {
+        grid-template-columns: minmax(0, 1fr);
       }
+    }
 
-      body {
-        min-height: 100vh;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-          sans-serif;
-        background: radial-gradient(circle at top, #07111f 0, #02152a 40%, #000000 100%);
-        color: #f5f5ff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 24px;
-      }
+    .field-label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
 
-      a {
-        color: #7dd3fc;
-        text-decoration: none;
-      }
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
 
-      a:hover {
-        text-decoration: underline;
-      }
+    .input {
+      flex: 1;
+      padding: 10px 11px;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: rgba(3, 6, 20, 0.85);
+      color: var(--text-main);
+      font-size: 13px;
+      outline: none;
+      transition: 0.18s ease;
+    }
 
-      .page {
-        width: 100%;
-        max-width: 1000px;
-        border-radius: 24px;
-        padding: 28px 32px 32px;
-        background: rgba(5, 12, 32, 0.96);
-        border: 1px solid rgba(77, 189, 255, 0.25);
-        box-shadow: 0 40px 90px rgba(0, 0, 0, 0.9);
-      }
+    .input::placeholder {
+      color: #5e6583;
+    }
 
-      .back-link {
-        font-size: 12px;
-        margin-bottom: 18px;
-        opacity: 0.8;
-      }
+    .input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(64, 224, 255, 0.5);
+      background: rgba(1, 4, 16, 0.98);
+    }
 
-      h1 {
-        font-size: 24px;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: #e5f3ff;
-        margin-bottom: 6px;
-      }
+    .button {
+      border: none;
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      background: linear-gradient(120deg, #40e0ff, #6f6bff);
+      color: #040614;
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow:
+        0 0 18px rgba(64, 224, 255, 0.7),
+        0 0 1px rgba(255, 255, 255, 0.7);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+    }
 
-      .subtitle {
-        font-size: 13px;
-        color: #aab6ff;
-        margin-bottom: 24px;
-      }
+    .button:disabled {
+      opacity: 0.5;
+      cursor: default;
+      box-shadow: none;
+      transform: none;
+    }
 
-      .section {
-        border-radius: 18px;
-        border: 1px solid rgba(120, 166, 255, 0.4);
-        background: radial-gradient(circle at top left, #0b1430 0, #050a1a 45%, #02030a 100%);
-        padding: 18px 18px 16px;
-        margin-bottom: 18px;
-      }
+    .button:not(:disabled):hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+      box-shadow:
+        0 0 26px rgba(64, 224, 255, 0.9),
+        0 0 1px rgba(255, 255, 255, 0.9);
+    }
 
-      .section-title {
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.18em;
-        color: #8cb3ff;
-        margin-bottom: 14px;
-      }
+    .button-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #040614;
+    }
 
-      .row {
-        display: flex;
-        gap: 16px;
-        flex-wrap: wrap;
-      }
+    .helper-text {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
 
-      .col {
-        flex: 1 1 0;
-        min-width: 0;
-      }
+    .status {
+      font-size: 12px;
+      color: var(--text-muted);
+      min-height: 16px;
+    }
 
-      label {
-        font-size: 12px;
-        color: #c2cffc;
-        display: block;
-        margin-bottom: 6px;
-      }
+    .status strong {
+      color: var(--accent);
+    }
 
-      input[type="text"] {
-        width: 100%;
-        border-radius: 999px;
-        border: 1px solid rgba(126, 169, 255, 0.45);
-        background: rgba(2, 5, 20, 0.95);
-        color: #f6f7ff;
-        padding: 10px 16px;
-        font-size: 13px;
-        outline: none;
-      }
+    .status-error {
+      color: var(--error);
+    }
 
-      input[type="text"]::placeholder {
-        color: #59607c;
-      }
+    .status-ok {
+      color: #6fff9f;
+    }
 
-      input[type="text"]:focus {
-        border-color: #4dd4ff;
-        box-shadow: 0 0 0 1px rgba(77, 212, 255, 0.4);
-      }
+    .card-right {
+      border-radius: 16px;
+      border: 1px solid var(--border-subtle);
+      background: radial-gradient(circle at top, #121831 0, #050712 58%, #03040a 100%);
+      padding: 12px 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+    }
 
-      .btn-row {
-        margin-top: 10px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
+    .card-right::before {
+      content: "";
+      position: absolute;
+      top: -40%;
+      right: -10%;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(64, 224, 255, 0.18), transparent 60%);
+      opacity: 0.8;
+      pointer-events: none;
+    }
 
-      button.primary {
-        border-radius: 999px;
-        border: none;
-        padding: 9px 18px;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        background: linear-gradient(135deg, #4ddeff, #8b6bff);
-        color: #050816;
-        box-shadow: 0 14px 40px rgba(43, 190, 255, 0.6);
-        transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
-        white-space: nowrap;
-      }
+    .right-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+    }
 
-      button.primary:hover {
-        transform: translateY(-1px);
-        filter: brightness(1.06);
-        box-shadow: 0 18px 50px rgba(82, 197, 255, 0.9);
-      }
+    .right-title {
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #d9e3ff;
+    }
 
-      button.primary:disabled {
-        opacity: 0.6;
-        cursor: default;
-        transform: none;
-        box-shadow: none;
-      }
+    .right-tag {
+      font-size: 10px;
+      color: var(--text-muted);
+      border-radius: 999px;
+      padding: 2px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      background: rgba(0, 0, 0, 0.35);
+    }
 
-      .hint {
-        font-size: 11px;
-        color: #7f8ab0;
-        margin-top: 6px;
-      }
+    .result-scroll {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      border-radius: 12px;
+      background: rgba(2, 5, 20, 0.86);
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      padding: 8px 10px 8px;
+      overflow: auto;
+      max-height: 260px;
+    }
 
-      .result-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
-        gap: 16px;
-      }
+    .result-title {
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
 
-      .card {
-        border-radius: 16px;
-        border: 1px solid rgba(110, 160, 255, 0.35);
-        background: radial-gradient(circle at top left, #070f26 0, #050716 50%, #020309 100%);
-        padding: 16px 16px 14px;
-        min-height: 126px;
-      }
+    .result-section-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin: 8px 0 4px;
+    }
 
-      .card-title {
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.16em;
-        color: #8da2ff;
-        margin-bottom: 10px;
-      }
+    .summary {
+      font-size: 12px;
+      color: var(--text-main);
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
 
-      .title-output {
-        font-size: 14px;
-        font-weight: 600;
-        margin-bottom: 8px;
-        color: #f3f5ff;
-      }
+    .chapters-list {
+      list-style: none;
+      font-size: 12px;
+      margin-top: 2px;
+    }
 
-      .summary-output {
-        font-size: 12px;
-        color: #b8c2ff;
-        line-height: 1.5;
-        white-space: pre-wrap;
-      }
+    .chapters-list li {
+      padding: 3px 0;
+      display: flex;
+      gap: 6px;
+    }
 
-      .hashtags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
+    .chapter-time {
+      font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, monospace;
+      color: var(--accent);
+      font-size: 11px;
+      min-width: 52px;
+    }
 
-      .hashtags code {
-        font-family: inherit;
-        font-size: 11px;
-        background: rgba(20, 34, 80, 0.95);
-        border-radius: 999px;
-        padding: 4px 10px;
-        border: 1px solid rgba(149, 196, 255, 0.45);
-        color: #d9e6ff;
-      }
+    .chapter-label {
+      flex: 1;
+    }
 
-      .chapters {
-        list-style: none;
-        margin-top: 4px;
-      }
+    .hashtags {
+      font-size: 11px;
+      color: var(--accent);
+      margin-top: 4px;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
 
-      .chapters li {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 6px 4px;
-        border-bottom: 1px solid rgba(37, 55, 104, 0.65);
-        font-size: 12px;
-        color: #d5ddff;
-      }
+    .empty-state {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: left;
+      padding: 8px 4px 4px;
+    }
 
-      .chapters li:last-child {
-        border-bottom: none;
-      }
-
-      .chapter-time {
-        font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas,
-          "Liberation Mono", "Courier New", monospace;
-        font-size: 11px;
-        color: #9fd5ff;
-        min-width: 52px;
-      }
-
-      .status-bar {
-        margin-top: 10px;
-        font-size: 11px;
-        color: #7b87b2;
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
-        align-items: center;
-      }
-
-      .ai-status {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 11px;
-        color: #a5b8ff;
-        min-height: 18px;
-      }
-
-      .ai-status.done {
-        color: #6efacc;
-      }
-
-      .ai-pulse {
-        width: 9px;
-        height: 9px;
-        border-radius: 999px;
-        background: radial-gradient(circle, #6efacc 0, #12f7ff 40%, #0b1836 100%);
-        box-shadow: 0 0 12px rgba(110, 250, 204, 0.9);
-        animation: ai-pulse 1.6s ease-in-out infinite;
-      }
-
-      @keyframes ai-pulse {
-        0% {
-          transform: scale(0.9);
-          opacity: 0.7;
-        }
-        50% {
-          transform: scale(1.2);
-          opacity: 1;
-        }
-        100% {
-          transform: scale(0.9);
-          opacity: 0.7;
-        }
-      }
-
-      @media (max-width: 768px) {
-        body {
-          padding: 16px;
-        }
-        .page {
-          padding: 20px 16px 22px;
-        }
-        .result-grid {
-          grid-template-columns: minmax(0, 1fr);
-        }
-      }     .chapter-timeline {
-  position: relative;
-  margin-top: 16px;
-  height: 10px;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    rgba(0, 255, 255, 0.25),
-    rgba(138, 180, 255, 0.5)
-  );
-  box-shadow: 0 0 20px rgba(0, 200, 255, 0.35);
-  overflow: visible;
-}
-
-.chapter-marker {
-  position: absolute;
-  top: -4px;
-  width: 10px;
-  height: 18px;
-  border-radius: 999px;
-  background: #00f2ff;
-  box-shadow: 0 0 16px rgba(0, 242, 255, 0.9);
-  cursor: pointer;
-}
-
-.chapter-marker .chapter-tooltip {
-  position: absolute;
-  left: 50%;
-  bottom: 30px;
-  transform: translateX(-50%) translateY(8px);
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(10, 18, 40, 0.95);
-  border: 1px solid rgba(0, 242, 255, 0.5);
-  font-size: 11px;
-  white-space: nowrap;
-  color: #e6f1ff;
-  box-shadow: 0 0 18px rgba(0, 242, 255, 0.6);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.18s ease, transform 0.18s ease;
-  z-index: 5;
-}
-
-.chapter-marker:hover .chapter-tooltip {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-    </style>
-  </head>
-  <body>
-    <div class="page">
-      <div class="back-link">
-        <a href="index.html">&larr; Tillbaka till Kenai-hubben</a>
+    .footer-note {
+      margin-top: 12px;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-logo"></div>
+        <span>Kenai · Creator Engine</span>
       </div>
-
-      <h1>AI-timestamps &amp; beskrivning för YouTube &amp; poddar</h1>
-      <p class="subtitle">
-        Klistra in en video- eller podd-URL så hjälper Kenai dig att skapa kapitel,
-        sammanfattning och hashtags – klart att klistra in direkt i beskrivningen.
-      </p>
-
-      <!-- 1 – URL -->
-      <section class="section">
-        <div class="section-title">1 – Klistra in URL</div>
-        <label for="urlInput">YouTube-länk, podd-länk eller annan publik video/podd-URL</label>
-        <input
-          id="urlInput"
-          type="text"
-          placeholder="https://www.youtube.com/watch?v=..."
-        />
-      <div class="btn-row">
-  <button
-    id="generateBtn"
-    class="kenai-btn"
-  >
-    <span id="generateBtnText">Generera timestamps med AI</span>
-  </button>
-</div> 
-
-<p
-  id="generateStatus"
-  style="margin-top: 8px; font-size: 12px; opacity: 0.8; display: none;"
->
-  Kenai analyserar din video…
-</p>
-
-</p>
-
-
-        </div>
-        <p class="hint">
-          Kenai läser innehållet och föreslår kapitel, kort sammanfattning och några hashtags
-          baserat på din URL.
-        </p>
-        <div class="ai-status" id="aiStatus"></div>
-      </section>
-
-      <!-- 2 – Resultat -->
-      <section class="section">
-        <div class="section-title">2 – Resultat</div>
-
-        <div class="result-grid">
-          <div class="card">
-            <div class="card-title">Titel &amp; sammanfattning</div>
-           <div id="summaryTitle" class="title-output">
-              Titel hämtas när AI är klar…
-            </div>
-            <div id="summaryOutput" class="summary-output">
-              <p id="summaryText" class="result-summary"></p>
-              Sammanfattning av videon/podden dyker upp här när AI är klar.
-            </div>
-          </div>
- 
-          <div class="card">
-            <div class="card-title">Hashtags</div>
-            <div id="hashtagsList" class="hashtags">
-              <code>#kenai</code>
-              <code>#ai</code>
-              <code>#timestamps</code>
-            </div>
-          </div>
-        </div>
-
-        <div class="card" style="margin-top: 16px">
-          <div class="card-title">Kapitel</div>
-          <ul id="chaptersList" class="chapters-list">
-            <div id="chapterTimeline" class="chapter-timeline"></div> 
-            <li>
-              <span class="chapter-time">00:00</span>
-              <span>Intro</span>
-            </li>
-            <li>
-              <span class="chapter-time">00:30</span>
-              <span>Exempelkapitel</span>
-            </li>
-            <li>
-              <span class="chapter-time">01:00</span>
-              <span>Avslutning</span>
-            </li>
-        </div>
-      </section>
-      </ul>
-      <!-- Status -->
-      <div class="status-bar">
-        <span id="statusText">Redo att generera timestamps.</span>
-        <span style="opacity: 0.6; font-size: 10px"
-          >Obs. Detta är en tidig Kenai-prototyp.</span
-        >
+      <div class="top-links">
+        <a href="index.html" class="top-link">⬅ Tillbaka till hubben</a>
       </div>
     </div>
-    <span style="opacity: 0.6; font-size: 10px;">
-      Obs. Detta är en tidig Kenai-prototyp.
-    </span>
-  </div>
-</div>
 
-<script src="js/timestamps.js"></script>
+    <div class="card">
+      <div class="card-header">
+        <div class="pill">
+          <span class="pill-dot"></span>
+          <span>AI-kapitel & timestamps</span>
+        </div>
+        <h1>Gör din video uppladdnings-klar med ett klick</h1>
+        <p class="subtitle">
+          Klistra in en YouTube- eller podd-URL så genererar Kenai automatiskt
+          kapitel, sammanfattning och hashtags du kan klistra in direkt på din kanal.
+        </p>
+      </div>
+
+      <div class="layout">
+        <!-- LEFT: INPUT -->
+        <div>
+          <label for="urlInput" class="field-label">Video- eller podd-URL</label>
+          <div class="input-row">
+            <input
+              id="urlInput"
+              class="input"
+              type="url"
+              placeholder="https://youtube.com/watch?v=..."
+              autocomplete="off"
+            />
+            <button id="generateBtn" class="button">
+              <span class="button-dot"></span>
+              Generera
+            </button>
+          </div>
+          <p class="helper-text">
+            Tips: börja med ett kortare klipp (5–30 minuter) tills vi har fintrimmat allt.
+          </p>
+          <p id="status" class="status"></p>
+        </div>
+
+        <!-- RIGHT: RESULT -->
+        <div class="card-right">
+          <div class="right-header">
+            <div class="right-title">Resultat</div>
+            <div class="right-tag">Autogenererat av Kenai</div>
+          </div>
+
+          <div class="result-scroll" id="resultBox">
+            <div class="empty-state" id="emptyState">
+              Ingen analys ännu.<br />
+              Klistra in en länk till vänster och tryck <b>Generera</b> så dyker
+              kapitel, sammanfattning och hashtags upp här.
+            </div>
+
+            <div id="resultContent" style="display:none;">
+              <div class="result-title" id="videoTitle"></div>
+
+              <div class="result-section-label">Sammanfattning</div>
+              <div class="summary" id="summaryText"></div>
+
+              <div class="result-section-label">Kapitel</div>
+              <ul class="chapters-list" id="chaptersList"></ul>
+
+              <div class="result-section-label">Hashtags</div>
+              <div class="hashtags" id="hashtagsText"></div>
+            </div>
+          </div>
+
+          <div class="footer-note">
+            Kopiera &amp; klistra in direkt i din YouTube-beskrivning.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const urlInput = document.getElementById("urlInput");
+    const generateBtn = document.getElementById("generateBtn");
+    const statusEl = document.getElementById("status");
+
+    const emptyStateEl = document.getElementById("emptyState");
+    const resultContentEl = document.getElementById("resultContent");
+    const titleEl = document.getElementById("videoTitle");
+    const summaryEl = document.getElementById("summaryText");
+    const chaptersListEl = document.getElementById("chaptersList");
+    const hashtagsEl = document.getElementById("hashtagsText");
+
+    function setStatus(message, type) {
+      statusEl.textContent = message || "";
+      statusEl.classList.remove("status-error", "status-ok");
+      if (type === "error") statusEl.classList.add("status-error");
+      if (type === "ok") statusEl.classList.add("status-ok");
+    }
+
+    function setLoading(isLoading) {
+      generateBtn.disabled = isLoading;
+      if (isLoading) {
+        generateBtn.innerHTML = '<span class="button-dot"></span>AI jobbar…';
+        setStatus("AI analyserar din länk, detta kan ta några sekunder…", null);
+      } else {
+        generateBtn.innerHTML = '<span class="button-dot"></span>Generera';
+      }
+    }
+
+    function renderResult(data) {
+      emptyStateEl.style.display = "none";
+      resultContentEl.style.display = "block";
+
+      titleEl.textContent = data.title || "Okänd titel";
+
+      summaryEl.textContent = data.summary || "Ingen sammanfattning hittades.";
+
+      chaptersListEl.innerHTML = "";
+      if (Array.isArray(data.chapters) && data.chapters.length > 0) {
+        data.chapters.forEach((ch) => {
+          const li = document.createElement("li");
+
+          const timeSpan = document.createElement("span");
+          timeSpan.className = "chapter-time";
+          timeSpan.textContent = ch.time || "--:--";
+
+          const labelSpan = document.createElement("span");
+          labelSpan.className = "chapter-label";
+          labelSpan.textContent = ch.label || ch.title || "Kapitel";
+
+          li.appendChild(timeSpan);
+          li.appendChild(labelSpan);
+          chaptersListEl.appendChild(li);
+        });
+      } else {
+        const li = document.createElement("li");
+        li.textContent = "Inga kapitel hittades.";
+        chaptersListEl.appendChild(li);
+      }
+
+      if (Array.isArray(data.hashtags) && data.hashtags.length > 0) {
+        hashtagsEl.textContent = data.hashtags.join(" ");
+      } else if (typeof data.hashtags === "string") {
+        hashtagsEl.textContent = data.hashtags;
+      } else {
+        hashtagsEl.textContent = "#kenai #timestamps";
+      }
+    }
+
+    async function handleGenerate() {
+      const url = urlInput.value.trim();
+      if (!url) {
+        setStatus("Skriv in en video- eller podd-URL först.", "error");
+        urlInput.focus();
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const res = await fetch("/api/timestamps", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url }),
+        });
+
+        if (!res.ok) {
+          throw new Error("Serverfel: " + res.status);
+        }
+
+        const data = await res.json();
+        if (!data) {
+          throw new Error("Tomt svar från servern.");
+        }
+
+        renderResult(data);
+        setStatus("Klart! Resultatet är genererat här till höger.", "ok");
+      } catch (err) {
+        console.error(err);
+        setStatus(
+          "Något gick fel. Kolla konsolen i devtools eller testa med en annan länk.",
+          "error"
+        );
+      } finally { 
+        setLoading(false);
+      }
+    } 
+
+    generateBtn.addEventListener("click", handleGenerate);
+    urlInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleGenerate();
+      }
+    });
+  </script> 
 </body>
 </html>
-
-
