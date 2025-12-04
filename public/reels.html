@@ -444,105 +444,74 @@ if (copyHashtagsBtn && hookHashtags) {
   });
 }
 
-// --- Scrolla ner till Reels Maker-kortet ---
-const goToReelsBtn   = document.getElementById("goToReelsBtn");
-const reelsMakerCard = document.getElementById("reelsMakerCard");
+    // Scrolla ner till Reels Maker-kortet
+    const goToReelsBtn = document.getElementById("goToReelsBtn");
+    const reelsMakerCard = document.getElementById("reelsMakerCard");
 
-if (goToReelsBtn && reelsMakerCard) {
-  goToReelsBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    reelsMakerCard.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
-}
-
-
-  // --- Kenai Reels Maker – enkel demo-logik så knapparna lever igen ---
-
-  const presetBtns = document.querySelectorAll(".preset-btn");
-  const fileInput = document.getElementById("fileInput");
-  const targetSecondsInput = document.getElementById("targetSeconds");
-  const buildPlanBtn = document.getElementById("buildPlanBtn");
-  const renderBtn = document.getElementById("renderBtn");
-  const pillStyle = document.getElementById("pillStyle");
-  const pillFiles = document.getElementById("pillFiles");
-  const pillDuration = document.getElementById("pillDuration");
-  const planPreview = document.getElementById("planPreview");
-  const statusText = document.getElementById("statusText");
-
-  let currentStyle = "basic";
-
-  // Välj preset (Basic / Marvel / Tarantino / Kenai)
-  if (presetBtns && presetBtns.length) {
-    presetBtns.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        presetBtns.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-
-        currentStyle = btn.dataset.style || "basic";
-        if (pillStyle) {
-          pillStyle.textContent = btn.textContent.trim();
-        }
+    if (goToReelsBtn && reelsMakerCard) {
+      goToReelsBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        reelsMakerCard.scrollIntoView({ behavior: "smooth", block: "start" });
       });
-    });
-  }
-
-  // Räkna filer
-  if (fileInput && pillFiles) {
-    fileInput.addEventListener("change", () => {
-      const count = fileInput.files ? fileInput.files.length : 0;
-      pillFiles.textContent = String(count);
-    });
-  }
-
-  // Bygg en enkel fejk-plan (ingen backend, bara så knappen gör något)
-  async function buildLocalPlan() {
-    if (!fileInput || !targetSecondsInput || !planPreview || !pillDuration || !statusText) return;
-
-    const files = fileInput.files || [];
-    const target = Number(targetSecondsInput.value || "10") || 10;
-
-    if (!files.length) {
-      statusText.textContent = "Välj minst en bild eller ett klipp först.";
-      return;
     }
 
-    if (buildPlanBtn) buildPlanBtn.disabled = true;
-    statusText.textContent = "Skapar reel-plan (demo)...";
-    planPreview.textContent = "";
+    // --- Enkel lokal reel-plan (demo) ---
+    const fileInput = document.getElementById("fileInput");
+    const targetSecondsInput = document.getElementById("targetSeconds");
+    const buildPlanBtn = document.getElementById("buildPlanBtn");
+    const renderBtn = document.getElementById("renderBtn");
+    const statusText = document.getElementById("statusText");
+    const planPreview = document.getElementById("planPreview");
+    const pillDuration = document.getElementById("pillDuration");
 
-    // superenkel demo-logik: dela tiden jämnt på alla filer
-    const perClip = target / files.length;
-    const lines = [];
-    for (let i = 0; i < files.length; i++) {
-      const f = files[i];
-      lines.push(
-        `${i + 1}. [${perClip.toFixed(1)}s] ${f.type.startsWith("video") ? "video" : "bild"} – ${f.name}`
-      );
+    async function buildLocalPlan() {
+      const files = fileInput?.files || [];
+      const target = Number(targetSecondsInput?.value || "10") || 10;
+
+      if (!files.length) {
+        if (statusText) statusText.textContent = "Välj minst en bild eller ett klipp först.";
+        return;
+      }
+
+      if (buildPlanBtn) {
+        buildPlanBtn.disabled = true;
+        buildPlanBtn.textContent = "Skapar reel-plan (demo)…";
+      }
+      if (planPreview) planPreview.textContent = "";
+
+      const perClip = target / files.length;
+      const lines = [];
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        lines.push(
+          `${i + 1}. [${perClip.toFixed(1)}s] ${f.type.startsWith("video") ? "video" : "bild"} – ${f.name}`
+        );
+      }
+
+      if (pillDuration) pillDuration.textContent = `${target.toFixed(1)} s`;
+      if (planPreview) planPreview.textContent = lines.join("\n");
+      if (statusText) statusText.textContent = "Reel-plan (demo) klar – redo att testas.";
+
+      if (buildPlanBtn) {
+        buildPlanBtn.disabled = false;
+        buildPlanBtn.textContent = "Skapa reel-plan (demo)";
+      }
     }
 
-    pillDuration.textContent = target.toFixed(1) + " s";
-    planPreview.textContent = lines.join("\n");
-    statusText.textContent = "Reel-plan (demo) klar – redo att testas.";
+    if (buildPlanBtn) {
+      buildPlanBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        buildLocalPlan();
+      });
+    }
 
-    if (buildPlanBtn) buildPlanBtn.disabled = false;
-  }
-
-  if (buildPlanBtn) {
-    buildPlanBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      buildLocalPlan();
-    });
-  }
-
-  if (renderBtn) {
-    renderBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      alert("Rendera reel (demo) – riktig export kommer senare 🚀");
-    });
-  }
-
-}); 
-</script>
+    if (renderBtn) {
+      renderBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        alert("Rendera reel (demo) – riktig export kommer senare 🚀");
+      });
+    }
+  </script>
 
 
 
