@@ -8,6 +8,10 @@ import fs from "fs";
 import PDFDocument from "pdfkit";
 import { fileURLToPath } from "url";
 import OpenAI from "openai";
+import multer from "multer";
+import ffmpeg from "fluent-ffmpeg";
+import ffmpegPath from "ffmpeg-static";
+
 
 
 
@@ -20,6 +24,14 @@ const openai = new OpenAI({
 
 
 const app = express();
+// Multer för att ta emot videoklipp (lagras temporärt i /tmp på servern)
+const upload = multer({
+  dest: "/tmp/kenai-reels",
+});
+ 
+// Koppla fluent-ffmpeg till ffmpeg-static binären
+ffmpeg.setFfmpegPath(ffmpegPath);
+
 app.set("trust proxy", 1);
 
 // ---- CORS (ingen cors-dependency) ----
@@ -264,7 +276,74 @@ app.post("/api/reels/render-demo", async (req, res) => {
       error: "Serverfel i render-demo.",
     });
   }
+});// --- Reels: basic render-endpoint – tar emot videoklipp och slår ihop dem ---
+app.post("/api/reels/render-basic", upload.array("clips", 10), async (req, res) => {
+  const files = req.files || [];
+
+  if (!files.length) {
+    return res.status(400).json({
+      ok: false,
+      error: "Inga videoklipp mottogs för rendering.",
+    });
+  }
+
+  // Enkel output-path i /tmp
+  const outputPath = `/tmp/kenai-reel-${Date.now()}.mp4`;
+
+  try {
+    // Bygg ffmpeg-kommando: lägg till alla input-filer i ordning
+    const command = ffmpeg();
+
+    files.forEach((file) => {
+      command.input(file.path);
+    });
+
+    // mergeToFile = enkel concat (FFmpeg sköter konvertering vid behov)
+    await new Promise((resolve, reject) => {
+      command
+        .on("error", (err) => {
+          console.error("FFmpeg render-basic error:", err);
+          reject(err);
+        })
+        .on("end", () => {
+          console.log("FFmpeg render-basic klar:", outputPath);
+          resolve();
+        })
+        .mergeToFile(outputPath, "/tmp");
+    });
+
+    // Skicka tillbaka färdig MP4 som binary stream
+    res.setHeader("Content-Type", "video/mp4");
+    res.setHeader("Content-Disposition", 'inline; filename="kenai-reel.mp4"');
+
+    const stream = fs.createReadStream(outputPath);
+
+    // Städa temporära filer när streamen är klar
+    stream.on("close", () => {
+      try {
+        fs.unlink(outputPath, () => {});
+      } catch (e) {
+        console.error("Kunde inte ta bort output-fil:", e);
+      }
+      files.forEach((f) => {
+        try {
+          fs.unlink(f.path, () => {});
+        } catch (e) {
+          console.error("Kunde inte ta bort temp-input:", e);
+        }
+      });
+    });
+
+    stream.pipe(res);
+  } catch (err) {
+    console.error("Fel i /api/reels/render-basic:", err);
+    return res.status(500).json({
+      ok: false,
+      error: "Serverfel vid basic rendering.",
+    });
+  }
 });
+
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {

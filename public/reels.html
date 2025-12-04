@@ -429,59 +429,90 @@ if (buildPlanBtn && targetSecondsInput && planPreview) {
   });
 }
 
-// Render-knappen – just nu bara info
-if (renderBtn) {
-  renderBtn.addEventListener("click", () => {
-    if (statusText) {
-      statusText.textContent =
-        "Rendering av riktig video är inte klar ännu – det här är bara en demo.";
+// Render-knappen – skickar videoklipp till backend för basic rendering
+if (renderBtn && targetSecondsInput && planPreview) {
+  renderBtn.addEventListener("click", async () => {
+    const target = parseInt(targetSecondsInput.value, 10) || 0;
+
+    if (!selectedFiles.length) {
+      if (statusText) statusText.textContent = "Välj minst ett videoklipp först.";
+      return;
     }
-  });
-}
-
-// --- AI Hook & Hashtags ---
-
-const hookBtn = document.getElementById("hookBtn");
-const hookIdea = document.getElementById("hookInput");
-const hookOutput = document.getElementById("hookOutput");
-const hookHashtags = document.getElementById("hookHashtags");
-
-if (hookBtn && hookIdea && hookOutput && hookHashtags) {
-  hookBtn.addEventListener("click", async () => {
-    const idea = hookIdea.value.trim();
-    if (!idea) return;
-
-    const originalLabel = hookBtn.textContent;
-    hookBtn.disabled = true;
-    hookBtn.textContent = "AI jobbar...";
+    if (!target || target <= 0) {
+      if (statusText) statusText.textContent = "Ange en mållängd i sekunder.";
+      return;
+    }
 
     try {
-      const res = await fetch("/api/reels/hooks", {
+      if (statusText) statusText.textContent = "Renderar basic reel…";
+
+      const formData = new FormData();
+      selectedFiles.forEach((file) => {
+        formData.append("clips", file);
+      });
+      formData.append("targetSeconds", String(target));
+
+      const res = await fetch("/api/reels/render-basic", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea }),
+        body: formData,
       });
 
-      if (!res.ok) throw new Error("Serverfel");
+      if (!res.ok) {
+        let errMsg = "Render misslyckades.";
+        try {
+          const data = await res.json();
+          if (data && data.error) errMsg = data.error;
+        } catch (_) {
+          // Kan vara binary, ignorera JSON-fel
+        }
+        if (statusText) statusText.textContent = errMsg;
+        return;
+      }
 
-      const data = await res.json();
-      const hooks = Array.isArray(data.hooks) ? data.hooks : [];
-      const tags = Array.isArray(data.hashtags) ? data.hashtags : [];
+      // Vi får tillbaka en MP4 som binary (blob)
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
 
-      hookOutput.value =
-        hooks.length ? hooks.join("\n") : "Inga hooks tillbaka från AI just nu.";
+      // Skapa eller återanvänd en video-preview under planPreview
+      let video = document.getElementById("reelPreviewVideo");
+      if (!video) {
+        video = document.createElement("video");
+        video.id = "reelPreviewVideo";
+        video.controls = true;
+        video.style.marginTop = "12px";
+        video.style.maxWidth = "100%";
+        video.style.borderRadius = "12px";
+        video.style.outline = "none";
 
-      hookHashtags.value = tags.length ? tags.join(" ") : "";
+        const planContainer = planPreview.parentElement;
+        if (planContainer) {
+          planContainer.appendChild(video);
+        } else {
+          document.body.appendChild(video);
+        }
+      }
+
+      video.src = url;
+      video.play().catch(() => {});
+
+      if (statusText) {
+        statusText.textContent = "Basic reel renderad! Scrolla ner för att se videon.";
+      }
+
+      planPreview.innerHTML += `
+        <hr />
+        <p><strong>Basic render klar:</strong> En enkel sammanslagning av dina klipp. Nästa steg: Kenai-effekter.</p>
+      `;
     } catch (err) {
-      console.error("Fel i /api/reels/hooks:", err);
-      hookOutput.value = "Något gick fel. Testa igen om en liten stund.";
-      hookHashtags.value = "";
-    } finally {
-      hookBtn.disabled = false;
-      hookBtn.textContent = originalLabel;
+      console.error("Fel vid basic render:", err);
+      if (statusText) {
+        statusText.textContent =
+          "Något gick fel vid basic rendering. Testa igen om en stund.";
+      }
     }
   });
 }
+
 
 // --- Kopiera hashtags-knappen ---
 
