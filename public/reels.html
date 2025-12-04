@@ -170,6 +170,33 @@
   </style>
 </head>
 <body>
+        <!-- AI Hook & Hashtags -->
+      <section class="card">
+        <div class="badge">
+          <span>🧠 AI-hook & hashtags</span>
+        </div>
+        <h2>Gör din Kenai-reel klickbar på 5 sek</h2>
+        <p>
+          Beskriv din reel (t.ex. “sommar på båt med vänner” eller “Kenai AI som fixar podd-sammanfattning”) så föreslår Kenai hooks och hashtags.
+        </p>
+
+        <label for="hookInput" style="display:block;margin-top:14px;margin-bottom:6px;">Beskriv din reel-idé</label>
+        <textarea id="hookInput" rows="3" style="width:100%;resize:vertical;border-radius:10px;padding:10px;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.12);color:#fff;"></textarea>
+
+        <button id="hookBtn" class="primary" style="margin-top:12px;">Generera hooks & hashtags</button>
+
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;">
+          <div>
+            <div style="font-weight:600;margin-bottom:4px;">Förslag på hooks</div>
+            <textarea id="hookOutput" rows="4" style="width:100%;resize:vertical;border-radius:10px;padding:10px;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.12);color:#fff;"></textarea>
+          </div>
+          <div>
+            <div style="font-weight:600;margin-bottom:4px;">Hashtags</div>
+            <div id="hookHashtags" style="display:flex;flex-wrap:wrap;gap:6px;font-size:13px;"></div>
+          </div>
+        </div>
+      </section>
+
   <div class="app">
     <div class="card">
       <div class="badge">
@@ -265,7 +292,94 @@
     </div>
   </div>
 
-  <script>
+  // -------------------------
+// AI Hook & Hashtags-sektion
+// -------------------------
+
+const hookInput = document.getElementById("hookInput");
+const hookBtn = document.getElementById("hookBtn");
+const hookOutput = document.getElementById("hookOutput");
+const hookHashtags = document.getElementById("hookHashtags");
+
+async function generateHooksAndTags() {
+  if (!hookInput || !hookOutput || !hookHashtags) return;
+
+  const niche = hookInput.value.trim();
+  if (!niche) {
+    hookOutput.value = "Skriv först vad din reel handlar om – t.ex. 'Kenai AI som gör podd-klipp åt mig'.";
+    return;
+  }
+
+  hookBtn.disabled = true;
+  const originalText = hookBtn.textContent;
+  hookBtn.textContent = "AI jobbar…";
+
+  hookOutput.value = "AI jobbar… genererar hooks baserat på din idé.";
+  hookHashtags.innerHTML = "";
+
+  try {
+    // Försök kalla din backend (trends-backend)
+    const res = await fetch("/api/trends-backend", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ niche })
+    });
+
+    if (!res.ok) {
+      throw new Error("Serverfel: " + res.status);
+    }
+
+    const data = await res.json();
+
+    // Förväntad struktur: { ideas: [...], hashtags: [...] }
+    const ideas = Array.isArray(data.ideas) && data.ideas.length
+      ? data.ideas
+      : [
+          "POV: du upptäcker Kenai och låter AI sköta allt jobb.",
+          "Jag testade Kenai i 30 sekunder – här är vad som hände.",
+          "Sluta klippa video manuellt. Låt Kenai göra det åt dig."
+        ];
+
+    const tags = Array.isArray(data.hashtags) && data.hashtags.length
+      ? data.hashtags
+      : ["#kenai", "#ai", "#reels", "#contentcreator", "#svenskai"];
+
+    hookOutput.value = ideas.map((idea, i) => `${i + 1}. ${idea}`).join("\n");
+
+    hookHashtags.innerHTML = "";
+    tags.forEach(tag => {
+      const span = document.createElement("span");
+      span.textContent = tag;
+      span.style.padding = "4px 10px";
+      span.style.borderRadius = "999px";
+      span.style.border = "1px solid rgba(255,255,255,0.25)";
+      span.style.background = "rgba(0,0,0,0.35)";
+      span.style.cursor = "pointer";
+      span.onclick = () => {
+        // Klick för att kopiera ett tagg
+        navigator.clipboard?.writeText(tag).catch(() => {});
+      };
+      hookHashtags.appendChild(span);
+    });
+  } catch (err) {
+    console.error(err);
+    hookOutput.value =
+      "Kunde inte hämta data från backend just nu.\n\n" +
+      "Här är ändå några generella Kenai-hooks du kan testa:\n" +
+      "1. Jag lät AI klippa min reel på 10 sekunder.\n" +
+      "2. Den här AI:n gör jobbet åt mig medan jag chillar.\n" +
+      "3. Så här blev min video när Kenai tog över redigeringen.";
+    hookHashtags.innerHTML = "";
+  } finally {
+    hookBtn.disabled = false;
+    hookBtn.textContent = originalText;
+  }
+}
+
+if (hookBtn) {
+  hookBtn.addEventListener("click", generateHooksAndTags);
+}
+<script>
     // --- STATE ---
     let selectedStyle = "basic";
     let lastPlan = null;
