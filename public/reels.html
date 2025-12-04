@@ -410,7 +410,6 @@ if (!hookBtn || !hookInput || !hookOutput || !hookHashtags) {
     } catch (err) {
       console.error("Fel i /api/reels/hooks:", err);
       hookOutput.value = "Något gick fel. Testa igen om en liten stund.";
-      hookHashtags.value = "";
     } finally {
       hookBtn.disabled = false;
       hookBtn.textContent = originalLabel;
