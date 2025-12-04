@@ -217,9 +217,54 @@ Svar MÅSTE vara JSON på formen:
     res.status(500).json({ error: "Server error" });
   }
 });
+// --- Reels: render demo-endpoint (ingen riktig video ännu) ---
+app.post("/api/reels/render-demo", async (req, res) => {
+  try {
+    const { style, clips, targetSeconds } = req.body || {};
 
+    console.log("Reels render-demo hit:", {
+      style,
+      clipCount: Array.isArray(clips) ? clips.length : 0,
+      targetSeconds,
+    });
 
+    if (!Array.isArray(clips) || clips.length === 0) {
+      return res.status(400).json({
+        ok: false,
+        error: "Inga klipp skickades till render-demo.",
+      });
+    }
 
+    if (!targetSeconds || targetSeconds <= 0) {
+      return res.status(400).json({
+        ok: false,
+        error: "Ogiltig mållängd.",
+      });
+    }
+
+    // Här kommer vi i nästa steg koppla in riktig FFmpeg-rendering.
+    // Just nu låtsas vi bara att allting gick bra.
+    return res.json({
+      ok: true,
+      message:
+        "Render-demo mottagen. FFmpeg-rendering kopplas på i nästa steg.",
+      debug: {
+        style: style || "Basic",
+        clips: clips.map((c) => ({
+          name: c.name || "okänt namn",
+          plannedSeconds: c.duration || null,
+        })),
+        targetSeconds,
+      },
+    });
+  } catch (err) {
+    console.error("Fel i /api/reels/render-demo:", err);
+    return res.status(500).json({
+      ok: false,
+      error: "Serverfel i render-demo.",
+    });
+  }
+});
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
