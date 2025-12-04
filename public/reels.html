@@ -230,11 +230,28 @@
     <button id="copyHashtagsBtn" class="primary">
       Kopiera hashtags
     </button>
+  </div>
+</div>
+
+<div style="margin-top:16px; text-align:right;">
+  <button id="goToReelsBtn" class="primary">
+    Fixa reel med de här hooksen
+  </button>
+</div>
+</section>
+
+
+
+<div style="margin-top:16px; text-align:right;">
+  <button id="goToReelsBtn" class="primary">
+    Fixa reel med de här hooksen
+  </button>
+</div>
 </section>
 
  
   <div class="app">
-    <div class="card">
+    <div class="card" id="reelsMakerCard">
       <div class="badge">
         <span>🚀</span>
         <span>Kenaireel – presets</span>
@@ -341,12 +358,13 @@
     const hookOutput = document.getElementById("hookOutput");
     const hookHashtags = document.getElementById("hookHashtags");
     const copyHashtagsBtn = document.getElementById("copyHashtagsBtn");
+    const goToReelsBtn = document.getElementById("goToReelsBtn");
 
     if (!hookBtn || !hookInput || !hookOutput || !hookHashtags) {
       console.warn("Hook-fält saknas på sidan.");
       return;
     }
-
+ 
     // Generera hooks + hashtags
     hookBtn.addEventListener("click", async () => {
       const idea = hookInput.value.trim();
