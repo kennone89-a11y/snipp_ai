@@ -234,11 +234,15 @@
 </div>
 
 <div style="margin-top:16px; text-align:right;">
-  <button id="goToReelsBtn" class="primary">
+  <a href="#reelsMakerCard"
+     id="goToReelsBtn"
+     class="primary"
+     style="display:inline-block; padding:10px 22px; border-radius:999px;">
     Fixa reel med de här hooksen
-  </button>
+  </a>
 </div>
-</section>
+
+
 
  
   <div class="app">
@@ -424,17 +428,5 @@
       }
     });
   }
-
-  // Scrolla ner till Reels Maker-kortet
-  const goToReelsBtn = document.getElementById("goToReelsBtn");
-  const reelsMakerCard = document.getElementById("reelsMakerCard");
-
-  if (goToReelsBtn && reelsMakerCard) {
-    goToReelsBtn.addEventListener("click", () => {
-      reelsMakerCard.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }
-});
-
 
   
