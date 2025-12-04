@@ -202,19 +202,22 @@
         </p>
 
         <label for="hookInput" style="display:block;margin-top:14px;margin-bottom:6px;">Beskriv din reel-idé</label>
-        <textarea id="hookInput" rows="3" style="width:100%;resize:vertical;border-radius:10px;padding:10px;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.12);color:#fff;"></textarea>
+       <textarea id="hookInput" rows="4" style="width:100%; ..."></textarea>
 
-        <button id="hookBtn" class="primary" style="margin-top:12px;">Generera hooks & hashtags</button>
+<button id="hookBtn" class="primary" style="margin-top:12px;">
+  Generera hooks & hashtags
+</button>
 
-        <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;">
-          <div>
-            <div style="font-weight:600;margin-bottom:4px;">Förslag på hooks</div>
-            <textarea id="hookOutput" rows="4" style="width:100%;resize:vertical;border-radius:10px;padding:10px;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.12);color:#fff;"></textarea>
-          </div>
-          <div>
-            <div style="font-weight:600;margin-bottom:4px;">Hashtags</div>
-            <div id="hookHashtags" style="display:flex;flex-wrap:wrap;gap:6px;font-size:13px;"></div>
-          </div>
+<div style="margin-top:16px;">
+  <div>Förslag på hooks</div>
+  <textarea id="hookOutput" rows="4" style="width:100%; ..."></textarea>
+</div>
+
+<div style="margin-top:16px;">
+  <div>Hashtags</div>
+  <textarea id="hookHashtags" rows="3" style="width:100%; ..."></textarea>
+</div>
+
         </div>
       </section>
  
@@ -327,14 +330,60 @@ const hookBtn = document.getElementById("hookBtn");
 const hookOutput = document.getElementById("hookOutput");
 const hookHashtags = document.getElementById("hookHashtags");
 
-async function generateHooksAndTags() {
-  if (!hookInput || !hookOutput || !hookHashtags) return;
+// --- AI hooks & hashtags ---
 
-  const niche = hookInput.value.trim();
-  if (!niche) {
-    hookOutput.value = "Skriv först vad din reel handlar om – t.ex. 'Kenai AI som gör podd-klipp åt mig'.";
+const hookBtn = document.getElementById("hookBtn");
+const hookInput = document.getElementById("hookInput");
+const hookOutput = document.getElementById("hookOutput");
+const hookHashtags = document.getElementById("hookHashtags");
+
+async function generateHooksAndTags() {
+  if (!hookBtn || !hookInput || !hookOutput || !hookHashtags) return;
+
+  const idea = hookInput.value.trim();
+  if (!idea) {
+    hookOutput.value = "Skriv först in en idé till din reel 😊";
+    hookHashtags.value = "";
     return;
   }
+
+  const originalLabel = hookBtn.textContent;
+  hookBtn.disabled = true;
+  hookBtn.textContent = "AI jobbar…";
+
+  try {
+    const res = await fetch("/api/reels/hooks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idea }),
+    });
+
+    if (!res.ok) throw new Error("Serverfel");
+
+    const data = await res.json();
+
+    const hooks = Array.isArray(data.hooks) ? data.hooks : [];
+    const tags = Array.isArray(data.hashtags) ? data.hashtags : [];
+
+    hookOutput.value = hooks.length
+      ? hooks.join("\n")
+      : "Inga hooks tillbaka från AI just nu.";
+
+    hookHashtags.value = tags.length ? tags.join(" ") : "";
+  } catch (err) {
+    console.error(err);
+    hookOutput.value = "Något gick fel. Testa igen om en liten stund.";
+    hookHashtags.value = "";
+  } finally {
+    hookBtn.disabled = false;
+    hookBtn.textContent = originalLabel;
+  }
+}
+
+if (hookBtn) {
+  hookBtn.addEventListener("click", generateHooksAndTags);
+}
+
 
   hookBtn.disabled = true;
   const originalText = hookBtn.textContent;
