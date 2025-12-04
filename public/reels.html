@@ -365,7 +365,60 @@
 
   
  
-<script>
+
+  <script>
+// --- AI Hook & Hashtags ---
+
+const hookBtn = document.getElementById("hookBtn");
+const hookInput = document.getElementById("hookInput");
+const hookOutput = document.getElementById("hookOutput");
+const hookHashtags = document.getElementById("hookHashtags");
+
+if (hookBtn && hookInput && hookOutput && hookHashtags) {
+  hookBtn.addEventListener("click", async () => {
+    const idea = hookInput.value.trim();
+    if (!idea) {
+      hookOutput.value = "Skriv en reel-idé först.";
+      return;
+    }
+
+    const originalLabel = hookBtn.textContent;
+    hookBtn.disabled = true;
+    hookBtn.textContent = "AI jobbar...";
+    hookOutput.value = "";
+    hookHashtags.value = "";
+
+    try {
+      const res = await fetch("/api/reels/hooks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idea }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Serverfel");
+      }
+
+      const data = await res.json();
+      const hooks = Array.isArray(data.hooks) ? data.hooks : [];
+      const tags = Array.isArray(data.hashtags) ? data.hashtags : [];
+
+      hookOutput.value = hooks.length
+        ? hooks.join("\n")
+        : "Inga hooks tillbaka från AI just nu.";
+
+      hookHashtags.value = tags.length ? tags.join(" ") : "";
+    } catch (err) {
+      console.error("Fel i /api/reels/hooks:", err);
+      hookOutput.value = "Något gick fel. Testa igen om en liten stund.";
+      hookHashtags.value = "";
+    } finally {
+      hookBtn.disabled = false;
+      hookBtn.textContent = originalLabel;
+    }
+  });
+}
+
 // --- Reels core (demo) ---
 
 const filesInput = document.getElementById("files");
