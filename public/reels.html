@@ -366,62 +366,11 @@
  
 <script>
 // --- AI Hook & Hashtags ---
-
-const hookBtn = document.getElementById("hookBtn");
-const hookInput = document.getElementById("hookInput");
-const hookOutput = document.getElementById("hookOutput");
-const hookHashtags = document.getElementById("hookHashtags");
-
-if (!hookBtn || !hookInput || !hookOutput || !hookHashtags) {
-  console.warn("Hook-fält saknas på sidan.");
-} else {
-  hookBtn.addEventListener("click", async () => {
-    const idea = hookInput.value.trim();
-    if (!idea) {
-      hookOutput.value = "Skriv först in en idé till din reel 🧠";
-      hookHashtags.value = "";
-      return;
-    }
-
-    const originalLabel = hookBtn.textContent;
-    hookBtn.disabled = true;
-    hookBtn.textContent = "AI jobbar...";
-
-    try {
-      const res = await fetch("/api/reels/hooks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea }),
-      });
-
-      if (!res.ok) throw new Error("Serverfel");
-
-      const data = await res.json();
-      const hooks = Array.isArray(data.hooks) ? data.hooks : [];
-      const tags  = Array.isArray(data.hashtags) ? data.hashtags : [];
-
-      hookOutput.value = hooks.length
-        ? hooks.join("\n")
-        : "Inga hooks tillbaka från AI just nu.";
-
-      hookHashtags.value = tags.length
-        ? tags.join(" ")
-        : "";
-    } catch (err) {
-      console.error("Fel i /api/reels/hooks:", err);
-      hookOutput.value = "Något gick fel. Testa igen om en liten stund.";
-    } finally {
-      hookBtn.disabled = false;
-      hookBtn.textContent = originalLabel;
-    }
-  });
-}
-
-// --- Hooks-knappen ---
 const hookBtn = document.getElementById("hookBtn");
 const hookIdea = document.getElementById("hookIdea");
 const hookOutput = document.getElementById("hookOutput");
 const hookHashtags = document.getElementById("hookHashtags");
+
 
 if (hookBtn && hookIdea && hookOutput && hookHashtags) {
   hookBtn.addEventListener("click", async () => {
