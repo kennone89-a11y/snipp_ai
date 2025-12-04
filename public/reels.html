@@ -360,88 +360,101 @@
 
  
 <script>
-  // --- AI Hook & Hashtags ---
+// --- AI Hook & Hashtags ---
 
-  document.addEventListener("DOMContentLoaded", () => {
-    const hookBtn = document.getElementById("hookBtn");
-    const hookInput = document.getElementById("hookInput");
-    const hookOutput = document.getElementById("hookOutput");
-    const hookHashtags = document.getElementById("hookHashtags");
-    const copyHashtagsBtn = document.getElementById("copyHashtagsBtn");
-    const goToReelsBtn = document.getElementById("goToReelsBtn");
+const hookBtn = document.getElementById("hookBtn");
+const hookInput = document.getElementById("hookInput");
+const hookOutput = document.getElementById("hookOutput");
+const hookHashtags = document.getElementById("hookHashtags");
 
-    if (!hookBtn || !hookInput || !hookOutput || !hookHashtags) {
-      console.warn("Hook-fält saknas på sidan.");
+if (!hookBtn || !hookInput || !hookOutput || !hookHashtags) {
+  console.warn("Hook-fält saknas på sidan.");
+} else {
+  hookBtn.addEventListener("click", async () => {
+    const idea = hookInput.value.trim();
+    if (!idea) {
+      hookOutput.value = "Skriv först in en idé till din reel 🧠";
+      hookHashtags.value = "";
       return;
     }
- 
-    // Generera hooks + hashtags
-    hookBtn.addEventListener("click", async () => {
-      const idea = hookInput.value.trim();
-      if (!idea) {
-        hookOutput.value = "Skriv först in en idé till din reel 😊";
-        hookHashtags.value = "";
-        return;
-      }
 
-      const originalLabel = hookBtn.textContent;
-      hookBtn.disabled = true;
-      hookBtn.textContent = "AI jobbar…";
+    const originalLabel = hookBtn.textContent;
+    hookBtn.disabled = true;
+    hookBtn.textContent = "AI jobbar...";
 
-      try {
-        const res = await fetch("/api/reels/hooks", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idea }),
-        });
+    try {
+      const res = await fetch("/api/reels/hooks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idea }),
+      });
 
-        if (!res.ok) throw new Error("Serverfel");
+      if (!res.ok) throw new Error("Serverfel");
 
-        const data = await res.json();
-        const hooks = Array.isArray(data.hooks) ? data.hooks : [];
-        const tags = Array.isArray(data.hashtags) ? data.hashtags : [];
+      const data = await res.json();
+      const hooks = Array.isArray(data.hooks) ? data.hooks : [];
+      const tags  = Array.isArray(data.hashtags) ? data.hashtags : [];
 
-        hookOutput.value = hooks.length
-          ? hooks.join("\n")
-          : "Inga hooks tillbaka från AI just nu.";
+      hookOutput.value = hooks.length
+        ? hooks.join("\n")
+        : "Inga hooks tillbaka från AI just nu.";
 
-        hookHashtags.value = tags.length ? tags.join(" ") : "";
-      } catch (err) {
-        console.error("Fel i hooks-frontend:", err);
-        hookOutput.value = "Något gick fel. Testa igen om en liten stund.";
-        hookHashtags.value = "";
-      } finally {
-        hookBtn.disabled = false;
-        hookBtn.textContent = originalLabel;
-      }
-    });
+      hookHashtags.value = tags.length
+        ? tags.join(" ")
+        : "";
+    } catch (err) {
+      console.error("Fel i /api/reels/hooks:", err);
+      hookOutput.value = "Något gick fel. Testa igen om en liten stund.";
+      hookHashtags.value = "";
+    } finally {
+      hookBtn.disabled = false;
+      hookBtn.textContent = originalLabel;
+    }
+  });
+}
 
-     // Kopiera hashtags
-  if (copyHashtagsBtn && hookHashtags) {
-    copyHashtagsBtn.addEventListener("click", async () => {
-      const text = hookHashtags.value.trim();
-      if (!text) {
-        copyHashtagsBtn.textContent = "Inget att kopiera";
-        setTimeout(() => {
-          copyHashtagsBtn.textContent = "Kopiera hashtags";
-        }, 1500);
-        return;
-      }
+// --- Kopiera hashtags-knappen ---
+const copyHashtagsBtn = document.getElementById("copyHashtagsBtn");
 
-      try {
-        await navigator.clipboard.writeText(text);
-        copyHashtagsBtn.textContent = "Kopierat ✅";
-        setTimeout(() => {
-          copyHashtagsBtn.textContent = "Kopiera hashtags";
-        }, 1500);
-      } catch (e) {
-        console.error("Kunde inte kopiera hashtags:", e);
-        copyHashtagsBtn.textContent = "Kunde inte kopiera";
-        setTimeout(() => {
-          copyHashtagsBtn.textContent = "Kopiera hashtags";
-        }, 1500);
-      }
-    });
-  }
+if (copyHashtagsBtn && hookHashtags) {
+  copyHashtagsBtn.addEventListener("click", async () => {
+    const text = hookHashtags.value.trim();
+
+    if (!text) {
+      copyHashtagsBtn.textContent = "Inget att kopiera";
+      setTimeout(() => {
+        copyHashtagsBtn.textContent = "Kopiera hashtags";
+      }, 1500);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      copyHashtagsBtn.textContent = "Kopierat ✅";
+      setTimeout(() => {
+        copyHashtagsBtn.textContent = "Kopiera hashtags";
+      }, 1500);
+    } catch (e) {
+      console.error("Kunde inte kopiera hashtags:", e);
+      copyHashtagsBtn.textContent = "Kunde inte kopiera";
+      setTimeout(() => {
+        copyHashtagsBtn.textContent = "Kopiera hashtags";
+      }, 1500);
+    }
+  });
+}
+
+// --- Scrolla ner till Reels Maker-kortet ---
+const goToReelsBtn   = document.getElementById("goToReelsBtn");
+const reelsMakerCard = document.getElementById("reelsMakerCard");
+
+if (goToReelsBtn && reelsMakerCard) {
+  goToReelsBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    reelsMakerCard.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+</script>
+
 
   
