@@ -145,6 +145,26 @@
       overflow: auto;
       white-space: pre;
     }
+.timeline-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.timeline-item {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.timeline-item span {
+  opacity: 0.85;
+}
+
 
     .pill {
       display: inline-flex;
@@ -394,6 +414,57 @@ if (hookBtn) {
     const statusText   = document.getElementById("statusText");
     if (renderBtn) renderBtn.disabled = true;
     const planPreview     = document.getElementById("planPreview");
+    function renderPlanTimeline(plan) {
+  if (!planPreview) return;
+
+  planPreview.innerHTML = "";
+
+  if (!plan || !Array.isArray(plan.clips) || plan.clips.length === 0) {
+    const p = document.createElement("p");
+    p.textContent = "Ingen plan ännu. Välj stil, lägg till klipp och klicka på \"Skapa reel-plan\".";
+    p.className = "small-muted";
+    planPreview.appendChild(p);
+    return;
+  }
+
+  const info = document.createElement("p");
+  info.className = "small-muted";
+  const total = typeof plan.totalSeconds === "number"
+    ? plan.totalSeconds.toFixed(1)
+    : "";
+  info.textContent = total
+    ? `AI-plan: ${plan.clips.length} klipp, totalt ca ${total} sek.`
+    : `AI-plan: ${plan.clips.length} klipp.`;
+  planPreview.appendChild(info);
+
+  const row = document.createElement("div");
+  row.className = "timeline-row";
+
+  plan.clips.forEach((clip, index) => {
+    const item = document.createElement("div");
+    item.className = "timeline-item";
+
+    const type = clip.type || (clip.isImage ? "bild" : "klipp");
+    const seconds =
+      typeof clip.duration === "number"
+        ? clip.duration.toFixed(1) + " s"
+        : "";
+
+    const label =
+      `#${index + 1} ` +
+      (type === "image" || type === "bild" ? "Bild" : "Video") +
+      (seconds ? ` · ${seconds}` : "");
+
+    const span = document.createElement("span");
+    span.textContent = label;
+    item.appendChild(span);
+
+    row.appendChild(item);
+  });
+
+  planPreview.appendChild(row);
+}
+
     const pillStyle       = document.getElementById("pillStyle");
     const pillFiles       = document.getElementById("pillFiles");
     const pillDuration    = document.getElementById("pillDuration");
@@ -460,8 +531,12 @@ if (hookBtn) {
       statusText.textContent =
         "Plan skapad – detta är vad Kenai/AI skulle skicka som plan.json till backend.";
 
-      planPreview.textContent = JSON.stringify(plan, null, 2);
-    });
+        statusText.style.color = "#9c3a3f";
+  statusText.textContent = "Plan skapad! Detta är vad Kenai/AI skulle skicka som plan.json till backend.";
+
+  renderPlanTimeline(plan);
+});
+
 
     function buildPlanForStyle({ files, style, targetSeconds }) {
       const count = files.length;
