@@ -325,485 +325,59 @@
 // AI Hook & Hashtags-sektion
 // -------------------------
 
-// --- AI hooks & hashtags --- 
+<script>
+  // --- AI Hook & Hashtags ---
 
-const hookBtn = document.getElementById("hookBtn");
-const hookInput = document.getElementById("hookInput");
-const hookOutput = document.getElementById("hookOutput");
-const hookHashtags = document.getElementById("hookHashtags");
+  (function () {
+    const hookBtn = document.getElementById("hookBtn");
+    const hookInput = document.getElementById("hookInput");
+    const hookOutput = document.getElementById("hookOutput");
+    const hookHashtags = document.getElementById("hookHashtags");
 
-async function generateHooksAndTags() {
-  if (!hookBtn || !hookInput || !hookOutput || !hookHashtags) return;
+    async function generateHooksAndTags() {
+      if (!hookBtn || !hookInput || !hookOutput || !hookHashtags) return;
 
-  const idea = hookInput.value.trim();
-  if (!idea) {
-    hookOutput.value = "Skriv först in en idé till din reel 😊";
-    hookHashtags.value = "";
-    return;
-  }
-
-  const originalLabel = hookBtn.textContent;
-  hookBtn.disabled = true;
-  hookBtn.textContent = "AI jobbar…";
-
-  try {
-    const res = await fetch("/api/reels/hooks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idea }),
-    });
-
-    if (!res.ok) throw new Error("Serverfel");
-
-    const data = await res.json();
-
-    const hooks = Array.isArray(data.hooks) ? data.hooks : [];
-    const tags = Array.isArray(data.hashtags) ? data.hashtags : [];
-
-    hookOutput.value = hooks.length
-      ? hooks.join("\n")
-      : "Inga hooks tillbaka från AI just nu.";
-
-    hookHashtags.value = tags.length ? tags.join(" ") : "";
-  } catch (err) {
-    console.error(err);
-    hookOutput.value = "Något gick fel. Testa igen om en liten stund.";
-    hookHashtags.value = "";
-  } finally {
-    hookBtn.disabled = false;
-    hookBtn.textContent = originalLabel;
-  }
-}
-
-if (hookBtn) {
-  hookBtn.addEventListener("click", generateHooksAndTags);
-}
-
-
-  hookBtn.disabled = true;
-  const originalText = hookBtn.textContent;
-  hookBtn.textContent = "AI jobbar…";
-
-  hookOutput.value = "AI jobbar… genererar hooks baserat på din idé.";
-  hookHashtags.innerHTML = "";
-
-  try {
-    // Försök kalla din backend (trends-backend)
-    const res = await fetch("/api/trends-backend", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ niche })
-    });
-
-    if (!res.ok) {
-      throw new Error("Serverfel: " + res.status);
-    }
-
-    const data = await res.json();
-
-    // Förväntad struktur: { ideas: [...], hashtags: [...] }
-    const ideas = Array.isArray(data.ideas) && data.ideas.length
-      ? data.ideas
-      : [
-          "POV: du upptäcker Kenai och låter AI sköta allt jobb.",
-          "Jag testade Kenai i 30 sekunder – här är vad som hände.",
-          "Sluta klippa video manuellt. Låt Kenai göra det åt dig."
-        ];
-
-    const tags = Array.isArray(data.hashtags) && data.hashtags.length
-      ? data.hashtags
-      : ["#kenai", "#ai", "#reels", "#contentcreator", "#svenskai"];
-
-    hookOutput.value = ideas.map((idea, i) => `${i + 1}. ${idea}`).join("\n");
-
-    hookHashtags.innerHTML = "";
-    tags.forEach(tag => {
-      const span = document.createElement("span");
-      span.textContent = tag;
-      span.style.padding = "4px 10px";
-      span.style.borderRadius = "999px";
-      span.style.border = "1px solid rgba(255,255,255,0.25)";
-      span.style.background = "rgba(0,0,0,0.35)";
-      span.style.cursor = "pointer";
-      span.onclick = () => {
-        // Klick för att kopiera ett tagg
-        navigator.clipboard?.writeText(tag).catch(() => {});
-      };
-      hookHashtags.appendChild(span);
-    });
-  } catch (err) {
-    console.error(err);
-    hookOutput.value =
-      "Kunde inte hämta data från backend just nu.\n\n" +
-      "Här är ändå några generella Kenai-hooks du kan testa:\n" +
-      "1. Jag lät AI klippa min reel på 10 sekunder.\n" +
-      "2. Den här AI:n gör jobbet åt mig medan jag chillar.\n" +
-      "3. Så här blev min video när Kenai tog över redigeringen.";
-    hookHashtags.innerHTML = "";
-  } finally {
-    hookBtn.disabled = false;
-    hookBtn.textContent = originalText;
-  }
-}
-
-if (hookBtn) {
-  hookBtn.addEventListener("click", generateHooksAndTags);
-}
-    // --- STATE ---
-    let selectedStyle = "basic";
-    let lastPlan = null;
-
-    const presetButtons   = Array.from(document.querySelectorAll(".preset-btn"));
-    const styleDescriptionEl = document.getElementById("styleDescription");
-    const filesInput      = document.getElementById("files");
-    const targetSecondsInput = document.getElementById("targetSeconds");
-    const buildPlanBtn = document.getElementById("buildPlanBtn");
-    const renderBtn    = document.getElementById("renderBtn");
-    const statusText   = document.getElementById("statusText");
-    if (renderBtn) renderBtn.disabled = true;
-    const planPreview     = document.getElementById("planPreview");
-    function renderPlanTimeline(plan) {
-  if (!planPreview) return;
-
-  planPreview.innerHTML = "";
-
-  if (!plan || !Array.isArray(plan.clips) || plan.clips.length === 0) {
-    const p = document.createElement("p");
-    p.textContent = "Ingen plan ännu. Välj stil, lägg till klipp och klicka på \"Skapa reel-plan\".";
-    p.className = "small-muted";
-    planPreview.appendChild(p);
-    return;
-  }
-
-  const info = document.createElement("p");
-  info.className = "small-muted";
-  const total = typeof plan.totalSeconds === "number"
-    ? plan.totalSeconds.toFixed(1)
-    : "";
-  info.textContent = total
-    ? `AI-plan: ${plan.clips.length} klipp, totalt ca ${total} sek.`
-    : `AI-plan: ${plan.clips.length} klipp.`;
-  planPreview.appendChild(info);
-
-  const row = document.createElement("div");
-  row.className = "timeline-row";
-
-  plan.clips.forEach((clip, index) => {
-    const item = document.createElement("div");
-    item.className = "timeline-item";
-
-    const type = clip.type || (clip.isImage ? "bild" : "klipp");
-    const seconds =
-      typeof clip.duration === "number"
-        ? clip.duration.toFixed(1) + " s"
-        : "";
-
-    const label =
-      `#${index + 1} ` +
-      (type === "image" || type === "bild" ? "Bild" : "Video") +
-      (seconds ? ` · ${seconds}` : "");
-
-    const span = document.createElement("span");
-    span.textContent = label;
-    item.appendChild(span);
-
-    row.appendChild(item);
-  });
-
-  planPreview.appendChild(row);
-}
-
-    const pillStyle       = document.getElementById("pillStyle");
-    const pillFiles       = document.getElementById("pillFiles");
-    const pillDuration    = document.getElementById("pillDuration");
-
-    // --- PRESET HANDLING ---
-    presetButtons.forEach(btn => {
-      btn.addEventListener("click", () => {
-        const style = btn.getAttribute("data-style");
-        selectedStyle = style;
-
-        presetButtons.forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-
-        let desc = "";
-        if (style === "basic") {
-          desc = "Stil: Basic – klipper upp jämnt per klipp, bra för test.";
-        } else if (style === "marvel_intro") {
-          desc = "Stil: Marvel-reel – kort, snabb intro/reklam (3–5 sek) med snabba klipp och logga i slutet.";
-        } else if (style === "tarantino_cut") {
-          desc = "Stil: Tarantino-cut – längre opening shot, sen non-linear smash cuts mellan klippen.";
-        } else if (style === "kenai_classic") {
-          desc = "Stil: Kenaireel Classic – placeholder för din unika Kenai-stil (mix av story + tempo).";
-        }
-        styleDescriptionEl.innerHTML = desc;
-        pillStyle.innerHTML = "🎬 <span>Stil: " + prettyStyleName(style) + "</span>";
-      });
-    });
-
-    function prettyStyleName(style) {
-      if (style === "basic") return "Basic";
-      if (style === "marvel_intro") return "Marvel-reel";
-      if (style === "tarantino_cut") return "Tarantino-cut";
-      if (style === "kenai_classic") return "Kenaireel Classic";
-      return style;
-    }
-
-    // --- BUILD PLAN (DEMO) ---
-    buildPlanBtn.addEventListener("click", () => {
-      const files = Array.from(filesInput.files || []);
-      const rawTarget = parseFloat(targetSecondsInput.value || "0");
-
-      if (!files.length) {
-        statusText.textContent = "Välj minst en fil först.";
-        statusText.style.color = "#f97373";
+      const idea = hookInput.value.trim();
+      if (!idea) {
+        hookOutput.value = "Skriv först in en idé till din reel 😊";
+        hookHashtags.value = "";
         return;
       }
 
-      let target = isNaN(rawTarget) || rawTarget <= 0 ? 10 : rawTarget;
-
-      if ((selectedStyle === "marvel_intro" || selectedStyle === "tarantino_cut") &&
-          (rawTarget <= 0 || rawTarget > 12)) {
-        target = 6;
-      }
-
-      const plan = buildPlanForStyle({ files, style: selectedStyle, targetSeconds: target });
-
-      lastPlan = plan;
-     if (renderBtn) renderBtn.disabled = false;
-
-      pillFiles.innerHTML    = "📂 <span>Filer: " + files.length + "</span>";
-      pillDuration.innerHTML = "⏱️ <span>Total: " + plan.totalDuration.toFixed(2) + " s</span>";
-
-      statusText.style.color = "#9ca3af";
-      statusText.textContent =
-        "Plan skapad – detta är vad Kenai/AI skulle skicka som plan.json till backend.";
-
-        statusText.style.color = "#9c3a3f";
-  statusText.textContent = "Plan skapad! Detta är vad Kenai/AI skulle skicka som plan.json till backend.";
-
-  renderPlanTimeline(plan);
-});
-
-
-    function buildPlanForStyle({ files, style, targetSeconds }) {
-      const count = files.length;
-      const clips = [];
-      let clipDuration = targetSeconds / count;
-
-      // MARVEL INTRO
-      if (style === "marvel_intro") {
-        let ideal = targetSeconds / count;
-        let perClip = Math.min(0.18, Math.max(0.06, ideal));
-        let mainDuration = perClip * count;
-        let outroDuration = targetSeconds >= 3 ? 1.0 : 0.0;
-        let total = mainDuration + outroDuration;
-
-        if (total > targetSeconds && mainDuration > 0) {
-          const over = total - targetSeconds;
-          const adjust = over / count;
-          perClip = Math.max(0.05, perClip - adjust);
-          mainDuration = perClip * count;
-          total = mainDuration + outroDuration;
-        }
-
-        files.forEach((file, index) => {
-          clips.push({
-            index,
-            filename: file.name,
-            type: file.type.startsWith("video") ? "video" : "image",
-            duration: parseFloat(perClip.toFixed(3))
-          });
+      const originalLabel = hookBtn.textContent;
+      hookBtn.disabled = true;
+      hookBtn.textContent = "AI jobbar…";
+ 
+      try {
+        const res = await fetch("/api/reels/hooks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idea }),
         });
 
-        const segments = [
-          {
-            type: "montage",
-            style: "marvel_intro",
-            totalDuration: parseFloat(mainDuration.toFixed(3)),
-            clipDuration: parseFloat(perClip.toFixed(3)),
-            clips
-          }
-        ];
+        if (!res.ok) throw new Error("Serverfel");
 
-        if (outroDuration > 0) {
-          segments.push({
-            type: "logo_outro",
-            duration: parseFloat(outroDuration.toFixed(3)),
-            text: "KENAIREEL",
-            effect: "impact_glow"
-          });
-        }
+        const data = await res.json();
+        const hooks = Array.isArray(data.hooks) ? data.hooks : [];
+        const tags = Array.isArray(data.hashtags) ? data.hashtags : [];
 
-        return {
-          style,
-          totalDuration: parseFloat((mainDuration + outroDuration).toFixed(3)),
-          segments
-        };
+        hookOutput.value = hooks.length
+          ? hooks.join("\n")
+          : "Inga hooks tillbaka från AI just nu.";
+
+        hookHashtags.value = tags.length ? tags.join(" ") : "";
+      } catch (err) {
+        console.error(err);
+        hookOutput.value = "Något gick fel. Testa igen om en liten stund.";
+        hookHashtags.value = "";
+      } finally {
+        hookBtn.disabled = false;
+        hookBtn.textContent = originalLabel;
       }
-
-      // TARANTINO CUT
-      if (style === "tarantino_cut") {
-        if (count === 1) {
-          const only = files[0];
-          const d = parseFloat(targetSeconds.toFixed(3));
-          clips.push({
-            index: 0,
-            filename: only.name,
-            type: only.type.startsWith("video") ? "video" : "image",
-            duration: d
-          });
-          return {
-            style,
-            totalDuration: d,
-            segments: [
-              {
-                type: "tarantino_cut",
-                mode: "single_shot",
-                colorGrade: "high_contrast",
-                transition: "slow_push_in",
-                totalDuration: d,
-                clips
-              }
-            ]
-          };
-        }
-
-        const pivotIndex = Math.floor(count / 2);
-        const introDuration = Math.min(3, targetSeconds * 0.4);
-        const remaining = Math.max(0.5, targetSeconds - introDuration);
-        const perOther = remaining / (count - 1);
-
-        const indices = [...Array(count).keys()];
-        indices.splice(pivotIndex, 1);
-        for (let i = indices.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [indices[i], indices[j]] = [indices[j], indices[i]];
-        }
-        const order = [pivotIndex, ...indices];
-
-        order.forEach((idx, orderPos) => {
-          const file = files[idx];
-          const isIntro = orderPos === 0;
-          const dur = isIntro ? introDuration : perOther;
-          clips.push({
-            index: idx,
-            filename: file.name,
-            type: file.type.startsWith("video") ? "video" : "image",
-            role: isIntro ? "opening_shot" : "smash_cut",
-            duration: parseFloat(dur.toFixed(3))
-          });
-        });
-
-        const total = introDuration + perOther * (count - 1);
-
-        return {
-          style,
-          totalDuration: parseFloat(total.toFixed(3)),
-          segments: [
-            {
-              type: "tarantino_cut",
-              narrativeMode: "non_linear",
-              colorGrade: "high_contrast",
-              transition: "smash_cut",
-              totalDuration: parseFloat(total.toFixed(3)),
-              clips,
-              playOrder: order
-            }
-          ]
-        };
-      }
-
-      // KENAIREEL CLASSIC (placeholder)
-      if (style === "kenai_classic") {
-        let perClip = targetSeconds / count;
-        files.forEach((file, index) => {
-          clips.push({
-            index,
-            filename: file.name,
-            type: file.type.startsWith("video") ? "video" : "image",
-            duration: parseFloat(perClip.toFixed(3))
-          });
-        });
-
-        return {
-          style,
-          totalDuration: parseFloat(targetSeconds.toFixed(3)),
-          segments: [
-            {
-              type: "kenai_story",
-              totalDuration: parseFloat(targetSeconds.toFixed(3)),
-              clipDuration: parseFloat(perClip.toFixed(3)),
-              clips
-            }
-          ]
-        };
-      }
-
-      // BASIC fallback
-      clipDuration = targetSeconds / count;
-      files.forEach((file, index) => {
-        clips.push({
-          index,
-          filename: file.name,
-          type: file.type.startsWith("video") ? "video" : "image",
-          duration: parseFloat(clipDuration.toFixed(3))
-        });
-      });
-
-      return {
-        style,
-        totalDuration: parseFloat(targetSeconds.toFixed(3)),
-        segments: [
-          {
-            type: "basic",
-            totalDuration: parseFloat(targetSeconds.toFixed(3)),
-            clipDuration: parseFloat(clipDuration.toFixed(3)),
-            clips
-          }
-        ]
-      };
     }
 
-    // --- Rendera reel (v1 – demo-koppling) ---
-if (renderBtn) {
-  renderBtn.addEventListener("click", async () => {
-    if (!lastPlan) {
-      statusText.style.color = "#f97373";
-      statusText.textContent = "Ingen plan att rendera – skapa en plan först.";
-      return;
+    if (hookBtn) {
+      hookBtn.addEventListener("click", generateHooksAndTags);
     }
-
-    statusText.style.color = "#9ca3af";
-    statusText.textContent = "Skickar plan till Kenai för rendering (demo)...";
-
-    try {
-      const res = await fetch("/api/render-reel-demo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: lastPlan }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || `Status: ${res.status}`);
-      }
-
-      statusText.style.color = "#22c55e";
-      statusText.textContent = "Plan mottagen! I nästa steg kommer Kenai bygga en riktig video av det här.";
-
-      if (data.videoUrl) {
-        console.log("Demo-video URL:", data.videoUrl);
-      }
-    } catch (err) {
-      console.error("RENDER ERROR:", err);
-      statusText.style.color = "#f97373";
-      statusText.textContent = "Kunde inte skicka planen för rendering (demo).";
-    }
-  });
-}
-
-  </script>
-</body>
-</html>
+  })();
+</script>
