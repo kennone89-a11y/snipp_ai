@@ -197,50 +197,65 @@
 </div>
 
         <!-- AI Hook & Hashtags -->
-      <section class="card">
-        <div class="badge">
-          <span>🧠 AI-hook & hashtags</span>
-        </div>
-        <h2>Gör din Kenai-reel klickbar på 5 sek</h2>
-        <p>
-          Beskriv din reel (t.ex. “sommar på båt med vänner” eller “Kenai AI som fixar podd-sammanfattning”) så föreslår Kenai hooks och hashtags.
-        </p>
+     <section class="card">
+  <div class="badge">
+    <span>AI hook & hashtags</span>
+  </div>
 
-        <label for="hookInput" style="width:100%;padding:14px;border-radius:12px;font-size:14px;background:#0c1f3b;color:white;border:1px solid rgba(255,255,255,0.15);"
-       <textarea id="hookInput" rows="4" style="width:100%;padding:14px;border-radius:12px;font-size:14px;background:#0c1f3b;color:white;border:1px solid rgba(255,255,255,0.15);"
+  <h2>Gör din Kenai-reel klickbar på 5 sek</h2>
+  <p>
+    Beskriv din reel (t.ex. ”sommar på båt med vänner” eller
+    ”Kenai AI som fixar podd-sammanfattning”) så föreslår Kenai hooks och hashtags.
+  </p>
 
-
-<button id="hookBtn" class="primary" style="margin-top:12px;">
-  Generera hooks & hashtags
-</button>
-
-<div style="margin-top:16px;">
-  <div>Förslag på hooks</div>
-  <textarea id="hookOutput" rows="4" style="width:100%; ..."></textarea>
-</div>
-
-<div style="margin-top:16px;">
-  <div>Hashtags</div>
+  <label for="hookInput" style="width:100%;padding:14px;border-radius:12px;font-size:14px;background:#0c1f3b;color:#ffffff;margin-bottom:4px;">
+    Beskriv din reel-idé
+  </label>
   <textarea
-    id="hookHashtags"
-    rows="3"
-    style="width:100%;padding:14px;border-radius:12px;font-size:14px;background:#0c1f3b;color:#ffffff;border:1px solid rgba(255,255,255,0.15);resize:vertical;"
-  ></textarea>
-  <div style="margin-top:8px; text-align:right;">
+    id="hookInput"
+    rows="4"
+    style="width:100%;padding:14px;border-radius:12px;font-size:14px;background:#0c1f3b;color:#ffffff;border:1px solid rgba(255,255,255,0.15);">
+  </textarea>
+
+  <button id="hookBtn" class="primary" style="margin-top:12px;">
+    Generera hooks & hashtags
+  </button>
+
+  <div style="margin-top:16px;">
+    <div>Förslag på hooks</div>
+    <textarea
+      id="hookOutput"
+      rows="4"
+      style="width:100%;padding:14px;border-radius:12px;font-size:14px;background:#03152b;color:#ffffff;border:1px solid rgba(255,255,255,0.08);">
+    </textarea>
+  </div>
+
+  <div style="margin-top:16px;">
+    <div>Hashtags</div>
+    <textarea
+      id="hookHashtags"
+      rows="3"
+      style="width:100%;padding:14px;border-radius:12px;font-size:14px;background:#03152b;color:#ffffff;border:1px solid rgba(255,255,255,0.08);">
+    </textarea>
+  </div>
+
+  <div style="margin-top:16px; text-align:right;">
     <button id="copyHashtagsBtn" class="primary">
       Kopiera hashtags
     </button>
   </div>
-</div>
 
-<div style="margin-top:16px; text-align:right;">
-  <a href="#reelsMakerCard"
-     id="goToReelsBtn"
-     class="primary"
-     style="display:inline-block; padding:10px 22px; border-radius:999px;">
-    Fixa reel med de här hooksen
-  </a>
-</div>
+  <div style="margin-top:16px; text-align:right;">
+    <a
+      href="#reelsMakerCard"
+      id="goToReelsBtn"
+      class="primary"
+      style="display:inline-block;padding:10px 22px;border-radius:999px;">
+      Fixa reel med de här hooksen
+    </a>
+  </div>
+</section>
+
 
 
 
