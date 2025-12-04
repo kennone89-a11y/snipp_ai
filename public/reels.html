@@ -321,22 +321,20 @@
 
  
 <script>
-   // -------------------------
-// AI Hook & Hashtags-sektion
-// -------------------------
-
-<script>
   // --- AI Hook & Hashtags ---
 
-  (function () {
+  document.addEventListener("DOMContentLoaded", () => {
     const hookBtn = document.getElementById("hookBtn");
     const hookInput = document.getElementById("hookInput");
     const hookOutput = document.getElementById("hookOutput");
     const hookHashtags = document.getElementById("hookHashtags");
 
-    async function generateHooksAndTags() {
-      if (!hookBtn || !hookInput || !hookOutput || !hookHashtags) return;
+    if (!hookBtn || !hookInput || !hookOutput || !hookHashtags) {
+      console.warn("Hook-fält saknas på sidan.");
+      return;
+    }
 
+    hookBtn.addEventListener("click", async () => {
       const idea = hookInput.value.trim();
       if (!idea) {
         hookOutput.value = "Skriv först in en idé till din reel 😊";
@@ -347,7 +345,7 @@
       const originalLabel = hookBtn.textContent;
       hookBtn.disabled = true;
       hookBtn.textContent = "AI jobbar…";
- 
+
       try {
         const res = await fetch("/api/reels/hooks", {
           method: "POST",
@@ -367,17 +365,16 @@
 
         hookHashtags.value = tags.length ? tags.join(" ") : "";
       } catch (err) {
-        console.error(err);
+        console.error("Fel i hooks-frontend:", err);
         hookOutput.value = "Något gick fel. Testa igen om en liten stund.";
         hookHashtags.value = "";
       } finally {
         hookBtn.disabled = false;
         hookBtn.textContent = originalLabel;
       }
-    }
-
-    if (hookBtn) {
-      hookBtn.addEventListener("click", generateHooksAndTags);
-    }
-  })();
+    });
+  });
 </script>
+
+
+  
