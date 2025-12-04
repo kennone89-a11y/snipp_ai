@@ -279,6 +279,8 @@
     <button id="uploadBtn" class="primary" onclick="uploadRecording()">
   Ladda upp & AI-sammanfatta
 </button>
+<p id="aiStatus" style="font-size:13px;color:#9aa0c2;margin-top:6px;"></p>
+
 
   </div>
 
@@ -365,6 +367,12 @@ const summaryEl = document.getElementById("summary");
 const statusEl = document.getElementById("status");
 const logEl = document.getElementById("log");
 const aiStatusEl = document.getElementById("aiStatus"); // 👈 nytt id
+
+function setAIStatus(msg) {
+  if (!aiStatusEl) return;
+  aiStatusEl.textContent = msg || "";
+}
+
 
 // Inspelnings­tillstånd (LÅT DETTA OCH ALLT NEDAN VARA KVAR)
 let mediaRecorder = null;
@@ -484,6 +492,12 @@ function setAIStatus(message, done = false) {
     }
 
     async function uploadRecording() {
+        setAIStatus("AI jobbar… analyserar ditt ljud. Detta kan ta upp till någon minut.");
+  if (uploadBtn) {
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = "AI jobbar…";
+  }
+
       if (!audioBlob) {
         setStatus("Ingen inspelning att ladda upp.");
         return;
@@ -652,9 +666,9 @@ setLog("Public URL hämtad.");
     startBtn.addEventListener("click", startRecording);
     stopBtn.addEventListener("click", stopRecording);
     uploadBtn.addEventListener("click", uploadRecording);
-    summaryBtn.addEventListener("click", uploadAndSummarize);
     pdfBtn.addEventListener("click", downloadPdf);
     mailBtn.addEventListener("click", sendSummaryEmail);
   </script>
+
 </body>
 </html>
