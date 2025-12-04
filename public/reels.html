@@ -397,35 +397,44 @@
       }
     });
 
-    // Kopiera hashtags
-    if (copyHashtagsBtn && hookHashtags) {
-      copyHashtagsBtn.addEventListener("click", async () => {
-        const text = hookHashtags.value.trim();
-        if (!text) {
-          copyHashtagsBtn.textContent = "Inget att kopiera";
-          setTimeout(() => {
-            copyHashtagsBtn.textContent = "Kopiera hashtags";
-          }, 1500);
-          return;
-        }
+     // Kopiera hashtags
+  if (copyHashtagsBtn && hookHashtags) {
+    copyHashtagsBtn.addEventListener("click", async () => {
+      const text = hookHashtags.value.trim();
+      if (!text) {
+        copyHashtagsBtn.textContent = "Inget att kopiera";
+        setTimeout(() => {
+          copyHashtagsBtn.textContent = "Kopiera hashtags";
+        }, 1500);
+        return;
+      }
 
-        try {
-          await navigator.clipboard.writeText(text);
-          copyHashtagsBtn.textContent = "Kopierat ✅";
-          setTimeout(() => {
-            copyHashtagsBtn.textContent = "Kopiera hashtags";
-          }, 1500);
-        } catch (e) {
-          console.error("Kunde inte kopiera hashtags:", e);
-          copyHashtagsBtn.textContent = "Kunde inte kopiera";
-          setTimeout(() => {
-            copyHashtagsBtn.textContent = "Kopiera hashtags";
-          }, 1500);
-        }
-      });
-    }
-  });
-</script>
+      try {
+        await navigator.clipboard.writeText(text);
+        copyHashtagsBtn.textContent = "Kopierat ✅";
+        setTimeout(() => {
+          copyHashtagsBtn.textContent = "Kopiera hashtags";
+        }, 1500);
+      } catch (e) {
+        console.error("Kunde inte kopiera hashtags:", e);
+        copyHashtagsBtn.textContent = "Kunde inte kopiera";
+        setTimeout(() => {
+          copyHashtagsBtn.textContent = "Kopiera hashtags";
+        }, 1500);
+      }
+    });
+  }
+
+  // Scrolla ner till Reels Maker-kortet
+  const goToReelsBtn = document.getElementById("goToReelsBtn");
+  const reelsMakerCard = document.getElementById("reelsMakerCard");
+
+  if (goToReelsBtn && reelsMakerCard) {
+    goToReelsBtn.addEventListener("click", () => {
+      reelsMakerCard.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+});
 
 
   
