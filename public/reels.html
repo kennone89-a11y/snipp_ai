@@ -365,12 +365,86 @@
 
  
 <script>
+<script>
+// --- Reels core (demo) ---
+
+const filesInput = document.getElementById("files");
+const targetSecondsInput = document.getElementById("targetSeconds");
+const buildPlanBtn = document.getElementById("buildPlanBtn");
+const renderBtn = document.getElementById("renderBtn");
+
+const pillStyle = document.getElementById("pillStyle");
+const pillFiles = document.getElementById("pillFiles");
+const pillDuration = document.getElementById("pillDuration");
+const statusText = document.getElementById("statusText");
+const planPreview = document.getElementById("planPreview");
+
+let selectedFiles = [];
+let currentStyle = pillStyle ? pillStyle.textContent.trim() : "Basic";
+
+// När användaren väljer filer
+if (filesInput) {
+  filesInput.addEventListener("change", (e) => {
+    selectedFiles = Array.from(e.target.files || []);
+    if (pillFiles) pillFiles.textContent = selectedFiles.length.toString();
+  });
+}
+
+// Skapa enkel demo-plan (ingen riktig backend-render här)
+if (buildPlanBtn && targetSecondsInput && planPreview) {
+  buildPlanBtn.addEventListener("click", () => {
+    const target = parseInt(targetSecondsInput.value, 10) || 0;
+
+    if (!selectedFiles.length) {
+      if (statusText) statusText.textContent = "Välj minst ett klipp först.";
+      return;
+    }
+    if (!target || target <= 0) {
+      if (statusText) statusText.textContent = "Ange en mållängd i sekunder.";
+      return;
+    }
+
+    const perClip = target / selectedFiles.length;
+    if (pillDuration) pillDuration.textContent = `${target.toFixed(1)} s`;
+
+    const itemsHtml = selectedFiles
+      .map((file, idx) => {
+        return `<li>Klipp ${idx + 1}: ${file.name} – ca ${perClip.toFixed(
+          1
+        )} s</li>`;
+      })
+      .join("");
+
+    planPreview.innerHTML = `
+      <p><strong>Stil:</strong> ${currentStyle}</p>
+      <p><strong>Antal klipp:</strong> ${selectedFiles.length}</p>
+      <p><strong>Mållängd:</strong> ${target.toFixed(1)} s</p>
+      <ul>${itemsHtml}</ul>
+    `;
+
+    if (statusText) {
+      statusText.textContent =
+        "Demo-plan skapad. Backend-bygge av riktig video kommer senare.";
+    }
+  });
+}
+
+// Render-knappen – just nu bara info
+if (renderBtn) {
+  renderBtn.addEventListener("click", () => {
+    if (statusText) {
+      statusText.textContent =
+        "Rendering av riktig video är inte klar ännu – det här är bara en demo.";
+    }
+  });
+}
+
 // --- AI Hook & Hashtags ---
+
 const hookBtn = document.getElementById("hookBtn");
 const hookIdea = document.getElementById("hookInput");
 const hookOutput = document.getElementById("hookOutput");
 const hookHashtags = document.getElementById("hookHashtags");
-
 
 if (hookBtn && hookIdea && hookOutput && hookHashtags) {
   hookBtn.addEventListener("click", async () => {
@@ -410,6 +484,7 @@ if (hookBtn && hookIdea && hookOutput && hookHashtags) {
 }
 
 // --- Kopiera hashtags-knappen ---
+
 const copyHashtagsBtn = document.getElementById("copyHashtagsBtn");
 
 if (copyHashtagsBtn && hookHashtags) {
@@ -441,6 +516,8 @@ if (copyHashtagsBtn && hookHashtags) {
   });
 }
 </script>
+
+
 </body>
 </html>
 
