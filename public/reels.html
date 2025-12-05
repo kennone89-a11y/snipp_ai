@@ -485,86 +485,72 @@ if (buildPlanBtn && targetSecondsInput && planPreview) {
 // Render-knappen – skickar videoklipp till backend för basic rendering
 if (renderBtn && targetSecondsInput && planPreview) {
   renderBtn.addEventListener("click", async () => {
-    const target = parseInt(targetSecondsInput.value, 10) || 0;
-
+  try {
+    // 1) Kolla att vi har filer
     if (!selectedFiles.length) {
-      if (statusText) statusText.textContent = "Välj minst ett videoklipp först.";
+      if (statusText) statusText.textContent = "Välj minst ett klipp först.";
       return;
     }
+
+    // 2) Kolla längd
+    const target = parseInt(targetSecondsInput.value || "0", 10);
     if (!target || target <= 0) {
-      if (statusText) statusText.textContent = "Ange en mållängd i sekunder.";
+      if (statusText) statusText.textContent = "Ange en längd i sekunder.";
       return;
     }
 
-    try {
-      if (statusText) statusText.textContent = "Renderar basic reel…";
+    if (statusText) statusText.textContent = "Renderar basic reel…";
 
-      const formData = new FormData();
-      selectedFiles.forEach((file) => {
-        formData.append("clips", file);
-      });
-      formData.append("targetSeconds", String(target));
+    // 3) Bygg FormData (samma som till backend)
+    const formData = new FormData();
+    selectedFiles.forEach((file) => {
+      formData.append("clips", file);
+    });
+    formData.append("targetSeconds", String(target));
 
-      const res = await fetch("/api/reels/render-basic", {
-        method: "POST",
-        body: formData,
-      });
+    // 4) Skicka till /api/reels/render-basic
+    const res = await fetch("/api/reels/render-basic", {
+      method: "POST",
+      body: formData,
+    });
 
-      if (!res.ok) {
-        let errMsg = "Render misslyckades.";
-        try {
-          const data = await res.json();
-          if (data && data.error) errMsg = data.error;
-        } catch (_) {
-          // Kan vara binary, ignorera JSON-fel
-        }
-        if (statusText) statusText.textContent = errMsg;
-        return;
-      }
-
-      // Vi får tillbaka en MP4 som binary (blob)
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-
-      // Skapa eller återanvänd en video-preview under planPreview
-      let video = document.getElementById("reelPreviewVideo");
-      if (!video) {
-        video = document.createElement("video");
-        video.id = "reelPreviewVideo";
-        video.controls = true;
-        video.style.marginTop = "12px";
-        video.style.maxWidth = "100%";
-        video.style.borderRadius = "12px";
-        video.style.outline = "none";
-
-        const planContainer = planPreview.parentElement;
-        if (planContainer) {
-          planContainer.appendChild(video);
-        } else {
-          document.body.appendChild(video);
-        }
-      }
-
-      video.src = url;
-      video.play().catch(() => {});
-
-      if (statusText) {
-        statusText.textContent = "Basic reel renderad! Scrolla ner för att se videon.";
-      }
-
-      planPreview.innerHTML += `
-        <hr />
-        <p><strong>Basic render klar:</strong> En enkel sammanslagning av dina klipp. Nästa steg: Kenai-effekter.</p>
-      `;
-    } catch (err) {
-      console.error("Fel vid basic render:", err);
-      if (statusText) {
-        statusText.textContent =
-          "Något gick fel vid basic rendering. Testa igen om en stund.";
-      }
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error("Render-basic misslyckades:", res.status, text);
+      if (statusText) statusText.textContent = "Render misslyckades.";
+      alert("Render misslyckades. Se konsolen för detaljer.");
+      return;
     }
-  });
-}
+
+    // 5) Läs svaret som video-blob
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+
+    // 6) Hitta eller skapa videospelaren
+    let video = document.getElementById("basicRenderVideo");
+    if (!video) {
+      const container = planPreview || document.body;
+      video = document.createElement("video");
+      video.id = "basicRenderVideo";
+      video.controls = true;
+      video.style.width = "100%";
+      container.appendChild(video);
+    }
+
+    video.src = url;
+    video.load();
+    video.play().catch(() => {});
+
+    if (statusText) statusText.textContent =
+      "Basic render klar – videon finns här under.";
+
+  } catch (err) {
+    console.error("Fel i renderBtn-click:", err);
+    if (statusText) statusText.textContent = "Något gick fel i render.";
+    alert("Något gick fel i render. Se konsolen för detaljer.");
+  }
+});
+
 
 
 // --- Kopiera hashtags-knappen ---
@@ -600,53 +586,8 @@ if (copyHashtagsBtn && hookHashtags) {
   });
 }
 </script>
-// --- Basic render backend test ---
+    
 
-const renderBasicBtn = document.getElementById("renderBasicBtn");
-
-async function handleRenderBasicClick() {
-  // ta första file-inputen på sidan (din "Välj filer"-knapp)
-  const fileInput = document.querySelector('input[type="file"]');
-  if (!fileInput || !fileInput.files || !fileInput.files.length) {
-    alert("Välj minst en video/bild först.");
-    return;
-  }
-
-  const formData = new FormData();
-  for (let i = 0; i < fileInput.files.length; i++) {
-    formData.append("clips", fileInput.files[i]);
-  }
-
-  try {
-    const resp = await fetch("/api/reels/render-basic", {
-      method: "POST",
-      body: formData,
-    });
-
-    const data = await resp.json().catch(() => ({}));
-
-    console.log("render-basic response:", data);
-
-    if (!resp.ok || !data.ok) {
-      alert(data.error || "Fel vid basic-render (se console).");
-      return;
-    }
-
-    if (data.publicUrl) {
-      alert("Basic render klar! Vi öppnar videon i ny flik, där du kan spara den.");
-      window.open(data.publicUrl, "_blank");
-    } else {
-      alert("Basic render klar, men ingen public URL returnerades (se console).");
-    }
-  } catch (err) {
-    console.error("Fel i handleRenderBasicClick:", err);
-    alert("Något gick fel mot /api/reels/render-basic.");
-  }
-}
-
-if (renderBasicBtn) {
-  renderBasicBtn.addEventListener("click", handleRenderBasicClick);
-}
 
 
 </body>

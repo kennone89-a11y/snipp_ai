@@ -28,8 +28,10 @@ const openai = new OpenAI({
 const app = express();
 // Multer för att ta emot videoklipp (lagras temporärt i /tmp på servern)
 const upload = multer({
-  dest: "/tmp/kenai-reels",
+  storage,
+  limits: { fileSize: 50 * 1024 * 1024 } // 50 MB per klipp
 });
+
  
 // Koppla fluent-ffmpeg till ffmpeg-static binären
 ffmpeg.setFfmpegPath(ffmpegPath);
@@ -58,8 +60,8 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: "2mb" }));
-app.use(express.urlencoded({ extended: true }));
+{app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 // Servera alla statiska filer i /public (html, bilder, js)
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -379,23 +381,26 @@ await new Promise((resolve, reject) => {
 
 
     // Radera tmp-filer (best effort)
-    try {
-      await fs.promises.unlink(inputPath).catch(() => {});
-      await fs.promises.unlink(outputPath).catch(() => {});
-    } catch (cleanupErr) {
-      console.warn("Kunde inte radera tmp-filer (render-basic):", cleanupErr);
-    }
-
-    return res.json({
-      ok: true,
-      note: "Basic render klar lokalt (ingen Supabase-upload i denna version).",
-    });
+     // Läs in videon och skicka som binary
+  let videoBuffer;
+  try {
+    videoBuffer = await fs.promises.readFile(outputPath);
   } catch (err) {
-    console.error("Fel i /api/reels/render-basic:", err);
-    return res.status(500).json({
-      ok: false,
-      error: "Serverfel i render-basic.",
-    });
+    console.error("Kunde inte läsa ut videofil:", err);
+    return res.status(500).json({ ok: false, error: "Kunde inte läsa videon." });
+  }
+
+  // Skicka svaret först
+  res.setHeader("Content-Type", "video/mp4");
+  res.setHeader("Content-Length", videoBuffer.length);
+  res.send(videoBuffer);
+
+  // Försök radera tmp-filer efter att svaret skickats (best effort)
+  try {
+    await fs.promises.unlink(inputPath).catch(() => {});
+    await fs.promises.unlink(outputPath).catch(() => {});
+  } catch (cleanupErr) {
+    console.warn("Kunde inte radera tmp-filer (render-basic):", cleanupErr);
   }
 });
-
+ 
