@@ -151,7 +151,7 @@ app.post('/api/timestamps', async (req, res) => {
       console.error('Kenai Timestamps: OpenAI-svar inte OK:', r.status, data);
       return res.json(fallback);
     }
-
+ 
     const raw = (data.choices?.[0]?.message?.content || '').trim();
     console.log('Kenai Timestamps: rå OpenAI-svar:', raw);
 
