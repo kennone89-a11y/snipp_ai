@@ -11,21 +11,10 @@ import OpenAI from "openai";
 import multer from "multer";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from "ffmpeg-static";
-import { createClient } from "@supabase/supabase-js";
 
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
-let supabase = null;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    "⚠️ SUPABASE_URL eller SUPABASE_ANON_KEY saknas i env. Basic-render-upload kommer inte funka."
-  );
-} else {
-  supabase = createClient(supabaseUrl, supabaseAnonKey);
-}
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -335,40 +324,7 @@ app.post("/api/reels/render-basic", upload.array("clips", 10), async (req, res) 
         .run();
     });
 
-    // Om Supabase inte är konfigurerad, returnera bara ok
-    if (!supabase) {
-      return res.json({
-        ok: true,
-        note: "Render klar lokalt, men Supabase-klienten är inte konfigurerad (ingen upload gjordes).",
-      });
-    }
-
-    // Läs ut filen och ladda upp till Supabase
-    const fileBuffer = await fs.promises.readFile(outputPath);
-    const storagePath = `reels-output/kenai-basic-${Date.now()}-${videoFile.originalname}`;
-
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from("audio") // samma bucket som tidigare
-      .upload(storagePath, fileBuffer, {
-        contentType: "video/mp4",
-        upsert: true,
-      });
-
-    if (uploadError) {
-      console.error("Fel vid Supabase-upload (render-basic):", uploadError);
-      return res.status(500).json({
-        ok: false,
-        error: "Render klart men Supabase-upload misslyckades.",
-      });
-    }
-
-    const { data: publicData } = supabase.storage
-      .from("audio")
-      .getPublicUrl(storagePath);
-
-    const publicUrl = publicData?.publicUrl;
-
-    // Städa tmp-filer (best effort)
+    // Radera tmp-filer (best effort)
     try {
       await fs.promises.unlink(inputPath).catch(() => {});
       await fs.promises.unlink(outputPath).catch(() => {});
@@ -378,8 +334,7 @@ app.post("/api/reels/render-basic", upload.array("clips", 10), async (req, res) 
 
     return res.json({
       ok: true,
-      publicUrl,
-      path: storagePath,
+      note: "Basic render klar lokalt (ingen Supabase-upload i denna version).",
     });
   } catch (err) {
     console.error("Fel i /api/reels/render-basic:", err);
