@@ -17,11 +17,16 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("⚠️ SUPABASE_URL eller SUPABASE_ANON_KEY saknas i env. Basic-render-upload kommer inte funka.");
+let supabase = null;
+
+if (!supabase) {
+  return res.json({
+    ok: true,
+    note: "Render klar lokalt, men Supabase-klienten är inte konfigurerad (ingen upload gjordes).",
+  });
 }
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 
 
 
