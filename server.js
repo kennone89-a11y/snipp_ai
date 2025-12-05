@@ -316,49 +316,75 @@ app.post("/api/reels/render-basic", upload.array("clips", 10), async (req, res) 
       outputPath,
     });
 
-    // Enkel transcode → mp4, 1080 bredd, bevara aspect, korrekt pixelformat
+    // Enkel transcode -> mp4, 1080 bred, bevara aspect
     await new Promise((resolve, reject) => {
       ffmpeg(inputPath)
         .videoCodec("libx264")
-        .audioCodec("aac")
-        .outputOptions([
-          "-movflags faststart",
-          "-preset veryfast",
-          "-pix_fmt yuv420p",
-          // Skala till max 1080 bredd, behåll aspect
-          "-vf scale=1080:-2",
-        ])
-        .on("error", (err) => {
-          console.error("FFmpeg basic error:", err);
-          reject(err);
-        })
+        .outputOptions(["-preset veryfast", "-movflags +faststart"])
+        .size("1080x?")
+        .output(outputPath)
         .on("end", () => {
           console.log("FFmpeg render-basic klar:", outputPath);
           resolve();
         })
-        .save(outputPath);
+        .on("error", (err) => {
+          console.error("Fel i FFmpeg render-basic:", err);
+          reject(err);
+        })
+        .run();
     });
 
-    // Skicka mp4 tillbaka som stream
-    res.setHeader("Content-Type", "video/mp4");
-    res.setHeader("Content-Disposition", 'inline; filename="kenai-reel-basic.mp4"');
-
-    const stream = fs.createReadStream(outputPath);
-
-    stream.on("close", () => {
-      // Städa bort både output + temporära upload-filer
-      fs.unlink(outputPath, () => {});
-      (files || []).forEach((f) => {
-        if (f.path) fs.unlink(f.path, () => {});
+    // Om Supabase inte är konfigurerat, returnera bara "ok"
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return res.json({
+        ok: true,
+        note: "Render klar lokalt, men SUPABASE_URL/ANON saknas så ingen upload gjordes.",
       });
-    });
+    }
 
-    stream.pipe(res);
+    // Läs ut filen och ladda upp till Supabase
+    const fileBuffer = await fs.promises.readFile(outputPath);
+    const storagePath = `reels-output/kenai-basic-${Date.now()}-${videoFile.originalname}`;
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from("audio") // samma bucket som dina andra reels-grejer
+      .upload(storagePath, fileBuffer, {
+        contentType: "video/mp4",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("Fel vid Supabase-upload (render-basic):", uploadError);
+      return res.status(500).json({
+        ok: false,
+        error: "Render klart men Supabase-upload misslyckades.",
+      });
+    }
+
+    const { data: publicData } = supabase.storage
+      .from("audio")
+      .getPublicUrl(storagePath);
+
+    const publicUrl = publicData?.publicUrl;
+
+    // Städa tmp-filer (best effort)
+    try {
+      await fs.promises.unlink(inputPath).catch(() => {});
+      await fs.promises.unlink(outputPath).catch(() => {});
+    } catch (cleanupErr) {
+      console.warn("Kunde inte radera tmp-filer (render-basic):", cleanupErr);
+    }
+
+    return res.json({
+      ok: true,
+      publicUrl,
+      path: storagePath,
+    });
   } catch (err) {
     console.error("Fel i /api/reels/render-basic:", err);
     return res.status(500).json({
       ok: false,
-      error: "Serverfel vid basic rendering.",
+      error: "Serverfel i render-basic.",
     });
   }
 });

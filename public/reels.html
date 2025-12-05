@@ -600,6 +600,53 @@ if (copyHashtagsBtn && hookHashtags) {
   });
 }
 </script>
+// --- Basic render backend test ---
+
+const renderBasicBtn = document.getElementById("renderBasicBtn");
+
+async function handleRenderBasicClick() {
+  // ta första file-inputen på sidan (din "Välj filer"-knapp)
+  const fileInput = document.querySelector('input[type="file"]');
+  if (!fileInput || !fileInput.files || !fileInput.files.length) {
+    alert("Välj minst en video/bild först.");
+    return;
+  }
+
+  const formData = new FormData();
+  for (let i = 0; i < fileInput.files.length; i++) {
+    formData.append("clips", fileInput.files[i]);
+  }
+
+  try {
+    const resp = await fetch("/api/reels/render-basic", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await resp.json().catch(() => ({}));
+
+    console.log("render-basic response:", data);
+
+    if (!resp.ok || !data.ok) {
+      alert(data.error || "Fel vid basic-render (se console).");
+      return;
+    }
+
+    if (data.publicUrl) {
+      alert("Basic render klar! Vi öppnar videon i ny flik, där du kan spara den.");
+      window.open(data.publicUrl, "_blank");
+    } else {
+      alert("Basic render klar, men ingen public URL returnerades (se console).");
+    }
+  } catch (err) {
+    console.error("Fel i handleRenderBasicClick:", err);
+    alert("Något gick fel mot /api/reels/render-basic.");
+  }
+}
+
+if (renderBasicBtn) {
+  renderBasicBtn.addEventListener("click", handleRenderBasicClick);
+}
 
 
 </body>
