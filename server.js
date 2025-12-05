@@ -11,6 +11,18 @@ import OpenAI from "openai";
 import multer from "multer";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from "ffmpeg-static";
+import { createClient } from "@supabase/supabase-js";
+
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn("⚠️ SUPABASE_URL eller SUPABASE_ANON_KEY saknas i env. Basic-render-upload kommer inte funka.");
+}
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 
 
 
