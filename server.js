@@ -305,24 +305,78 @@ app.post("/api/reels/render-basic", upload.array("clips", 10), async (req, res) 
       inputPath,
       outputPath,
     });
+// Begränsa videostorlek (Render starter-plan klarar inte jättestora filer)
+const MAX_BYTES = 50 * 1024 * 1024; // ca 50 MB
+if ((videoFile.mimetype || "").startsWith("video/") && videoFile.size > MAX_BYTES) {
+  console.warn("Video för stor för basic-render:", {
+    size: videoFile.size,
+    max: MAX_BYTES,
+  });
+  return res.status(413).json({
+    ok: false,
+    error: "Videon är för stor för demo-render (max ca 50 MB). Testa ett kortare/komprimerat klipp.",
+  });
+}
 
-    // Enkel transcode -> mp4, 1080 bred, bevara aspect
-    await new Promise((resolve, reject) => {
-      ffmpeg(inputPath)
-        .videoCodec("libx264")
-        .outputOptions(["-preset veryfast", "-movflags +faststart"])
-        .size("1080x?")
-        .output(outputPath)
-        .on("end", () => {
-          console.log("FFmpeg render-basic klar:", outputPath);
-          resolve();
-        })
-        .on("error", (err) => {
-          console.error("Fel i FFmpeg render-basic:", err);
-          reject(err);
-        })
-        .run();
-    });
+// Lätt ffmpeg: för video kopierar vi bara streams (ingen tung transcode).
+await new Promise((resolve, reject) => {
+  const isVideo = (videoFile.mimetype || "").startsWith("video/");
+
+  let cmd = ffmpeg(inputPath);
+
+  if (isVideo) {
+    // Bara remux: kopiera video+audio → mycket mindre CPU/minne
+    cmd = cmd.outputOptions(["-c:v copy", "-c:a copy", "-movflags +faststart"]);
+  } else {
+    // T.ex. bild → gör enklare H.264-transcode
+    cmd = cmd
+      .videoCodec("libx264")
+      .outputOptions(["-preset veryfast", "-movflags +faststart"])
+      .size("1080x?");
+  }
+
+  cmd
+    .output(outputPath)
+    .on("end", () => {
+      console.log("FFmpeg render-basic klar:", { outputPath, isVideo });
+      resolve();
+    })
+    .on("error", (err) => {
+      console.error("Fel i FFmpeg render-basic:", err);
+      reject(err);
+    })
+    .run();
+});
+   // Lätt ffmpeg: för video kopierar vi bara streams (ingen tung transcode).
+await new Promise((resolve, reject) => {
+  const isVideo = (videoFile.mimetype || "").startsWith("video/");
+
+  let cmd = ffmpeg(inputPath);
+
+  if (isVideo) {
+    // Bara remux: kopiera video+audio → mycket mindre CPU/minne
+    cmd = cmd.outputOptions(["-c:v copy", "-c:a copy", "-movflags +faststart"]);
+  } else {
+    // T.ex. bild → gör enklare H.264-transcode
+    cmd = cmd
+      .videoCodec("libx264")
+      .outputOptions(["-preset veryfast", "-movflags +faststart"])
+      .size("1080x?");
+  }
+
+  cmd
+    .output(outputPath)
+    .on("end", () => {
+      console.log("FFmpeg render-basic klar:", { outputPath, isVideo });
+      resolve();
+    })
+    .on("error", (err) => {
+      console.error("Fel i FFmpeg render-basic:", err);
+      reject(err);
+    })
+    .run();
+});
+
 
     // Radera tmp-filer (best effort)
     try {
