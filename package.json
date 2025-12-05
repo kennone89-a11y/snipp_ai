@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "name": "snipp-ai",
   "version": "1.0.0",
   "description": "Kenai backend: Recorder, Timestamps, Reels",
