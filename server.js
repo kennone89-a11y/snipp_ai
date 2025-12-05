@@ -277,61 +277,67 @@ app.post("/api/reels/render-demo", async (req, res) => {
     });
   }
 }); 
-// --- Reels: basic render-endpoint – tar emot videoklipp och slår ihop dem ---
+// --- Reels: super-enkel basic rendering (endast första videoklippet) ---
 app.post("/api/reels/render-basic", upload.array("clips", 10), async (req, res) => {
-  const files = req.files || [];
-
-  if (!files.length) {
-    return res.status(400).json({
-      ok: false,
-      error: "Inga videoklipp mottogs för rendering.",
-    });
-  }
-
-  // Enkel output-path i /tmp
-  const outputPath = `/tmp/kenai-reel-${Date.now()}.mp4`;
-
   try {
-    // Bygg ffmpeg-kommando: lägg till alla input-filer i ordning
-    const command = ffmpeg();
+    const files = req.files || [];
 
-    files.forEach((file) => {
-      command.input(file.path);
+    if (!files.length) {
+      return res.status(400).json({
+        ok: false,
+        error: "Inga klipp skickades till render-basic.",
+      });
+    }
+
+    // Välj första videofilen (eller första filen om ingen har video/)
+    const videoFile =
+      files.find((f) => (f.mimetype || "").startsWith("video/")) || files[0];
+
+    const inputPath = videoFile.path;
+    const outputPath = path.join("/tmp", `kenai-basic-${Date.now()}.mp4`);
+
+    console.log("Reels render-basic hit:", {
+      originalName: videoFile.originalname,
+      mimetype: videoFile.mimetype,
+      size: videoFile.size,
+      inputPath,
+      outputPath,
     });
 
-    // mergeToFile = enkel concat (FFmpeg sköter konvertering vid behov)
+    // Enkel transcode → mp4, 1080 bredd, bevara aspect, korrekt pixelformat
     await new Promise((resolve, reject) => {
-      command
+      ffmpeg(inputPath)
+        .videoCodec("libx264")
+        .audioCodec("aac")
+        .outputOptions([
+          "-movflags faststart",
+          "-preset veryfast",
+          "-pix_fmt yuv420p",
+          // Skala till max 1080 bredd, behåll aspect
+          "-vf scale=1080:-2",
+        ])
         .on("error", (err) => {
-          console.error("FFmpeg render-basic error:", err);
+          console.error("FFmpeg basic error:", err);
           reject(err);
         })
         .on("end", () => {
           console.log("FFmpeg render-basic klar:", outputPath);
           resolve();
         })
-        .mergeToFile(outputPath, "/tmp");
+        .save(outputPath);
     });
 
-    // Skicka tillbaka färdig MP4 som binary stream
+    // Skicka mp4 tillbaka som stream
     res.setHeader("Content-Type", "video/mp4");
-    res.setHeader("Content-Disposition", 'inline; filename="kenai-reel.mp4"');
+    res.setHeader("Content-Disposition", 'inline; filename="kenai-reel-basic.mp4"');
 
     const stream = fs.createReadStream(outputPath);
 
-    // Städa temporära filer när streamen är klar
     stream.on("close", () => {
-      try {
-        fs.unlink(outputPath, () => {});
-      } catch (e) {
-        console.error("Kunde inte ta bort output-fil:", e);
-      }
-      files.forEach((f) => {
-        try {
-          fs.unlink(f.path, () => {});
-        } catch (e) {
-          console.error("Kunde inte ta bort temp-input:", e);
-        }
+      // Städa bort både output + temporära upload-filer
+      fs.unlink(outputPath, () => {});
+      (files || []).forEach((f) => {
+        if (f.path) fs.unlink(f.path, () => {});
       });
     });
 
@@ -344,6 +350,7 @@ app.post("/api/reels/render-basic", upload.array("clips", 10), async (req, res) 
     });
   }
 });
+
 
 
 const PORT = process.env.PORT || 10000;
