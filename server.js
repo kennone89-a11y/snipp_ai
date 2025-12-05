@@ -276,7 +276,8 @@ app.post("/api/reels/render-demo", async (req, res) => {
       error: "Serverfel i render-demo.",
     });
   }
-});// --- Reels: basic render-endpoint – tar emot videoklipp och slår ihop dem ---
+}); 
+// --- Reels: basic render-endpoint – tar emot videoklipp och slår ihop dem ---
 app.post("/api/reels/render-basic", upload.array("clips", 10), async (req, res) => {
   const files = req.files || [];
 
