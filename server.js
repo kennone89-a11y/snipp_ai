@@ -19,17 +19,13 @@ const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
 let supabase = null;
 
-if (!supabase) {
-  return res.json({
-    ok: true,
-    note: "Render klar lokalt, men Supabase-klienten är inte konfigurerad (ingen upload gjordes).",
-  });
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn(
+    "⚠️ SUPABASE_URL eller SUPABASE_ANON_KEY saknas i env. Basic-render-upload kommer inte funka."
+  );
+} else {
+  supabase = createClient(supabaseUrl, supabaseAnonKey);
 }
-
-
-
-
-
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -339,11 +335,11 @@ app.post("/api/reels/render-basic", upload.array("clips", 10), async (req, res) 
         .run();
     });
 
-    // Om Supabase inte är konfigurerat, returnera bara "ok"
-    if (!supabaseUrl || !supabaseAnonKey) {
+    // Om Supabase inte är konfigurerad, returnera bara ok
+    if (!supabase) {
       return res.json({
         ok: true,
-        note: "Render klar lokalt, men SUPABASE_URL/ANON saknas så ingen upload gjordes.",
+        note: "Render klar lokalt, men Supabase-klienten är inte konfigurerad (ingen upload gjordes).",
       });
     }
 
@@ -352,7 +348,7 @@ app.post("/api/reels/render-basic", upload.array("clips", 10), async (req, res) 
     const storagePath = `reels-output/kenai-basic-${Date.now()}-${videoFile.originalname}`;
 
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from("audio") // samma bucket som dina andra reels-grejer
+      .from("audio") // samma bucket som tidigare
       .upload(storagePath, fileBuffer, {
         contentType: "video/mp4",
         upsert: true,
@@ -394,9 +390,3 @@ app.post("/api/reels/render-basic", upload.array("clips", 10), async (req, res) 
   }
 });
 
-
-
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log("Kenai backend kör på port", PORT);
-});
