@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <title>Kenaireel – presets (Marvel & Tarantino)</title>
+  <title>Kenai Reels Maker – presets & demo</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
@@ -38,7 +38,6 @@
       color: #e0f2fe;
       margin-bottom: 10px;
     }
-
     .badge span { font-size: 14px; }
 
     .preset-row {
@@ -85,7 +84,8 @@
     }
 
     input[type="number"],
-    input[type="file"] {
+    input[type="file"],
+    textarea {
       width: 100%;
       padding: 8px 10px;
       border-radius: 10px;
@@ -95,10 +95,15 @@
       font-size: 13px;
     }
     input[type="number"]:focus,
-    input[type="file"]:focus {
+    input[type="file"]:focus,
+    textarea:focus {
       outline: none;
       border-color: rgb(56, 189, 248);
       box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+    }
+
+    textarea {
+      resize: vertical;
     }
 
     .row {
@@ -146,26 +151,6 @@
       overflow: auto;
       white-space: pre;
     }
-.timeline-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.timeline-item {
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.timeline-item span {
-  opacity: 0.85;
-}
-
 
     .pill {
       display: inline-flex;
@@ -191,178 +176,150 @@
   </style>
 </head>
 <body>
-  <div class="badge">
-    <span>✨</span>
-    <span>AI hook & hashtags</span>
-</div>
-
-        <!-- AI Hook & Hashtags -->
-     <section class="card">
-  <div class="badge">
-    <span>AI hook & hashtags</span>
-  </div>
-
-  <h2>Gör din Kenai-reel klickbar på 5 sek</h2>
-  <p>
-    Beskriv din reel (t.ex. ”sommar på båt med vänner” eller
-    ”Kenai AI som fixar podd-sammanfattning”) så föreslår Kenai hooks och hashtags.
-  </p>
-
-  <label for="hookInput" style="width:100%;padding:14px;border-radius:12px;font-size:14px;background:#0c1f3b;color:#ffffff;margin-bottom:4px;">
-    Beskriv din reel-idé
-  </label>
-  <textarea
-    id="hookInput"
-    rows="4"
-    style="width:100%;padding:14px;border-radius:12px;font-size:14px;background:#0c1f3b;color:#ffffff;border:1px solid rgba(255,255,255,0.15);">
-  </textarea>
-
-  <button id="hookBtn" class="primary" style="margin-top:12px;">
-    Generera hooks & hashtags
-  </button>
-
-  <div style="margin-top:16px;">
-    <div>Förslag på hooks</div>
-    <textarea
-      id="hookOutput"
-      rows="4"
-      style="width:100%;padding:14px;border-radius:12px;font-size:14px;background:#03152b;color:#ffffff;border:1px solid rgba(255,255,255,0.08);">
-    </textarea>
-  </div>
-
-  <div style="margin-top:16px;">
-    <div>Hashtags</div>
-    <textarea
-      id="hookHashtags"
-      rows="3"
-      style="width:100%;padding:14px;border-radius:12px;font-size:14px;background:#03152b;color:#ffffff;border:1px solid rgba(255,255,255,0.08);">
-    </textarea>
-  </div>
-
-  <div style="margin-top:16px; text-align:right;">
-    <button id="copyHashtagsBtn" class="primary">
-      Kopiera hashtags
-    </button>
-  </div>
-
-  <div style="margin-top:16px; text-align:right;">
-    <a
-      href="#reelsMakerCard"
-      id="goToReelsBtn"
-      class="primary"
-      style="display:inline-block;padding:10px 22px;border-radius:999px;">
-      Fixa reel med de här hooksen
-    </a>
-  </div>
-</section>
-
-
-
-
- 
   <div class="app">
-    <div class="card" id="reelsMakerCard">
+    <!-- AI Hook & Hashtags -->
+    <section class="card" id="hookCard">
+      <div class="badge">
+        <span>✨</span>
+        <span>AI hook & hashtags</span>
+      </div>
+
+      <h2>Gör din Kenai-reel klickbar på 5 sek</h2>
+      <p style="font-size: 13px; color:#9ca3af;">
+        Beskriv din reel (t.ex. ”sommar på båt med vänner” eller
+        ”Kenai AI som fixar podd-sammanfattning”) så föreslår Kenai hooks och hashtags (demo).
+      </p>
+
+      <label for="hookInput">Beskriv din reel-idé</label>
+      <textarea id="hookInput" rows="4" placeholder="Ex: &quot;Sommar på båt med vänner, Kenai visar hur AI klipper reelen åt mig&quot;"></textarea>
+
+      <button id="hookBtn" class="primary">
+        Generera hooks & hashtags (demo)
+      </button>
+
+      <div style="margin-top:16px;">
+        <div>Förslag på hooks</div>
+        <textarea id="hookOutput" rows="4" placeholder="Här dyker hook-förslag upp..."></textarea>
+      </div>
+
+      <div style="margin-top:16px;">
+        <div>Hashtags</div>
+        <textarea id="hookHashtags" rows="3" placeholder="#kenai #reels #ai ..."></textarea>
+      </div>
+
+      <div style="margin-top:16px; text-align:right;">
+        <button id="copyHashtagsBtn" class="primary">
+          Kopiera hashtags
+        </button>
+      </div>
+
+      <div style="margin-top:8px; text-align:right;">
+        <a
+          href="#reelsMakerCard"
+          id="goToReelsBtn"
+          class="primary"
+          style="display:inline-block;padding:10px 22px;border-radius:999px;">
+          Fixa reel med de här hooksen
+        </a>
+      </div>
+    </section>
+
+    <!-- Header / intro -->
+    <section class="card" id="reelsMakerCard">
       <div class="badge">
         <span>🚀</span>
-        <span>Kenaireel – presets</span>
+        <span>Kenai Reels Maker – presets</span>
       </div>
       <h1 style="font-size: 22px; margin-bottom: 4px;">Kenai Reels Maker (Marvel & Tarantino-demo)</h1>
-      <title>Kenai Reels Maker (Marvel & Tarantino-demo)</title>
-
-
       <p style="font-size: 13px; color:#9ca3af; margin:0 0 4px;">
-        Här kan du testa hur Kenai planerar reels: ladda in sommarbilder, välj stil (Marvel, Tarantino eller Kenai)
+        Testa hur Kenai planerar reels: ladda in sommarbilder, välj stil (Marvel, Tarantino eller Kenai)
         och få en AI-plan med klipplängder.
       </p>
       <p style="font-size: 12px; color:#6b7280; margin:0;">
-        Steg 1: Välj preset &amp; filer → Steg 2: Skapa plan → Steg 3: Skicka planen till backend (test).
+        Steg 1: Välj preset &amp; filer → Steg 2: Skapa plan → Steg 3: Skicka planen till backend (demo).
       </p>
-    </div>
+    </section>
 
     <!-- 1. Välj preset -->
-    <div class="card">
+    <section class="card">
       <h2 style="font-size: 16px; margin-bottom: 8px;">1. Välj reel-stil</h2>
       <div class="preset-row">
- <button class="preset-btn active" data-style="basic">
-  <strong>Basic</strong>
-  <small>Jämn längd per klipp, ingen magi.</small>
-</button>
+        <button class="preset-btn active" data-style="basic">
+          <strong>Basic</strong>
+          <small>Jämn längd per klipp, bra för test.</small>
+        </button>
 
-<button class="preset-btn" data-style="marvel">
-  <strong>Marvel-reel</strong>
-  <small>Snabb introsekvens, 3–5 sek, korta klipp + logga.</small>
-</button>
+        <button class="preset-btn" data-style="marvel">
+          <strong>Marvel-reel</strong>
+          <small>Snabb introsekvens, korta klipp + logga.</small>
+        </button>
 
-<button class="preset-btn" data-style="tarantino">
-  <strong>Tarantino-cut</strong>
-  <small>Non-linear, smash cuts, ding, opening shot.</small>
-</button>
+        <button class="preset-btn" data-style="tarantino">
+          <strong>Tarantino-cut</strong>
+          <small>Non-linear, smash cuts, &quot;ding&quot; opening shot.</small>
+        </button>
 
-<button class="preset-btn" data-style="kenai">
-  <strong>Kenaireel Classic</strong>
-  <small>Placeholder för den egen Kenai-stil.</small>
-</button>
-
-
+        <button class="preset-btn" data-style="kenai">
+          <strong>Kenaireel Classic</strong>
+          <small>Kenais egen stil (placeholder).</small>
+        </button>
       </div>
       <p class="small-muted" id="styleDescription">
         Stil: <strong>Basic</strong> – bra för test. Marvel/Tarantino/Kenai ger olika klippkänsla.
       </p>
-    </div>
+    </section>
 
     <!-- 2. Filer & mål-längd -->
-    <div class="card">
+    <section class="card">
       <h2 style="font-size: 16px; margin-bottom: 8px;">2. Lägg till klipp &amp; längd</h2>
       <div class="row">
         <div>
-          <label for="files">Bilder/filmer (lokalt, laddas ej upp än)</label>
+          <label for="files">Bilder/filmer (lokalt, laddas ej upp förrän du renderar)</label>
           <input id="files" type="file" multiple accept="image/*,video/*" />
           <div class="small-muted">
             Välj några sommarbilder/klipp som vi kan planera reelen med.
           </div>
         </div>
         <div>
-         <label for="files">Bilder/filmer (lokalt, laddas ej upp än)</label>
-<input id="files" type="file" multiple accept="image/*,video/*" />
-<div class="small-muted">
-  Välj några sommarbilder/klipp som vi kan planera reelen med.
-</div>
+          <label for="targetSeconds">Mål-längd (sekunder)</label>
+          <input id="targetSeconds" type="number" min="1" max="90" value="10" />
+          <div class="small-muted">
+            Marvel/Tarantino brukar ligga runt 15–30 sek. Basic kan vara längre.
+          </div>
 
-<label for="targetSeconds" style="margin-top:8px;">Mål-längd (sekunder)</label>
-<div class="form-group" style="margin-top:8px;">
-  <input id="targetSeconds" type="number" min="1" max="90" value="10" />
-  <div class="small-muted">
-    Marvel/Tarantino brukar ligga runt 15–30 sek. Basic kan vara längre.
-  </div>
-</div>
+          <div style="margin-top:8px;">
+            <label for="audioInput">Låt (demo – lägg på musik)</label>
+            <input id="audioInput" type="file" accept="audio/*" />
+            <div class="small-muted">
+              Används bara i demo-knappen &quot;Rendera + musik&quot; just nu.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-<div class="form-group" style="margin-top:8px;">
-  <label for="audioInput">Låt (demo – lägg på musik)</label>
-  <input id="audioInput" type="file" accept="audio/*" />
-</div>
-
-
-
-    <!-- 3. Plan-preview -->
-    <div class="card">
-      <button id="buildPlanBtn" class="primary">
-  Skapa reel-plan (demo)
-</button>
-
-<button id="renderBtn" class="primary" style="margin-left:8px;">
-  Rendera reel (v1 demo)
-</button>
-
-<button id="renderWithMusicBtn" class="primary" style="margin-left:8px;">
-  Rendera + musik (demo)
-</button>
-
-<div id="statusText" class="small-muted">
-  Backend kör Reels demo – planen tas emot men ingen riktig video byggs ännu.
-</div>
-
+    <!-- 3. Plan & preview -->
+    <section class="card">
       <h2 style="font-size: 16px; margin-bottom: 8px;">3. Förhandsgranska plan (vad AI skulle göra)</h2>
-  <p>Ingen plan ännu, välj stil, filer och klicka på "Skapa reel-plan".</p>
+
+      <div style="margin-bottom:8px;">
+        <button id="buildPlanBtn" class="primary">
+          Skapa reel-plan (demo)
+        </button>
+
+        <button id="renderBtn" class="primary" style="margin-left:8px;">
+          Rendera reel (v1 demo)
+        </button>
+
+        <button id="renderWithMusicBtn" class="primary" style="margin-left:8px;">
+          Rendera + musik (demo)
+        </button>
+      </div>
+
+      <div id="statusText" class="small-muted" style="margin-bottom:8px;">
+        Backend kör Reels demo – planen tas emot men ingen riktig video byggs ännu.
+      </div>
+
       <div style="margin-bottom:8px;">
         <span class="pill pill-style" id="pillStyle">
           🎬 <span>Stil: Basic</span>
@@ -374,201 +331,267 @@
           ⏱️ <span>Total: 0.0 s</span>
         </span>
       </div>
-      <div id="planPreview" class="plan-preview">
-  ...
-</div>
 
-<div id="renderPreview" style="margin-top: 16px;">
-  <!-- Här visar Kenai upp videon från basic-render -->
-</div>
+      <div id="planPreview" class="plan-preview">Ingen plan ännu, klicka på &quot;Skapa reel-plan&quot;.</div>
+
+      <div id="renderPreview" style="margin-top: 16px;">
+        <!-- Här visar Kenai upp videon från basic-render -->
+      </div>
+
       <p class="small-muted">
         Senare kan vi spara detta som <code>plan.json</code> och låta backend bygga den riktiga videon.
       </p>
-    </div>
+    </section>
   </div>
 
-  
- 
- 
-   <script>
-  // Hämta alla viktiga element från sidan
-  const fileInput = document.querySelector('input[type="file"]');
-  const targetSelect = document.querySelector("select");
-  const allButtons = Array.from(document.querySelectorAll("button"));
-  const audioInput = document.getElementById("audioInput");
-  const statusText = document.getElementById("statusText");
+  <script>
+    // ------- AI hook & hashtags (demo, ingen backend ännu) ---------
+    const hookInput = document.getElementById("hookInput");
+    const hookBtn = document.getElementById("hookBtn");
+    const hookOutput = document.getElementById("hookOutput");
+    const hookHashtags = document.getElementById("hookHashtags");
+    const copyHashtagsBtn = document.getElementById("copyHashtagsBtn");
 
-  const renderWithMusicBtn = allButtons.find((b) =>
-    b.textContent.toLowerCase().includes("rendera + musik")
-  );
+    if (hookBtn) {
+      hookBtn.addEventListener("click", () => {
+        const idea = (hookInput.value || "").trim() || "Min Kenai-reel";
+        hookOutput.value =
+          `1. "${idea}" – du ser resultatet direkt på 3 sek\n` +
+          `2. "${idea} utan att öppna ett enda klipp-program"\n` +
+          `3. "Jag laddar upp, Kenai gör resten"`;
 
-  const planBtn = allButtons.find((b) =>
-    b.textContent.toLowerCase().includes("skapa reel-plan")
-  );
-
-  const renderBasicBtn = allButtons.find((b) =>
-    b.textContent.toLowerCase().includes("rendera reel")
-  );
-
-  const previewContainer =
-    document.getElementById("renderPreview") ||
-    document.querySelector('[data-role="reel-preview"]');
-
-  let selectedFiles = [];
-
-  // 1) Spara valda klipp/bilder
-  if (fileInput) {
-    fileInput.addEventListener("change", (e) => {
-      selectedFiles = Array.from(e.target.files || []);
-      console.log("Valda filer:", selectedFiles.map((f) => f.name));
-
-      if (statusText) {
-        statusText.textContent = `Valda filer: ${selectedFiles.length}`;
-      }
-    });
-  }
-
-  // 2) Skapa reel-plan (demo) – visar bara en plan i rutan
-  if (planBtn) {
-    planBtn.addEventListener("click", async () => {
-      if (!selectedFiles.length) {
-        alert("Välj minst ett klipp först.");
-        return;
-      }
-
-      const targetSeconds = parseInt(targetSelect?.value || "10", 10);
-
-      const plan = {
-        targetSeconds,
-        totalFiles: selectedFiles.length,
-        files: selectedFiles.map((f) => ({
-          name: f.name,
-          type: f.type.startsWith("image/") ? "image" : "video",
-          size: f.size,
-        })),
-      };
-
-      console.log("Reel-plan:", plan);
-
-      if (previewContainer) {
-        previewContainer.innerHTML = `
-          <h5>AI-plan (demo)</h5>
-          <pre>${JSON.stringify(plan, null, 2)}</pre>
-        `;
-      }
-
-      if (statusText) {
-        statusText.textContent =
-          "Plan skapad (demo) – redo att skickas till backend.";
-      }
-    });
-  }
-// 3) Rendera reel (v1 demo) – upload + server-render
-if (renderBasicBtn) {
-  renderBasicBtn.addEventListener("click", async () => {
-    if (!selectedFiles.length) {
-      alert("Välj minst ett klipp först.");
-      return;
+        hookHashtags.value =
+          "#kenai #kenaireel #aivideo #reels #tiktok #instagram #contentcreator";
+      });
     }
 
-    const targetSeconds = parseInt(targetSelect?.value || "10", 10);
+    if (copyHashtagsBtn) {
+      copyHashtagsBtn.addEventListener("click", () => {
+        if (!hookHashtags) return;
+        hookHashtags.select();
+        hookHashtags.setSelectionRange(0, 99999);
+        try {
+          document.execCommand("copy");
+          alert("Hashtags kopierade ✅");
+        } catch (e) {
+          alert("Kunde inte kopiera automatiskt – markera och kopiera manuellt.");
+        }
+      });
+    }
 
-    // 1) Upload till /api/upload-reel-clips
-    const formData = new FormData();
-    formData.append("targetSeconds", String(targetSeconds));
+    // ------- Reels maker logik -------
 
-    selectedFiles.forEach((file) => {
-      formData.append("clips", file);
+    const presetButtons = Array.from(document.querySelectorAll(".preset-btn"));
+    const styleDescription = document.getElementById("styleDescription");
+    const pillStyle = document.getElementById("pillStyle");
+    const pillFiles = document.getElementById("pillFiles");
+    const pillDuration = document.getElementById("pillDuration");
+
+    const filesInput = document.getElementById("files");
+    const targetSecondsInput = document.getElementById("targetSeconds");
+    const audioInput = document.getElementById("audioInput");
+
+    const buildPlanBtn = document.getElementById("buildPlanBtn");
+    const renderBtn = document.getElementById("renderBtn");
+    const renderWithMusicBtn = document.getElementById("renderWithMusicBtn");
+
+    const statusText = document.getElementById("statusText");
+    const planPreview = document.getElementById("planPreview");
+    const renderPreview = document.getElementById("renderPreview");
+
+    let selectedStyle = "basic";
+    let selectedFiles = [];
+
+    // Byt stil
+    const styleTexts = {
+      basic: "Stil: Basic – jämn längd per klipp, bra för test.",
+      marvel: "Stil: Marvel – snabb intro, hårda cuts, logga i slutet.",
+      tarantino: "Stil: Tarantino – non-linear, smash cuts, dialog-fokus.",
+      kenai: "Stil: Kenaireel – Kenais egen signaturstil (kommer senare).",
+    };
+
+    presetButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const style = btn.getAttribute("data-style") || "basic";
+        selectedStyle = style;
+
+        presetButtons.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+
+        if (styleDescription) {
+          styleDescription.innerHTML = styleTexts[style] || styleTexts.basic;
+        }
+        if (pillStyle) {
+          pillStyle.innerHTML = `🎬 <span>Stil: ${style.charAt(0).toUpperCase() + style.slice(1)}</span>`;
+        }
+      });
     });
 
-    try {
-      const uploadRes = await fetch("/api/upload-reel-clips", {
-        method: "POST",
-        body: formData,
+    // Spara valda filer
+    if (filesInput) {
+      filesInput.addEventListener("change", (e) => {
+        selectedFiles = Array.from(e.target.files || []);
+        const count = selectedFiles.length;
+
+        if (statusText) {
+          statusText.textContent = `Valda filer: ${count}`;
+        }
+        if (pillFiles) {
+          pillFiles.innerHTML = `📂 <span>Filer: ${count}</span>`;
+        }
       });
+    }
 
-      const uploadData = await uploadRes.json();
-      console.log("Upload-svar:", uploadData);
+    function getTargetSeconds() {
+      const raw = targetSecondsInput ? parseInt(targetSecondsInput.value || "10", 10) : 10;
+      if (Number.isNaN(raw) || raw <= 0) return 10;
+      return Math.min(raw, 90);
+    }
 
-      if (!uploadData.ok) {
-        alert("Backend fel vid upload: " + (uploadData.error || "okänt fel"));
-        return;
-      }
+    // Skapa reel-plan (demo – bara JSON i rutan)
+    if (buildPlanBtn) {
+      buildPlanBtn.addEventListener("click", () => {
+        if (!selectedFiles.length) {
+          alert("Välj minst ett klipp först.");
+          return;
+        }
 
-      alert(uploadData.message || "Klippen är uppladdade (demo).");
+        const targetSeconds = getTargetSeconds();
+        const perClip = targetSeconds / selectedFiles.length;
 
-      // 2) Rendera reel med de uppladdade filerna
-      const renderRes = await fetch("/api/render-reel-demo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        const plan = {
+          style: selectedStyle,
           targetSeconds,
-          sessionId: uploadData.sessionId,
-          files: uploadData.files,
-        }),
+          totalFiles: selectedFiles.length,
+          approxSecondsPerClip: Number(perClip.toFixed(2)),
+          files: selectedFiles.map((f, i) => ({
+            index: i,
+            name: f.name,
+            type: f.type.startsWith("image/") ? "image" : "video",
+            size: f.size,
+            plannedDuration: Number(perClip.toFixed(2)),
+          })),
+        };
+
+        if (planPreview) {
+          planPreview.textContent = JSON.stringify(plan, null, 2);
+        }
+
+        if (pillDuration) {
+          pillDuration.innerHTML = `⏱️ <span>Total: ${targetSeconds.toFixed(1)} s</span>`;
+        }
+
+        if (statusText) {
+          statusText.textContent =
+            "Plan skapad (demo) – redo att skickas till backend / sparas som plan.json.";
+        }
       });
-
-      const renderData = await renderRes.json();
-      console.log("Render-svar:", renderData);
-
-      if (!renderData.ok) {
-        alert("Backend fel vid render: " + (renderData.error || "okänt fel"));
-        return;
-      }
- 
-      // Visa enkel länk i preview-rutan (AI-plan-rutan)
-      if (previewContainer) {
-        const url = renderData.outputUrl;
-        const html = `
-          <h5>Reel renderad (demo)</h5>
-          <p>Klicka nedan för att spela upp / ladda ner:</p>
-          <p><a href="${url}" target="_blank" rel="noopener">Öppna reel.mp4</a></p>
-        `;
-        previewContainer.innerHTML = html;
-      }
-
-      alert("Reel klar! (demo) – kolla länken i rutan nedan.");
-    } catch (err) {
-      console.error("Fel i upload+render-kedja:", err);
-      alert("Det blev fel när vi försökte ladda upp/rendera reelen.");
     }
-  });
-}
 
+    // Rendera reel (v1 demo – använder dina backend-routes)
+    if (renderBtn) {
+      renderBtn.addEventListener("click", async () => {
+        if (!selectedFiles.length) {
+          alert("Välj minst ett klipp först.");
+          return;
+        }
 
+        const targetSeconds = getTargetSeconds();
+        const formData = new FormData();
+        formData.append("targetSeconds", String(targetSeconds));
+        formData.append("style", selectedStyle);
 
+        selectedFiles.forEach((file) => {
+          formData.append("clips", file);
+        });
 
-  // 4) Rendera + musik (demo)
-  if (renderWithMusicBtn) {
-    renderWithMusicBtn.addEventListener("click", () => {
-      if (!selectedFiles.length) {
-        alert("Välj minst ett klipp först.");
-        return;
-      }
+        try {
+          if (statusText) {
+            statusText.textContent = "Laddar upp klipp till backend (demo)...";
+          }
 
-      if (!audioInput || !audioInput.files.length) {
-        alert("Välj en musikfil först.");
-        return;
-      }
+          const uploadRes = await fetch("/api/upload-reel-clips", {
+            method: "POST",
+            body: formData,
+          });
 
-      if (statusText) {
-        statusText.textContent =
-          "Demo: här skulle backend få både klipp + musik och bygga en synced reel.";
-      }
+          const uploadData = await uploadRes.json();
+          console.log("Upload-svar:", uploadData);
 
-      alert("Demo-läge: musik-render är inte kopplad till backend ännu.");
-    });
-  }
-</script>
+          if (!uploadData.ok) {
+            alert("Backend fel vid upload: " + (uploadData.error || "okänt fel"));
+            if (statusText) statusText.textContent = "Fel vid upload.";
+            return;
+          }
+
+          if (statusText) {
+            statusText.textContent = "Upload klar – ber backend rendera reelen (demo)...";
+          }
+
+          const renderRes = await fetch("/api/render-reel-demo", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              targetSeconds,
+              style: selectedStyle,
+              sessionId: uploadData.sessionId,
+              files: uploadData.files,
+            }),
+          });
+
+          const renderData = await renderRes.json();
+          console.log("Render-svar:", renderData);
+
+          if (!renderData.ok) {
+            alert("Backend fel vid render: " + (renderData.error || "okänt fel"));
+            if (statusText) statusText.textContent = "Fel vid render.";
+            return;
+          }
+
+          const url = renderData.outputUrl;
+
+          if (renderPreview && url) {
+            renderPreview.innerHTML = `
+              <h3 style="font-size:14px; margin-bottom:6px;">Reel renderad (demo)</h3>
+              <p style="font-size:12px; color:#9ca3af;">Klicka nedan för att spela upp eller ladda ner:</p>
+              <p><a href="${url}" target="_blank" rel="noopener">Öppna reel.mp4</a></p>
+            `;
+          }
+
+          if (statusText) {
+            statusText.textContent = "Reel klar! (demo) – kolla länken ovan.";
+          }
+
+          alert("Reel klar! (demo) – kolla länken i preview-rutan.");
+        } catch (err) {
+          console.error("Fel i upload+render-kedja:", err);
+          alert("Det blev fel när vi försökte ladda upp/rendera reelen.");
+          if (statusText) statusText.textContent = "Tekniskt fel i upload/render.";
+        }
+      });
+    }
+ 
+    // Rendera + musik (demo, ingen backend-koppling än)
+    if (renderWithMusicBtn) {
+      renderWithMusicBtn.addEventListener("click", () => {
+        if (!selectedFiles.length) {
+          alert("Välj minst ett klipp först.");
+          return;
+        }
+
+        if (!audioInput || !audioInput.files.length) {
+          alert("Välj en musikfil först.");
+          return;
+        }
+
+        if (statusText) {
+          statusText.textContent =
+            "Demo: här skulle backend få både klipp + musik och bygga en synced reel.";
+        }
+
+        alert("Demo-läge: musik-render är inte kopplad till backend ännu.");
+      });
+    }
+  </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-  
