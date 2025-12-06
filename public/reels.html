@@ -510,7 +510,83 @@
           );
         }
 
-        const plan = {
+                const plan = {
+          style: selectedStyle,
+          targetSeconds,
+          totalFiles: n,
+          files: selectedFiles.map((f, i) => {
+            const isImage = f.type.startsWith("image/");
+            const isVideo = f.type.startsWith("video/");
+
+            // Standardvärden
+            let role = "clip";
+            let fx = {
+              zoom: "none",          // none / in / out / pulse / slow-in
+              flash: false,          // vit flash
+              vignette: false,       // mörk ram
+              speed: 1.0,            // 1.0 = normal
+              overlayText: null,     // text på klippet
+              overlayPosition: "bottom", // bottom/top/center
+              logoOverlay: false     // visa Kenai-logga
+            };
+
+            // MARVEL-PRESET: tydlig hook → montage → payoff
+            if (selectedStyle === "marvel") {
+              if (i === 0) {
+                // HOOK
+                role = "hook";
+                fx.zoom = "in";
+                fx.flash = true;
+                fx.vignette = true;
+                fx.speed = 1.1;
+                fx.overlayText = "INSTANT HOOK";
+                fx.overlayPosition = "top";
+              } else if (i === n - 1) {
+                // PAYOFF
+                role = "payoff";
+                fx.zoom = "out";
+                fx.vignette = true;
+                fx.speed = 0.95;
+                fx.overlayText = "KENAI – AUTO-CUT ENGINE";
+                fx.overlayPosition = "bottom";
+                fx.logoOverlay = true;
+              } else {
+                // MONTAGE-MITTEN
+                role = "montage";
+                fx.zoom = "pulse";
+                fx.vignette = false;
+                fx.speed = 1.2;
+                fx.overlayText = "SNABBA CUTS";
+                fx.overlayPosition = "center";
+              }
+            }
+ 
+            // Kenai-stil: lite futuristiskt glow (placeholder)
+            if (selectedStyle === "kenai" && role === "clip") {
+              fx.zoom = "slow-in";
+              fx.vignette = true;
+              fx.overlayText = "KENAI REEL";
+              fx.overlayPosition = "bottom";
+            }
+
+            // Tarantino: retro-text (placeholder, vi bygger vidare sen)
+            if (selectedStyle === "tarantino" && role === "clip") {
+              fx.overlayText = "CHAPTER " + (i + 1);
+              fx.overlayPosition = "center";
+            }
+
+            return {
+              index: i,
+              name: f.name,
+              type: isImage ? "image" : isVideo ? "video" : "unknown",
+              size: f.size,
+              plannedDuration: durations[i],
+              role,
+              effects: fx
+            };
+          }),
+        };
+
           style: selectedStyle,
           targetSeconds,
           totalFiles: n,
