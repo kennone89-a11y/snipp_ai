@@ -488,7 +488,7 @@ if (renderBasicBtn) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(plan),
       });
-
+ 
       const data = await res.json();
       console.log("Backend svar:", data);
       alert(data.message || "Backend mottog planen korrekt (kolla konsolen)!");
