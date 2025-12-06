@@ -322,27 +322,47 @@
           </div>
         </div>
         <div>
-          <label for="targetSeconds">Mål-längd (sekunder)</label>
-          <input id="targetSeconds" type="number" min="1" max="90" value="10" />
-          <div class="small-muted">
-            Marvel/Tarantino brukar ligga runt 3–8 sek. Basic kan vara längre.
-          </div>
-        </div>
-      </div>
-      <button id="buildPlanBtn" class="primary">
-        ⚙️ Skapa reel-plan (demo)
-      </button>
-    <button id="renderBtn" class="primary" style="margin-left:8px;">
-  🎬 Rendera reel (v1 – demo)
-</button>
-     <div class="small-muted" id="statusText">
-  Backend kör Reels demo – planen tas emot men ingen riktig video byggs ännu.
+         <label for="files">Bilder/filmer (lokalt, laddas ej upp än)</label>
+<input id="files" type="file" multiple accept="image/*,video/*" />
+<div class="small-muted">
+  Välj några sommarbilder/klipp som vi kan planera reelen med.
 </div>
+
+<label for="targetSeconds" style="margin-top:8px;">Mål-längd (sekunder)</label>
+<div class="form-group" style="margin-top:8px;">
+  <input id="targetSeconds" type="number" min="1" max="90" value="10" />
+  <div class="small-muted">
+    Marvel/Tarantino brukar ligga runt 15–30 sek. Basic kan vara längre.
+  </div>
+</div>
+
+<div class="form-group" style="margin-top:8px;">
+  <label for="audioInput">Låt (demo – lägg på musik)</label>
+  <input id="audioInput" type="file" accept="audio/*" />
+</div>
+
 
 
     <!-- 3. Plan-preview -->
     <div class="card">
+      <button id="buildPlanBtn" class="primary">
+  Skapa reel-plan (demo)
+</button>
+
+<button id="renderBtn" class="primary" style="margin-left:8px;">
+  Rendera reel (v1 demo)
+</button>
+
+<button id="renderWithMusicBtn" class="primary" style="margin-left:8px;">
+  Rendera + musik (demo)
+</button>
+
+<div id="statusText" class="small-muted">
+  Backend kör Reels demo – planen tas emot men ingen riktig video byggs ännu.
+</div>
+
       <h2 style="font-size: 16px; margin-bottom: 8px;">3. Förhandsgranska plan (vad AI skulle göra)</h2>
+  <p>Ingen plan ännu, välj stil, filer och klicka på "Skapa reel-plan".</p>
       <div style="margin-bottom:8px;">
         <span class="pill pill-style" id="pillStyle">
           🎬 <span>Stil: Basic</span>
@@ -355,8 +375,12 @@
         </span>
       </div>
       <div id="planPreview" class="plan-preview">
-        Ingen plan ännu. Välj stil, filer och klicka på “Skapa reel-plan”.
-      </div>
+  ...
+</div>
+
+<div id="renderPreview" style="margin-top: 16px;">
+  <!-- Här visar Kenai upp videon från basic-render -->
+</div>
       <p class="small-muted">
         Senare kan vi spara detta som <code>plan.json</code> och låta backend bygga den riktiga videon.
       </p>
@@ -365,233 +389,123 @@
 
   
  
+ 
+   <script>
+  // Hämta alla viktiga element från sidan
+  const fileInput = document.querySelector('input[type="file"]');
+  const targetSelect = document.querySelector("select");
+  const allButtons = Array.from(document.querySelectorAll("button"));
+  const audioInput = document.getElementById("audioInput");
+  const statusText = document.getElementById("statusText");
 
-  <script>
-// --- AI Hook & Hashtags ---
+  const renderWithMusicBtn = allButtons.find((b) =>
+    b.textContent.toLowerCase().includes("rendera + musik")
+  );
 
-const hookBtn = document.getElementById("hookBtn");
-const hookInput = document.getElementById("hookInput");
-const hookOutput = document.getElementById("hookOutput");
-const hookHashtags = document.getElementById("hookHashtags");
+  const planBtn = allButtons.find((b) =>
+    b.textContent.toLowerCase().includes("skapa reel-plan")
+  );
 
-if (hookBtn && hookInput && hookOutput && hookHashtags) {
-  hookBtn.addEventListener("click", async () => {
-    const idea = hookInput.value.trim();
-    if (!idea) {
-      hookOutput.value = "Skriv en reel-idé först.";
-      return;
-    }
+  const renderBasicBtn = allButtons.find((b) =>
+    b.textContent.toLowerCase().includes("rendera reel")
+  );
 
-    const originalLabel = hookBtn.textContent;
-    hookBtn.disabled = true;
-    hookBtn.textContent = "AI jobbar...";
-    hookOutput.value = "";
-    hookHashtags.value = "";
+  const previewContainer =
+    document.getElementById("renderPreview") ||
+    document.querySelector('[data-role="reel-preview"]');
 
-    try {
-      const res = await fetch("/api/reels/hooks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea }),
-      });
+  let selectedFiles = [];
 
-      if (!res.ok) {
-        throw new Error("Serverfel");
+  // 1) Spara valda klipp/bilder
+  if (fileInput) {
+    fileInput.addEventListener("change", (e) => {
+      selectedFiles = Array.from(e.target.files || []);
+      console.log("Valda filer:", selectedFiles.map((f) => f.name));
+
+      if (statusText) {
+        statusText.textContent = `Valda filer: ${selectedFiles.length}`;
       }
-
-      const data = await res.json();
-      const hooks = Array.isArray(data.hooks) ? data.hooks : [];
-      const tags = Array.isArray(data.hashtags) ? data.hashtags : [];
-
-      hookOutput.value = hooks.length
-        ? hooks.join("\n")
-        : "Inga hooks tillbaka från AI just nu.";
-
-      hookHashtags.value = tags.length ? tags.join(" ") : "";
-    } catch (err) {
-      console.error("Fel i /api/reels/hooks:", err);
-      hookOutput.value = "Något gick fel. Testa igen om en liten stund.";
-      hookHashtags.value = "";
-    } finally {
-      hookBtn.disabled = false;
-      hookBtn.textContent = originalLabel;
-    }
-  });
-}
-
-// --- Reels core (demo) ---
-
-const filesInput = document.getElementById("files");
-const targetSecondsInput = document.getElementById("targetSeconds");
-const buildPlanBtn = document.getElementById("buildPlanBtn");
-const renderBtn = document.getElementById("renderBtn");
-
-const pillStyle = document.getElementById("pillStyle");
-const pillFiles = document.getElementById("pillFiles");
-const pillDuration = document.getElementById("pillDuration");
-const statusText = document.getElementById("statusText");
-const planPreview = document.getElementById("planPreview");
-
-let selectedFiles = [];
-let currentStyle = pillStyle ? pillStyle.textContent.trim() : "Basic";
-
-// När användaren väljer filer
-if (filesInput) {
-  filesInput.addEventListener("change", (e) => {
-    selectedFiles = Array.from(e.target.files || []);
-    if (pillFiles) pillFiles.textContent = selectedFiles.length.toString();
-  });
-}
-
-// Skapa enkel demo-plan (ingen riktig backend-render här)
-if (buildPlanBtn && targetSecondsInput && planPreview) {
-  buildPlanBtn.addEventListener("click", () => {
-    const target = parseInt(targetSecondsInput.value, 10) || 0;
-
-    if (!selectedFiles.length) {
-      if (statusText) statusText.textContent = "Välj minst ett klipp först.";
-      return;
-    }
-    if (!target || target <= 0) {
-      if (statusText) statusText.textContent = "Ange en mållängd i sekunder.";
-      return;
-    }
-
-    const perClip = target / selectedFiles.length;
-    if (pillDuration) pillDuration.textContent = `${target.toFixed(1)} s`;
-
-    const itemsHtml = selectedFiles
-      .map((file, idx) => {
-        return `<li>Klipp ${idx + 1}: ${file.name} – ca ${perClip.toFixed(
-          1
-        )} s</li>`;
-      })
-      .join("");
-
-    planPreview.innerHTML = `
-      <p><strong>Stil:</strong> ${currentStyle}</p>
-      <p><strong>Antal klipp:</strong> ${selectedFiles.length}</p>
-      <p><strong>Mållängd:</strong> ${target.toFixed(1)} s</p>
-      <ul>${itemsHtml}</ul>
-    `;
-
-    if (statusText) {
-      statusText.textContent =
-        "Demo-plan skapad. Backend-bygge av riktig video kommer senare.";
-    }
-  });
-}
-
-// Render-knappen – skickar videoklipp till backend för basic rendering
-if (renderBtn && targetSecondsInput && planPreview) {
-  renderBtn.addEventListener("click", async () => {
-  try {
-    // 1) Kolla att vi har filer
-    if (!selectedFiles.length) {
-      if (statusText) statusText.textContent = "Välj minst ett klipp först.";
-      return;
-    }
-
-    // 2) Kolla längd
-    const target = parseInt(targetSecondsInput.value || "0", 10);
-    if (!target || target <= 0) {
-      if (statusText) statusText.textContent = "Ange en längd i sekunder.";
-      return;
-    }
-
-    if (statusText) statusText.textContent = "Renderar basic reel…";
-
-    // 3) Bygg FormData (samma som till backend)
-    const formData = new FormData();
-    selectedFiles.forEach((file) => {
-      formData.append("clips", file);
     });
-    formData.append("targetSeconds", String(target));
-
-    // 4) Skicka till /api/reels/render-basic
-    const res = await fetch("/api/reels/render-basic", {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      console.error("Render-basic misslyckades:", res.status, text);
-      if (statusText) statusText.textContent = "Render misslyckades.";
-      alert("Render misslyckades. Se konsolen för detaljer.");
-      return;
-    }
-
-    // 5) Läs svaret som video-blob
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-
-    // 6) Hitta eller skapa videospelaren
-    let video = document.getElementById("basicRenderVideo");
-    if (!video) {
-      const container = planPreview || document.body;
-      video = document.createElement("video");
-      video.id = "basicRenderVideo";
-      video.controls = true;
-      video.style.width = "100%";
-      container.appendChild(video);
-    }
-
-    video.src = url;
-    video.load();
-    video.play().catch(() => {});
-
-    if (statusText) statusText.textContent =
-      "Basic render klar – videon finns här under.";
-
-  } catch (err) {
-    console.error("Fel i renderBtn-click:", err);
-    if (statusText) statusText.textContent = "Något gick fel i render.";
-    alert("Något gick fel i render. Se konsolen för detaljer.");
   }
-});
 
-
-
-// --- Kopiera hashtags-knappen ---
-
-const copyHashtagsBtn = document.getElementById("copyHashtagsBtn");
-
-if (copyHashtagsBtn && hookHashtags) {
-  copyHashtagsBtn.addEventListener("click", () => {
-    const text = hookHashtags.value.trim();
-
-    if (!text) {
-      copyHashtagsBtn.textContent = "Inget att kopiera";
-      setTimeout(() => {
-        copyHashtagsBtn.textContent = "Kopiera hashtags";
-      }, 1500);
-      return;
-    }
-
-    navigator.clipboard.writeText(text).then(
-      () => {
-        copyHashtagsBtn.textContent = "Kopierat!";
-        setTimeout(() => {
-          copyHashtagsBtn.textContent = "Kopiera hashtags";
-        }, 1500);
-      },
-      () => {
-        copyHashtagsBtn.textContent = "Kunde inte kopiera";
-        setTimeout(() => {
-          copyHashtagsBtn.textContent = "Kopiera hashtags";
-        }, 1500);
+  // 2) Skapa reel-plan (demo) – visar bara en plan i rutan
+  if (planBtn) {
+    planBtn.addEventListener("click", async () => {
+      if (!selectedFiles.length) {
+        alert("Välj minst ett klipp först.");
+        return;
       }
-    );
-  });
-}
+
+      const targetSeconds = parseInt(targetSelect?.value || "10", 10);
+
+      const plan = {
+        targetSeconds,
+        totalFiles: selectedFiles.length,
+        files: selectedFiles.map((f) => ({
+          name: f.name,
+          type: f.type.startsWith("image/") ? "image" : "video",
+          size: f.size,
+        })),
+      };
+
+      console.log("Reel-plan:", plan);
+
+      if (previewContainer) {
+        previewContainer.innerHTML = `
+          <h5>AI-plan (demo)</h5>
+          <pre>${JSON.stringify(plan, null, 2)}</pre>
+        `;
+      }
+
+      if (statusText) {
+        statusText.textContent =
+          "Plan skapad (demo) – redo att skickas till backend.";
+      }
+    });
+  }
+
+  // 3) Rendera reel (v1 demo)
+  if (renderBasicBtn) {
+    renderBasicBtn.addEventListener("click", () => {
+      if (!selectedFiles.length) {
+        alert("Välj minst ett klipp först.");
+        return;
+      }
+
+      if (statusText) {
+        statusText.textContent =
+          "Demo: här skulle backend /api/build-reel anropas och videon renderas.";
+      }
+
+      alert("Demo-läge: render-funktionen är inte kopplad till backend ännu.");
+    });
+  }
+
+  // 4) Rendera + musik (demo)
+  if (renderWithMusicBtn) {
+    renderWithMusicBtn.addEventListener("click", () => {
+      if (!selectedFiles.length) {
+        alert("Välj minst ett klipp först.");
+        return;
+      }
+
+      if (!audioInput || !audioInput.files.length) {
+        alert("Välj en musikfil först.");
+        return;
+      }
+
+      if (statusText) {
+        statusText.textContent =
+          "Demo: här skulle backend få både klipp + musik och bygga en synced reel.";
+      }
+
+      alert("Demo-läge: musik-render är inte kopplad till backend ännu.");
+    });
+  }
 </script>
-    
-
-
-
 </body>
 </html>
+
 
 
 
