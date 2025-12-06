@@ -458,7 +458,7 @@
       return Math.min(raw, 90);
     }
 
-    // Skapa reel-plan (demo – bara JSON i rutan)
+        // Skapa reel-plan (demo – olika logik per stil)
     if (buildPlanBtn) {
       buildPlanBtn.addEventListener("click", () => {
         if (!selectedFiles.length) {
@@ -467,19 +467,75 @@
         }
 
         const targetSeconds = getTargetSeconds();
-        const perClip = targetSeconds / selectedFiles.length;
+        const n = selectedFiles.length;
+
+        // 1) Grund: lika mycket per klipp
+        let basePerClip = targetSeconds / n;
+
+        // 2) Gör en duration-array som vi kan tweaka per stil
+        let durations = new Array(n).fill(basePerClip);
+
+        if (selectedStyle === "marvel") {
+          // Marvel: snabb intro + montage + logo/payoff
+          // - första klippet kort (hook)
+          // - mittenklipp kortare
+          // - sista klippet får mest tid
+          if (n >= 2) {
+            const hook = Math.max(0.8, targetSeconds * 0.12);       // ~12 %
+            const payoff = Math.max(2, targetSeconds * 0.35);       // ~35 %
+            const rest = targetSeconds - hook - payoff;
+            const middleCount = n - 2;
+            const middle = middleCount > 0 ? rest / middleCount : 0;
+
+            durations = durations.map((_, i) => {
+              if (i === 0) return Number(hook.toFixed(2));
+              if (i === n - 1) return Number(payoff.toFixed(2));
+              return Number(middle.toFixed(2));
+            });
+          }
+        } else if (selectedStyle === "tarantino") {
+          // Tarantino: lite mer ojämt, non-linear känsla
+          // Slumpa runt lite kring basvärdet
+          let total = 0;
+          durations = durations.map(() => {
+            const factor = 0.6 + Math.random() * 0.8; // 0.6–1.4x
+            const v = basePerClip * factor;
+            total += v;
+            return v;
+          });
+          // Skala tillbaka så totalen hamnar nära targetSeconds
+          const scale = targetSeconds / total;
+          durations = durations.map((d) => Number((d * scale).toFixed(2)));
+        } else if (selectedStyle === "kenai") {
+          // Kenai: bygg mot en liten "build-up" i slutet
+          // Tid i slutet får lite mer fokus
+          let totalWeight = 0;
+          const weights = durations.map((_, i) => {
+            const w = 1 + i * 0.4; // senare klipp väger mer
+            totalWeight += w;
+            return w;
+          });
+          durations = durations.map((_, i) => {
+            const v = (targetSeconds * weights[i]) / totalWeight;
+            return Number(v.toFixed(2));
+          });
+        } else {
+          // Basic: jämnt alltihop
+          durations = durations.map(() =>
+            Number(basePerClip.toFixed(2))
+          );
+        }
 
         const plan = {
           style: selectedStyle,
           targetSeconds,
-          totalFiles: selectedFiles.length,
-          approxSecondsPerClip: Number(perClip.toFixed(2)),
+          totalFiles: n,
           files: selectedFiles.map((f, i) => ({
             index: i,
             name: f.name,
             type: f.type.startsWith("image/") ? "image" : "video",
             size: f.size,
-            plannedDuration: Number(perClip.toFixed(2)),
+            plannedDuration: durations[i],
           })),
         };
 
@@ -488,101 +544,13 @@
         }
 
         if (pillDuration) {
-          pillDuration.innerHTML = `⏱️ <span>Total: ${targetSeconds.toFixed(1)} s</span>`;
+          const totalPlanned = durations.reduce((a, b) => a + b, 0);
+          pillDuration.innerHTML = `⏱️ <span>Total: ${totalPlanned.toFixed(1)} s</span>`;
         }
 
         if (statusText) {
           statusText.textContent =
-            "Plan skapad (demo) – redo att skickas till backend / sparas som plan.json.";
-        }
-      });
-    }
-
-        // Rendera reel (v1 demo – använder dina backend-routes)
-    if (renderBtn) {
-      renderBtn.addEventListener("click", async () => {
-        if (!selectedFiles.length) {
-          alert("Välj minst ett klipp först.");
-          return;
-        }
-
-        // DEMO-GRÄNS: max 3 klipp
-        if (selectedFiles.length > 3) {
-          alert("Demo-version: max 3 klipp åt gången. Välj 3 eller färre.");
-          return;
-        }
-
-        const targetSeconds = getTargetSeconds();
-        const formData = new FormData();
-        formData.append("targetSeconds", String(targetSeconds));
-        formData.append("style", selectedStyle);
-
-        selectedFiles.forEach((file) => {
-          formData.append("clips", file);
-        });
-
-        try {
-          if (statusText) {
-            statusText.textContent = "Laddar upp klipp till backend (demo)...";
-          }
-
-          const uploadRes = await fetch("/api/upload-reel-clips", {
-            method: "POST",
-            body: formData,
-          });
-
-          const uploadData = await uploadRes.json();
-          console.log("Upload-svar:", uploadData);
-
-          if (!uploadData.ok) {
-            alert("Backend fel vid upload: " + (uploadData.error || "okänt fel"));
-            if (statusText) statusText.textContent = "Fel vid upload.";
-            return;
-          }
-
-          if (statusText) {
-            statusText.textContent = "Upload klar – ber backend rendera reelen (demo)...";
-          }
-
-          const renderRes = await fetch("/api/render-reel-demo", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              targetSeconds,
-              style: selectedStyle,
-              sessionId: uploadData.sessionId,
-              files: uploadData.files,
-            }),
-          });
-
-          const renderData = await renderRes.json();
-          console.log("Render-svar:", renderData);
-
-          if (!renderData.ok) {
-            alert("Backend fel vid render: " + (renderData.error || "okänt fel"));
-            if (statusText) statusText.textContent = "Fel vid render.";
-            return;
-          }
-
-          const url = renderData.outputUrl;
-
-          if (renderPreview && url) {
-            renderPreview.innerHTML = `
-              <h3 style="font-size:14px; margin-bottom:6px;">Reel renderad (demo)</h3>
-              <p style="font-size:12px; color:#9ca3af;">Klicka nedan för att spela upp eller ladda ner:</p>
-              <p><a href="${url}" target="_blank" rel="noopener">Öppna reel.mp4</a></p>
-            `;
-          }
-
-          if (statusText) {
-            statusText.textContent = "Reel klar! (demo) – kolla länken ovan.";
-          }
-
-          alert("Reel klar! (demo) – kolla länken i preview-rutan.");
-        } catch (err) {
-          console.error("Fel i upload+render-kedja:", err);
-          alert("Det blev fel när vi försökte ladda upp/rendera reelen.");
-          if (statusText) statusText.textContent = "Tekniskt fel i upload/render.";
+            "Plan skapad (demo) – olika klipplogik per stil. Redo att skickas till backend / sparas som plan.json.";
         }
       });
     }
