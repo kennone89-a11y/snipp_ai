@@ -36,6 +36,7 @@ const storage = multer.diskStorage({
     // Render har en skrivbar /tmp-katalog
     cb(null, "/tmp");
   },
+  
   filename: (req, file, cb) => {
     const safeName = file.originalname.replace(/\s+/g, "_");
     cb(null, `kenai-${Date.now()}-${safeName}`);
@@ -47,6 +48,7 @@ const upload = multer({
   storage,
   limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB per klipp
 });
+const uploadReelsTmp = upload;
 
 // Koppla fluent-ffmpeg till ffmpeg-static binären
 ffmpeg.setFfmpegPath(ffmpegPath);
@@ -636,6 +638,59 @@ app.post("/api/build-reel", async (req, res) => {
 });
 
 // ---- Starta servern ----
+// -------------------------------------------------------------
+// API: Upload Reel Clips (v1 demo)
+// Tar emot videoklipp, sparar i /tmp och svarar med paths
+// -------------------------------------------------------------
+app.post(
+  "/api/upload-reel-clips",
+  uploadReelsTmp.array("clips", 20),
+  async (req, res) => {
+    try {
+      console.log("⏳ /api/upload-reel-clips HIT");
+
+      const files = req.files || [];
+      const targetSeconds = parseInt(req.body?.targetSeconds || "10", 10);
+
+      if (!files.length) {
+        return res.status(400).json({
+          ok: false,
+          error: "Inga klipp uppladdade.",
+        });
+      }
+
+      const sessionId = Date.now().toString();
+
+      console.log(
+        "📥 Mottagna klipp:",
+        files.map((f) => ({
+          path: f.path,
+          size: f.size,
+          originalname: f.originalname,
+        }))
+      );
+
+      return res.json({
+        ok: true,
+        message: "Klippen är uppladdade (demo).",
+        sessionId,
+        targetSeconds,
+        files: files.map((f) => ({
+          path: f.path,
+          size: f.size,
+          originalname: f.originalname,
+        })),
+      });
+    } catch (err) {
+      console.error("❌ FEL i /api/upload-reel-clips:", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Serverfel i /api/upload-reel-clips",
+      });
+    }
+  }
+);
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
