@@ -274,11 +274,10 @@
       <h2 style="font-size: 16px; margin-bottom: 8px;">2. Lägg till klipp &amp; längd</h2>
       <div class="row">
         <div>
-          <label for="files">Bilder/filmer (lokalt, laddas ej upp förrän du renderar)</label>
-          <input id="files" type="file" multiple accept="image/*,video/*" />
-          <div class="small-muted">
-            Välj några sommarbilder/klipp som vi kan planera reelen med.
-          </div>
+         <div class="small-muted">
+  Demo: funkar bäst med max 3 klipp åt gången.
+</div>
+
         </div>
         <div>
           <label for="targetSeconds">Mål-längd (sekunder)</label>
@@ -488,11 +487,17 @@
       });
     }
 
-    // Rendera reel (v1 demo – använder dina backend-routes)
+        // Rendera reel (v1 demo – använder dina backend-routes)
     if (renderBtn) {
       renderBtn.addEventListener("click", async () => {
         if (!selectedFiles.length) {
           alert("Välj minst ett klipp först.");
+          return;
+        }
+
+        // DEMO-GRÄNS: max 3 klipp
+        if (selectedFiles.length > 3) {
+          alert("Demo-version: max 3 klipp åt gången. Välj 3 eller färre.");
           return;
         }
 
@@ -570,6 +575,7 @@
         }
       });
     }
+
  
     // Rendera + musik (demo, ingen backend-koppling än)
     if (renderWithMusicBtn) {
