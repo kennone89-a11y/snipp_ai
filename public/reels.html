@@ -463,7 +463,7 @@
       }
     });
   }
-// 3) Rendera reel (v1 demo) – uploadar klippen till backend
+// 3) Rendera reel (v1 demo) – upload + server-render
 if (renderBasicBtn) {
   renderBasicBtn.addEventListener("click", async () => {
     if (!selectedFiles.length) {
@@ -473,6 +473,7 @@ if (renderBasicBtn) {
 
     const targetSeconds = parseInt(targetSelect?.value || "10", 10);
 
+    // 1) Upload till /api/upload-reel-clips
     const formData = new FormData();
     formData.append("targetSeconds", String(targetSeconds));
 
@@ -481,26 +482,59 @@ if (renderBasicBtn) {
     });
 
     try {
-      const res = await fetch("/api/upload-reel-clips", {
+      const uploadRes = await fetch("/api/upload-reel-clips", {
         method: "POST",
         body: formData,
       });
 
-      const data = await res.json();
-      console.log("Upload-svar:", data);
+      const uploadData = await uploadRes.json();
+      console.log("Upload-svar:", uploadData);
 
-      if (!data.ok) {
-        alert("Backend fel: " + (data.error || "okänt fel"));
+      if (!uploadData.ok) {
+        alert("Backend fel vid upload: " + (uploadData.error || "okänt fel"));
         return;
       }
 
-      alert(data.message || "Klippen är uppladdade (demo) – kolla konsolen!");
+      alert(uploadData.message || "Klippen är uppladdade (demo).");
+
+      // 2) Rendera reel med de uppladdade filerna
+      const renderRes = await fetch("/api/render-reel-demo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetSeconds,
+          sessionId: uploadData.sessionId,
+          files: uploadData.files,
+        }),
+      });
+
+      const renderData = await renderRes.json();
+      console.log("Render-svar:", renderData);
+
+      if (!renderData.ok) {
+        alert("Backend fel vid render: " + (renderData.error || "okänt fel"));
+        return;
+      }
+ 
+      // Visa enkel länk i preview-rutan (AI-plan-rutan)
+      if (previewContainer) {
+        const url = renderData.outputUrl;
+        const html = `
+          <h5>Reel renderad (demo)</h5>
+          <p>Klicka nedan för att spela upp / ladda ner:</p>
+          <p><a href="${url}" target="_blank" rel="noopener">Öppna reel.mp4</a></p>
+        `;
+        previewContainer.innerHTML = html;
+      }
+
+      alert("Reel klar! (demo) – kolla länken i rutan nedan.");
     } catch (err) {
-      console.error("Fel mot /api/upload-reel-clips:", err);
-      alert("Det blev fel när vi försökte ladda upp klippen.");
+      console.error("Fel i upload+render-kedja:", err);
+      alert("Det blev fel när vi försökte ladda upp/rendera reelen.");
     }
   });
 }
+
 
 
 
