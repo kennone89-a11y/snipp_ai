@@ -596,6 +596,44 @@ app.post(
     }
   }
 );
+// -------------------------------------------------------------
+// API: Build Reel (v1 demo backend) 
+// Tar emot plan.json + filer och kör basic FFmpeg-klippning
+// -------------------------------------------------------------
+
+app.post("/api/build-reel", async (req, res) => {
+  try {
+    console.log("⏳ /api/build-reel HIT");
+
+    // 1) Läs plan-data från request body
+    const { targetSeconds, files } = req.body || {};
+
+    if (!files || !Array.isArray(files) || files.length === 0) {
+      return res.status(400).json({
+        ok: false,
+        error: "Inga filer mottagna i plan.json",
+      });
+    }
+
+    console.log("📄 Mottagen plan:", files);
+
+    // 2) Demo–Endast: skapa en FUSK-”reel” genom att returnera text
+    //    (senare kopplar vi riktig ffmpeg-klippning här)
+    return res.json({
+      ok: true,
+      message: "Reels Engine demo — backend mottog plan.json korrekt",
+      receivedFiles: files,
+      targetSeconds,
+    });
+
+  } catch (err) {
+    console.error("❌ FEL i /api/build-reel:", err);
+    return res.status(500).json({
+      ok: false,
+      error: "Serverfel i /api/build-reel",
+    });
+  } 
+});
 
 // ---- Starta servern ----
 const PORT = process.env.PORT || 3000;

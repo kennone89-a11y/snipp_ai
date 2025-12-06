@@ -463,23 +463,42 @@
       }
     });
   }
+// 3) Rendera reel (v1 demo)
+if (renderBasicBtn) {
+  renderBasicBtn.addEventListener("click", async () => {
+    if (!selectedFiles.length) {
+      alert("Välj minst ett klipp först.");
+      return;
+    }
 
-  // 3) Rendera reel (v1 demo)
-  if (renderBasicBtn) {
-    renderBasicBtn.addEventListener("click", () => {
-      if (!selectedFiles.length) {
-        alert("Välj minst ett klipp först.");
-        return;
-      }
+    const targetSeconds = parseInt(targetSelect?.value || "10", 10);
 
-      if (statusText) {
-        statusText.textContent =
-          "Demo: här skulle backend /api/build-reel anropas och videon renderas.";
-      }
+    const plan = {
+      targetSeconds,
+      files: selectedFiles.map((f) => ({
+        name: f.name,
+        type: f.type.startsWith("image/") ? "image" : "video",
+        size: f.size,
+      })),
+    };
+ 
+    try {
+      const res = await fetch("/api/build-reel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(plan),
+      });
 
-      alert("Demo-läge: render-funktionen är inte kopplad till backend ännu.");
-    });
-  }
+      const data = await res.json();
+      console.log("Backend svar:", data);
+      alert(data.message || "Backend mottog planen korrekt (kolla konsolen)!");
+    } catch (err) {
+      console.error("Fel mot /api/build-reel:", err);
+      alert("Något gick fel mot backend, kolla konsolen.");
+    }
+  });
+}
+
 
   // 4) Rendera + musik (demo)
   if (renderWithMusicBtn) {
