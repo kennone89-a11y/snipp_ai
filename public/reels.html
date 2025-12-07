@@ -5,6 +5,10 @@
   <title>Kenai Reels Maker – presets & demo</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    <!-- Supabase JS (för uploadSelectedFilesToSupabase) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
     * { box-sizing: border-box; }
     body {
@@ -348,18 +352,17 @@
 (() => {
   const SB_URL ='https://hywwzzzxgagqhlxooekz.supabase.co';
 const SB_ANON ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
+const supabaseClient = window.supabase.createClient(SB_URL, SB_ANON);
 async function uploadSelectedFilesToSupabase() {
   if (!selectedFiles.length) {
     throw new Error("Inga filer valda för upload.");
   }
 
-  if (!window.supabase) {
+    if (!window.supabase) {
     throw new Error("Supabase-biblioteket (window.supabase) saknas på sidan.");
   }
+  // supabaseClient är redan skapat högst upp
 
-  if (!supabaseClient) {
-    supabaseClient = window.supabase.createClient(SB_URL, SB_ANON);
-  }
 
   const bucket = "audio"; // samma bucket som för reels
   const basePath = `reels/${sessionId}`;
