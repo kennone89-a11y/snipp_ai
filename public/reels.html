@@ -404,13 +404,15 @@
 
         const publicUrl = pub?.publicUrl || null;
 
-        results.push({
-          index: i,
-          fileName: file.name,
-          storagePath: path,
-          publicUrl,
-        });
-      }
+       results.push({
+  index: i,
+  fileName: file.name,
+  size: file.size,
+  type: file.type || "video/mp4",
+  storagePath: path,
+  publicUrl,
+});
+
 
       return results;
     }
