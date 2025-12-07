@@ -346,6 +346,66 @@
 
    <script>
 (() => {
+  const SB_URL ='https://hywwzzzxgagqhlxooekz.supabase.co';
+const SB_ANON ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';
+async function uploadSelectedFilesToSupabase() {
+  if (!selectedFiles.length) {
+    throw new Error("Inga filer valda för upload.");
+  }
+
+  if (!window.supabase) {
+    throw new Error("Supabase-biblioteket (window.supabase) saknas på sidan.");
+  }
+
+  if (!supabaseClient) {
+    supabaseClient = window.supabase.createClient(SB_URL, SB_ANON);
+  }
+
+  const bucket = "audio"; // samma bucket som för reels
+  const basePath = `reels/${sessionId}`;
+
+  const results = [];
+
+  for (let i = 0; i < selectedFiles.length; i++) {
+    const file = selectedFiles[i];
+
+    // Sanera filnamn
+    const safeName = (file.name || `clip_${i}.mp4`).replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `${basePath}/${Date.now()}_${i}_${safeName}`;
+
+    const { data, error } = await supabaseClient
+      .storage
+      .from(bucket)
+      .upload(path, file, {
+        contentType: file.type || "video/mp4",
+        upsert: false,
+      });
+
+    if (error) {
+      console.error("Supabase upload-fel för", file.name, error);
+      throw new Error(`Kunde inte ladda upp fil: ${file.name}`);
+    }
+
+    const { data: pub } = supabaseClient
+      .storage
+      .from(bucket)
+      .getPublicUrl(path);
+
+    const publicUrl = pub?.publicUrl || null;
+
+    results.push({
+      index: i,
+      file,
+      storagePath: path,
+      publicUrl,
+    });
+  }
+
+  return results;
+}
+
+let supabaseClient = null;
+
   // ----- Hämta element -----
   const styleButtons = document.querySelectorAll("[data-style]");
   const fileInput =
@@ -408,7 +468,7 @@
   }
 
   // ----- Skapa reel-plan (demo) -----
-   async function createReelPlan() {
+  async function createReelPlan() {
   if (!selectedFiles.length) {
     logStatus("Välj minst 1 fil först.");
     return;
@@ -425,51 +485,70 @@
 
   const n = selectedFiles.length;
 
-  // Enkel fördelning: samma längd per klipp
-  const perClip = n > 0 ? Number((targetSeconds / n).toFixed(1)) : 3;
+  try {
+    logStatus("Laddar upp klipp till Kenai-molnet ...");
 
-  const files = selectedFiles.map((f, i) => ({
-    index: i,
-    type: f.type && f.type.startsWith("image/") ? "image" : "video",
-    role: "clip",
-    filename: f.name,
-    size: f.size,
-    plannedDuration: perClip,
-    effects: {}, // här kan vi lägga Marvel/Tarantino-effekter senare
-  }));
+    // 1) Ladda upp filer till Supabase
+    const uploaded = await uploadSelectedFilesToSupabase();
 
-  const plan = {
-    style: selectedStyle,
-    targetSeconds,
-    totalFiles: n,
-    files,
-  };
-  currentPlan = plan;
+    logStatus("Bygger reel-plan (frontend demo + upload) ...");
 
-  // Bygg texten som ska visas i rutan
-  const lines = files.map((clip, index) => {
-    const num = index + 1;
-    const type = clip.type || "clip";
-    const dur = clip.plannedDuration != null ? clip.plannedDuration : "?";
-    const name = clip.filename || "okänt namn";
-    return num + ". " + type + " – " + dur + "s (" + name + ")";
-  });
+    // 2) Fördela tid per klipp
+    const perClip = n > 0 ? Number((targetSeconds / n).toFixed(1)) : 3;
 
-  let header = "Plan klar (frontend demo)\n";
-  header += "Stil: " + selectedStyle + "\n";
-  header += "Mållängd: " + targetSeconds + "s\n";
-  header += "Antal klipp: " + n + "\n\n";
+    // 3) Bygg file-lista med URL + storagePath
+    const files = uploaded.map((item) => {
+      const f = item.file;
+      const idx = item.index;
+      return {
+        index: idx,
+        type: f.type && f.type.startsWith("image/") ? "image" : "video",
+        role: "clip",
+        filename: f.name,
+        size: f.size,
+        plannedDuration: perClip,
+        storagePath: item.storagePath,
+        publicUrl: item.publicUrl,
+        effects: {}, // här lägger vi Marvel/Tarantino-effekter sen
+      };
+    });
 
-  const text = header + lines.join("\n");
+    const plan = {
+      style: selectedStyle,
+      targetSeconds,
+      totalFiles: n,
+      files,
+    };
 
-  // Visa i UI
-  logStatus("Plan klar (frontend demo).");
-  if (planPreview) {
-    planPreview.textContent = text;
+    // 4) Spara planen globalt
+    currentPlan = plan;
+
+    // 5) Bygg text som visas i rutan
+    const lines = files.map((clip, index) => {
+      const num = index + 1;
+      const type = clip.type || "clip";
+      const dur = clip.plannedDuration != null ? clip.plannedDuration : "?";
+      const name = clip.filename || "okänt namn";
+      return num + ". " + type + " – " + dur + "s (" + name + ")";
+    });
+
+    let header = "Plan klar (frontend demo + upload)\n";
+    header += "Stil: " + selectedStyle + "\n";
+    header += "Mållängd: " + targetSeconds + "s\n";
+    header += "Antal klipp: " + n + "\n\n";
+
+    const text = header + lines.join("\n");
+
+    logStatus("Plan klar (frontend demo + upload).");
+    if (planPreview) {
+      planPreview.textContent = text;
+    }
+
+    console.log("Reel-plan (frontend demo + upload):", plan);
+  } catch (err) {
+    console.error(err);
+    logStatus("Fel när plan skulle skapas: " + err.message);
   }
-
-  // Bra för debugging
-  console.log("Reel-plan (frontend demo):", plan);
 }
 
 
