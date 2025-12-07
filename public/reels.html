@@ -366,17 +366,28 @@
     return kenaiReelsSupabaseClient;
   }
 
-  async function uploadSelectedFilesToSupabase() {
-    if (!selectedFiles.length) {
-      throw new Error("Inga filer valda för upload.");
-    }
+      async function uploadSelectedFilesToSupabase() {
+      if (!selectedFiles.length) {
+        throw new Error("Inga filer valda för upload.");
+      }
 
-    const client = getReelsSupabaseClient();
+      // Max filstorlek ~40 MB
+      const MAX_FILE_BYTES = 40 * 1024 * 1024;
 
-    const bucket = "audio";              // samma bucket som för reels
-    const basePath = `reels/${sessionId}`;
+      for (const file of selectedFiles) {
+        if (file.size > MAX_FILE_BYTES) {
+          const mb = (file.size / (1024 * 1024)).toFixed(1);
+          throw new Error(`Filen "${file.name}" är ${mb} MB. Maxstorlek är ca 40 MB per klipp.`);
+        }
+      }
 
-    const results = [];
+      const client = getReelsSupabaseClient();
+
+      const bucket = "audio";               // eller "kenai-audio" om du ändrat det
+      const basePath = `reels/${sessionId}`;
+
+      const results = [];
+
 
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i];
