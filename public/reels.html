@@ -350,72 +350,74 @@
 
    <script>
 (() => {
-      const SB_URL ='https://hywwzzzxgagqhlxooekz.supabase.co';
-    const SB_ANON ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA'; // din riktiga key
-    let kenaiReelsSupabaseClient = null;
+      const SB_URL ='https://hywwzzzxgagqhlxooekz.supabase.co';       // t.ex. 'https://xxxxxx.supabase.co'
+  const SB_ANON ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5d3d6enp4Z2FncWhseG9vZWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5Mjk5NTcsImV4cCI6MjA3NzUwNTk1N30.A1BcczjSnP-LOh6p9XLozCBbBcr9LgHIcpjIqsk3eSA';          // hela eyJ... strängen
+  let kenaiReelsSupabaseClient = null;
 
-    function getReelsSupabaseClient() {
-      if (!window.supabase) {
-        throw new Error("Supabase-biblioteket (window.supabase) saknas på sidan.");
-      }
-      if (!kenaiReelsSupabaseClient) {
-        kenaiReelsSupabaseClient = window.supabase.createClient(SB_URL, SB_ANON);
-      }
-      return kenaiReelsSupabaseClient;
+  function getReelsSupabaseClient() {
+    if (!window.supabase) {
+      throw new Error("Supabase-biblioteket (window.supabase) saknas på sidan.");
     }
 
-    // ----- Upload-funktion för valda filer -----
-    async function uploadSelectedFilesToSupabase() {
-      if (!selectedFiles.length) {
-        throw new Error("Inga filer valda för upload.");
+    if (!kenaiReelsSupabaseClient) {
+      kenaiReelsSupabaseClient = window.supabase.createClient(SB_URL, SB_ANON);
+    }
+
+    return kenaiReelsSupabaseClient;
+  }
+
+  async function uploadSelectedFilesToSupabase() {
+    if (!selectedFiles.length) {
+      throw new Error("Inga filer valda för upload.");
+    }
+
+    const client = getReelsSupabaseClient();
+
+    const bucket = "audio";              // samma bucket som för reels
+    const basePath = `reels/${sessionId}`;
+
+    const results = [];
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i];
+
+      // Säker filnamn
+      const safeName = (file.name || `clip_${i}.mp4`).replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `${basePath}/${Date.now()}_${i}_${safeName}`;
+
+      const { data, error } = await client
+        .storage
+        .from(bucket)
+        .upload(path, file, {
+          contentType: file.type || "video/mp4",
+          upsert: false,
+        });
+
+      if (error) {
+        console.error("Supabase upload-fel för", file.name, error);
+        throw new Error(`Kunde inte ladda upp fil: ${file.name}`);
       }
 
-      const client = getReelsSupabaseClient();
+      const { data: pub, error: pubError } = client
+        .storage
+        .from(bucket)
+        .getPublicUrl(path);
 
-      const bucket = "audio";               // samma bucket som för reels
-      const basePath = `reels/${sessionId}`; // prefix för denna session
+      if (pubError) {
+        console.error("Supabase publicUrl-fel för", path, pubError);
+      }
 
-      const results = [];
-
-      for (let i = 0; i < selectedFiles.length; i++) {
-        const file = selectedFiles[i];
-
-        // Säkert filnamn
-        const safeName = (file.name || `clip_${i + 1}.mp4`).replace(/[^a-zA-Z0-9_.-]/g, "_");
-        const path = `${basePath}/${Date.now()}_${i + 1}_${safeName}`;
-
-        const { data, error } = await client
-          .storage
-          .from(bucket)
-          .upload(path, file, {
-            contentType: file.type || "video/mp4",
-            upsert: false,
-          });
-
-        if (error) {
-          console.error("Supabase upload-fel för", file.name, error);
-          throw new Error(`Kunde inte ladda upp fil: ${file.name}`);
-        }
-
-        const { data: pub } = client
-          .storage
-          .from(bucket)
-          .getPublicUrl(path);
-
-        const publicUrl = pub?.publicUrl || null;
- 
-       results.push({
-  index: i,
-  fileName: file.name,
-  size: file.size,
-  type: file.type || "video/mp4",
-  storagePath: path,
-  publicUrl,
-});
-
- 
-      return results;
+      results.push({
+        index: i,
+        file,
+        storagePath: path,
+        publicUrl: pub?.publicUrl || null,
+      });
     }
+
+    return results;
+  }
+
 
 
 let supabaseClient = null;
