@@ -406,102 +406,69 @@
   }
 
   // ----- Skapa reel-plan (demo) -----
-    async function createReelPlan() {
-    if (!selectedFiles.length) {
-      logStatus("Välj minst 1 fil först.");
-      return;
-    }
-
-    // Läs önskad längd (sekunder)
-    const rawTarget = (targetDurationInput && targetDurationInput.value)
-      ? Number(targetDurationInput.value)
-      : 15;
-
-    const targetSeconds = Number.isFinite(rawTarget) && rawTarget > 0
-      ? rawTarget
-      : 15;
-
-    const n = selectedFiles.length;
-    const perClip = n > 0 ? Number((targetSeconds / n).toFixed(1)) : 3;
-
-    // Bygg enkel plan lokalt
-    const plan = {
-      style: selectedStyle,
-      targetSeconds,
-      totalFiles: n,
-      files: selectedFiles.map((f, i) => ({
-        index: i,
-        type: f.type && f.type.startsWith("image/") ? "image" : "video",
-        role: "clip",
-        filename: f.name,
-        size: f.size,
-        plannedDuration: perClip,
-        effects: {}, // placeholder – backend kan lägga på effekter
-      })),
-    };
-
-    logStatus("Skickar plan (demo) till backend ...");
-
-    try {
-      const resp = await fetch("/api/build-reel", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          sessionId,
-          plan_json: JSON.stringify(plan),
-        }),
-      });
-
-      if (!resp.ok) {
-        const text = await resp.text();
-        throw new Error("Serverfel " + resp.status + ": " + text);
-      }
-
-      const data = await resp.json();
-
-      // Försök hitta en clips-lista i svaret
-      const clips =
-        data.clips ||
-        (data.plan && data.plan.clips) ||
-        data.files ||
-        [];
-
-      if (!Array.isArray(clips) || !clips.length) {
-        logStatus("Plan mottagen, men inga klipp i svaret. Se konsolen.");
-        console.log("build-reel svar:", data);
-        return;
-      }
-
-      const lines = clips.map((clip, index) => {
-        const num = index + 1;
-        const type = clip.type || "clip";
-        const dur =
-          clip.duration != null
-            ? clip.duration
-            : clip.plannedDuration != null
-            ? clip.plannedDuration
-            : "?";
-        const name = clip.filename || clip.name || "okänt namn";
-        return num + ". " + type + " – " + dur + "s (" + name + ")";
-      });
-
-      let header = "Plan klar (demo)\n";
-      header += "Stil: " + selectedStyle + "\n";
-      header += "Session: " + (data.sessionId || sessionId) + "\n\n";
-
-      const text = header + lines.join("\n");
-
-      logStatus("Plan klar (demo).");
-      if (planPreview) {
-        planPreview.textContent = text;
-      }
-    } catch (err) {
-      console.error(err);
-      logStatus("Fel när plan skulle skapas: " + err.message);
-    }
+   async function createReelPlan() {
+  if (!selectedFiles.length) {
+    logStatus("Välj minst 1 fil först.");
+    return;
   }
+
+  // Läs önskad längd (sekunder) från input
+  const rawTarget = (targetDurationInput && targetDurationInput.value)
+    ? Number(targetDurationInput.value)
+    : 15;
+
+  const targetSeconds = Number.isFinite(rawTarget) && rawTarget > 0
+    ? rawTarget
+    : 15;
+
+  const n = selectedFiles.length;
+
+  // Enkel fördelning: samma längd per klipp
+  const perClip = n > 0 ? Number((targetSeconds / n).toFixed(1)) : 3;
+
+  const files = selectedFiles.map((f, i) => ({
+    index: i,
+    type: f.type && f.type.startsWith("image/") ? "image" : "video",
+    role: "clip",
+    filename: f.name,
+    size: f.size,
+    plannedDuration: perClip,
+    effects: {}, // här kan vi lägga Marvel/Tarantino-effekter senare
+  }));
+
+  const plan = {
+    style: selectedStyle,
+    targetSeconds,
+    totalFiles: n,
+    files,
+  };
+
+  // Bygg texten som ska visas i rutan
+  const lines = files.map((clip, index) => {
+    const num = index + 1;
+    const type = clip.type || "clip";
+    const dur = clip.plannedDuration != null ? clip.plannedDuration : "?";
+    const name = clip.filename || "okänt namn";
+    return num + ". " + type + " – " + dur + "s (" + name + ")";
+  });
+
+  let header = "Plan klar (frontend demo)\n";
+  header += "Stil: " + selectedStyle + "\n";
+  header += "Mållängd: " + targetSeconds + "s\n";
+  header += "Antal klipp: " + n + "\n\n";
+
+  const text = header + lines.join("\n");
+
+  // Visa i UI
+  logStatus("Plan klar (frontend demo).");
+  if (planPreview) {
+    planPreview.textContent = text;
+  }
+
+  // Bra för debugging
+  console.log("Reel-plan (frontend demo):", plan);
+}
+
 
 
   // ----- Koppla knappar -----
