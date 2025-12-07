@@ -336,7 +336,9 @@
         </span>
       </div>
 
-      <div id="planPreview" class="plan-preview">Ingen plan ännu, klicka på &quot;Skapa reel-plan&quot;.</div>
+      <div id="planPreview" class="plan-preview">Ingen plan ännu, klicka på &quot;Skapa reel-plan&quot;...</div>
+<p id="uploadStatus" class="small-muted"></p>
+
 
       <div id="renderPreview" style="margin-top: 16px;">
         <!-- Här visar Kenai upp videon från basic-render -->
@@ -467,6 +469,11 @@ let supabaseClient = null;
     if (!planStatus) return;
     planStatus.textContent = msg;
   }
+   function setUploadStatus(message) {
+      const el = document.getElementById("uploadStatus");
+      if (!el) return;
+      el.textContent = message || "";
+    }
 
   function updateFileStats() {
     if (!fileCountSpan && !totalSizeSpan) return;
@@ -514,12 +521,15 @@ let supabaseClient = null;
   const n = selectedFiles.length;
 
   try {
-    logStatus("Laddar upp klipp till Kenai-molnet ...");
+  setUploadStatus("Laddar upp klipp …");
+  logStatus("Laddar upp klipp till Kenai-molnet ...");
 
-    // 1) Ladda upp filer till Supabase
-    const uploaded = await uploadSelectedFilesToSupabase();
+  // 1) Ladda upp filer till Supabase
+  const uploaded = await uploadSelectedFilesToSupabase();
 
-    logStatus("Bygger reel-plan (frontend demo + upload) ...");
+  setUploadStatus("Uppladdning klar ✓. Skapar plan...");
+  logStatus("Reel-plan (frontend demo + upload) ...");
+
 
     // 2) Fördela tid per klipp
     const perClip = n > 0 ? Number((targetSeconds / n).toFixed(1)) : 3;
@@ -574,9 +584,10 @@ let supabaseClient = null;
 
     console.log("Reel-plan (frontend demo + upload):", plan);
   } catch (err) {
-    console.error(err);
-    logStatus("Fel när plan skulle skapas: " + err.message);
-  }
+  console.error(err);
+  setUploadStatus("Fel: " + err.message);
+  logStatus("Fel när plan skapades: " + err.message);
+}
 }
 
 
@@ -588,7 +599,7 @@ let supabaseClient = null;
       createReelPlan();
     });
   }
-
+ 
     if (renderDemoBtn) {
     renderDemoBtn.addEventListener("click", async (event) => {
       event.preventDefault();
