@@ -482,12 +482,55 @@
     });
   }
 
-  if (renderDemoBtn) {
-    renderDemoBtn.addEventListener("click", (event) => {
+    if (renderDemoBtn) {
+    renderDemoBtn.addEventListener("click", async (event) => {
       event.preventDefault();
-      logStatus("Render-demo: här kommer riktig rendering senare (placeholder).");
+
+      if (!currentPlan) {
+        logStatus("Skapa först en plan (demo) innan du renderar.");
+        return;
+      }
+
+      logStatus("Render-demo: skickar plan till backend ...");
+
+      try {
+        const resp = await fetch("/api/render-reel", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            sessionId,
+            plan_json: JSON.stringify(currentPlan),
+          }),
+        });
+
+        if (!resp.ok) {
+          const text = await resp.text();
+          throw new Error("Serverfel " + resp.status + ": " + text);
+        }
+
+        const data = await resp.json();
+
+        // För demo: visa meddelande + ev. länk om backend skickar tillbaka videoUrl
+        const message =
+          data.message ||
+          "Render-demo klar (ingen riktig video ännu – bara test av flöde).";
+
+        if (data.videoUrl) {
+          logStatus(message + " URL: " + data.videoUrl);
+        } else {
+          logStatus(message);
+        }
+ 
+        console.log("Render-demo svar:", data);
+      } catch (err) {
+        console.error(err);
+        logStatus("Fel i render-demo: " + err.message);
+      }
     });
   }
+
 
   if (renderMusicDemoBtn) {
     renderMusicDemoBtn.addEventListener("click", (event) => {

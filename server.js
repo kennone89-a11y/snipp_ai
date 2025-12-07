@@ -604,39 +604,56 @@ app.post(
 // Tar emot plan.json + filer och kör basic FFmpeg-klippning
 // -------------------------------------------------------------
 
-app.post("/api/build-reel", async (req, res) => {
+app.post("/api/render-reel", async (req, res) => {
   try {
-    console.log("⏳ /api/build-reel HIT");
+    const { sessionId, plan_json } = req.body || {};
 
-    // 1) Läs plan-data från request body
-    const { targetSeconds, files } = req.body || {};
-
-    if (!files || !Array.isArray(files) || files.length === 0) {
+    if (!plan_json) {
       return res.status(400).json({
         ok: false,
-        error: "Inga filer mottagna i plan.json",
+        error: "plan_json saknas i request body",
       });
     }
 
-    console.log("📄 Mottagen plan:", files);
+    let plan = null;
+    try {
+      plan = JSON.parse(plan_json);
+    } catch (e) {
+      console.error("Kunde inte parsa plan_json i /api/render-reel:", e);
+    }
 
-    // 2) Demo–Endast: skapa en FUSK-”reel” genom att returnera text
-    //    (senare kopplar vi riktig ffmpeg-klippning här)
+    const totalFiles =
+      plan && Array.isArray(plan.files) ? plan.files.length : 0;
+
+    console.log("=== /api/render-reel DEMO ===");
+    console.log("Session:", sessionId || "ingen");
+    console.log("Stil:", plan?.style);
+    console.log("Mållängd (s):", plan?.targetSeconds);
+    console.log("Antal klipp:", totalFiles);
+    console.log("=============================");
+
+    // DEMO-svar – ingen riktig rendering ännu
     return res.json({
       ok: true,
-      message: "Reels Engine demo — backend mottog plan.json korrekt",
-      receivedFiles: files,
-      targetSeconds,
+      message:
+        "Render-demo mottagen. Ingen riktig video byggs ännu – bara loggning.",
+      sessionId: sessionId || null,
+      summary: {
+        style: plan?.style || null,
+        targetSeconds: plan?.targetSeconds || null,
+        totalFiles,
+      },
+      videoUrl: null, // här kan vi senare skicka riktig URL när vi har ffmpeg/AI
     });
-
   } catch (err) {
-    console.error("❌ FEL i /api/build-reel:", err);
+    console.error("Fel i /api/render-reel:", err);
     return res.status(500).json({
       ok: false,
-      error: "Serverfel i /api/build-reel",
+      error: "Internt serverfel i render-demo",
     });
-  } 
+  }
 });
+
 
 // ---- Starta servern ----
 // -------------------------------------------------------------
