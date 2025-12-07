@@ -344,387 +344,155 @@
     </section>
   </div>
 
-  <script>
-    // ------- AI hook & hashtags (demo, ingen backend ännu) ---------
-    const hookInput = document.getElementById("hookInput");
-    const hookBtn = document.getElementById("hookBtn");
-    const hookOutput = document.getElementById("hookOutput");
-    const hookHashtags = document.getElementById("hookHashtags");
-    const copyHashtagsBtn = document.getElementById("copyHashtagsBtn");
+   <script>
+(() => {
+  // ----- Hämta element -----
+  const styleButtons = document.querySelectorAll("[data-style]");
+  const fileInput =
+    document.getElementById("files") ||
+    document.getElementById("fileInput") ||
+    document.querySelector("input[type='file']");
 
-    if (hookBtn) {
-      hookBtn.addEventListener("click", () => {
-        const idea = (hookInput.value || "").trim() || "Min Kenai-reel";
-        hookOutput.value =
-          `1. "${idea}" – du ser resultatet direkt på 3 sek\n` +
-          `2. "${idea} utan att öppna ett enda klipp-program"\n` +
-          `3. "Jag laddar upp, Kenai gör resten"`;
+  const fileCountSpan = document.getElementById("fileCount");
+  const totalSizeSpan = document.getElementById("totalSize");
+  const targetDurationInput = document.getElementById("targetDuration");
 
-        hookHashtags.value =
-          "#kenai #kenaireel #aivideo #reels #tiktok #instagram #contentcreator";
-      });
-    }
+  const createPlanBtn = document.getElementById("createPlanBtn");
+  const renderDemoBtn = document.getElementById("renderDemoBtn");
+  const renderMusicDemoBtn = document.getElementById("renderMusicDemoBtn");
 
-    if (copyHashtagsBtn) {
-      copyHashtagsBtn.addEventListener("click", () => {
-        if (!hookHashtags) return;
-        hookHashtags.select();
-        hookHashtags.setSelectionRange(0, 99999);
-        try {
-          document.execCommand("copy");
-          alert("Hashtags kopierade ✅");
-        } catch (e) {
-          alert("Kunde inte kopiera automatiskt – markera och kopiera manuellt.");
-        }
-      });
-    }
+  const planStatus = document.getElementById("planStatus");
+  const planPreview = document.getElementById("planPreview");
 
-    // ------- Reels maker logik -------
+  // ----- State -----
+  let sessionId = (window.crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : "sess_" + Date.now();
 
-    const presetButtons = Array.from(document.querySelectorAll(".preset-btn"));
-    const styleDescription = document.getElementById("styleDescription");
-    const pillStyle = document.getElementById("pillStyle");
-    const pillFiles = document.getElementById("pillFiles");
-    const pillDuration = document.getElementById("pillDuration");
+  let selectedStyle = "basic";
+  let selectedFiles = [];
 
-    const filesInput = document.getElementById("files");
-    const targetSecondsInput = document.getElementById("targetSeconds");
-    const audioInput = document.getElementById("audioInput");
+  // ----- Hjälpfunktioner -----
+  function logStatus(msg) {
+    if (!planStatus) return;
+    planStatus.textContent = msg;
+  }
 
-    const buildPlanBtn = document.getElementById("buildPlanBtn");
-    const renderBtn = document.getElementById("renderBtn");
-    const renderWithMusicBtn = document.getElementById("renderWithMusicBtn");
+  function updateFileStats() {
+    if (!fileCountSpan && !totalSizeSpan) return;
+    const count = selectedFiles.length;
+    const totalBytes = selectedFiles.reduce((sum, f) => sum + f.size, 0);
+    const totalMB = totalBytes / (1024 * 1024);
 
-    const statusText = document.getElementById("statusText");
-    const planPreview = document.getElementById("planPreview");
-    const renderPreview = document.getElementById("renderPreview");
+    if (fileCountSpan) fileCountSpan.textContent = String(count);
+    if (totalSizeSpan) totalSizeSpan.textContent = totalMB.toFixed(1);
+  }
 
-    let selectedStyle = "basic";
-    let selectedFiles = [];
-
-    // Byt stil
-    const styleTexts = {
-      basic: "Stil: Basic – jämn längd per klipp, bra för test.",
-      marvel: "Stil: Marvel – snabb intro, hårda cuts, logga i slutet.",
-      tarantino: "Stil: Tarantino – non-linear, smash cuts, dialog-fokus.",
-      kenai: "Stil: Kenaireel – Kenais egen signaturstil (kommer senare).",
-    };
-
-    presetButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const style = btn.getAttribute("data-style") || "basic";
-        selectedStyle = style;
-
-        presetButtons.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-
-        if (styleDescription) {
-          styleDescription.innerHTML = styleTexts[style] || styleTexts.basic;
-        }
-        if (pillStyle) {
-          pillStyle.innerHTML = `🎬 <span>Stil: ${style.charAt(0).toUpperCase() + style.slice(1)}</span>`;
-        }
-      });
+  // ----- Välj reel-stil -----
+  styleButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      styleButtons.forEach((b) => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      selectedStyle = btn.dataset.style || "basic";
     });
+  });
 
-    // Spara valda filer
-    if (filesInput) {
-      filesInput.addEventListener("change", (e) => {
-        selectedFiles = Array.from(e.target.files || []);
-        const count = selectedFiles.length;
+  // ----- Filval -----
+  if (fileInput) {
+    fileInput.addEventListener("change", () => {
+      selectedFiles = Array.from(fileInput.files || []);
+      updateFileStats();
+    });
+  }
 
-        if (statusText) {
-          statusText.textContent = `Valda filer: ${count}`;
-        }
-        if (pillFiles) {
-          pillFiles.innerHTML = `📂 <span>Filer: ${count}</span>`;
-        }
+  // ----- Skapa reel-plan (demo) -----
+  async function createReelPlan() {
+    if (!selectedFiles.length) {
+      logStatus("Välj minst 1 fil först.");
+      return;
+    }
+
+    const targetDuration = (targetDurationInput && targetDurationInput.value)
+      ? targetDurationInput.value
+      : "15";
+
+    logStatus("Bygger reel-plan (demo) ...");
+
+    try {
+      const formData = new FormData();
+      formData.append("sessionId", sessionId);
+      formData.append("style", selectedStyle);
+      formData.append("targetDuration", targetDuration);
+
+      selectedFiles.forEach((file) => {
+        formData.append("files", file, file.name);
       });
-    }
 
-    function getTargetSeconds() {
-      const raw = targetSecondsInput ? parseInt(targetSecondsInput.value || "10", 10) : 10;
-      if (Number.isNaN(raw) || raw <= 0) return 10;
-      return Math.min(raw, 90);
-    }
-
-    // Skapa reel-plan (demo – olika logik per stil)
-    if (buildPlanBtn) {
-      buildPlanBtn.addEventListener("click", () => {
-        if (!selectedFiles.length) {
-          alert("Välj minst ett klipp först.");
-          return;
-        }
-
-        const targetSeconds = getTargetSeconds();
-        const n = selectedFiles.length;
-
-        // Grund: lika mycket per klipp
-        let basePerClip = targetSeconds / n;
-
-        // Duration-array att tweaka per stil
-        let durations = new Array(n).fill(basePerClip);
-
-        if (selectedStyle === "marvel") {
-          // Marvel: hook (kort), mitten, payoff (längst)
-          if (n >= 2) {
-            const hook = Math.max(0.8, targetSeconds * 0.12);
-            const payoff = Math.max(2, targetSeconds * 0.35);
-            const rest = targetSeconds - hook - payoff;
-            const middleCount = n - 2;
-            const middle = middleCount > 0 ? rest / middleCount : 0;
-
-            durations = durations.map((_, i) => {
-              if (i === 0) return Number(hook.toFixed(2));
-              if (i === n - 1) return Number(payoff.toFixed(2));
-              return Number(middle.toFixed(2));
-            });
-          }
-        } else if (selectedStyle === "tarantino") {
-          // Tarantino: ojämt, non-linear känsla
-          let total = 0;
-          durations = durations.map(() => {
-            const factor = 0.6 + Math.random() * 0.8; // 0.6–1.4x
-            const v = basePerClip * factor;
-            total += v;
-            return v;
-          });
-          const scale = targetSeconds / total;
-          durations = durations.map((d) => Number((d * scale).toFixed(2)));
-        } else if (selectedStyle === "kenai") {
-          // Kenai: build-up mot slutet
-          let totalWeight = 0;
-          const weights = durations.map((_, i) => {
-            const w = 1 + i * 0.4;
-            totalWeight += w;
-            return w;
-          });
-          durations = durations.map((_, i) => {
-            const v = (targetSeconds * weights[i]) / totalWeight;
-            return Number(v.toFixed(2));
-          });
-        } else {
-          // Basic: jämnt
-          durations = durations.map(() =>
-            Number(basePerClip.toFixed(2))
-          );
-        }
-
-                const plan = {
-          style: selectedStyle,
-          targetSeconds,
-          totalFiles: n,
-          files: selectedFiles.map((f, i) => {
-            const isImage = f.type.startsWith("image/");
-            const isVideo = f.type.startsWith("video/");
-
-            // Standardvärden
-            let role = "clip";
-            let fx = {
-              zoom: "none",          // none / in / out / pulse / slow-in
-              flash: false,          // vit flash
-              vignette: false,       // mörk ram
-              speed: 1.0,            // 1.0 = normal
-              overlayText: null,     // text på klippet
-              overlayPosition: "bottom", // bottom/top/center
-              logoOverlay: false     // visa Kenai-logga
-            };
-
-            // MARVEL-PRESET: tydlig hook → montage → payoff
-            if (selectedStyle === "marvel") {
-              if (i === 0) {
-                // HOOK
-                role = "hook";
-                fx.zoom = "in";
-                fx.flash = true;
-                fx.vignette = true;
-                fx.speed = 1.1;
-                fx.overlayText = "INSTANT HOOK";
-                fx.overlayPosition = "top";
-              } else if (i === n - 1) {
-                // PAYOFF
-                role = "payoff";
-                fx.zoom = "out";
-                fx.vignette = true;
-                fx.speed = 0.95;
-                fx.overlayText = "KENAI – AUTO-CUT ENGINE";
-                fx.overlayPosition = "bottom";
-                fx.logoOverlay = true;
-              } else {
-                // MONTAGE-MITTEN
-                role = "montage";
-                fx.zoom = "pulse";
-                fx.vignette = false;
-                fx.speed = 1.2;
-                fx.overlayText = "SNABBA CUTS";
-                fx.overlayPosition = "center";
-              }
-            }
- 
-            // Kenai-stil: lite futuristiskt glow (placeholder)
-            if (selectedStyle === "kenai" && role === "clip") {
-              fx.zoom = "slow-in";
-              fx.vignette = true;
-              fx.overlayText = "KENAI REEL";
-              fx.overlayPosition = "bottom";
-            }
-
-            // Tarantino: retro-text (placeholder, vi bygger vidare sen)
-            if (selectedStyle === "tarantino" && role === "clip") {
-              fx.overlayText = "CHAPTER " + (i + 1);
-              fx.overlayPosition = "center";
-            }
-
-            return {
-              index: i,
-              name: f.name,
-              type: isImage ? "image" : isVideo ? "video" : "unknown",
-              size: f.size,
-              plannedDuration: durations[i],
-              role,
-              effects: fx
-            };
-          }),
-        };
-
-          style: selectedStyle,
-          targetSeconds,
-          totalFiles: n,
-          files: selectedFiles.map((f, i) => ({
-            index: i,
-            name: f.name,
-            type: f.type.startsWith("image/") ? "image" : "video",
-            size: f.size,
-            plannedDuration: durations[i],
-          })),
-        };
-
-        if (planPreview) {
-          planPreview.textContent = JSON.stringify(plan, null, 2);
-        }
-
-        if (pillDuration) {
-          const totalPlanned = durations.reduce((a, b) => a + b, 0);
-          pillDuration.innerHTML = `⏱️ <span>Total: ${totalPlanned.toFixed(1)} s</span>`;
-        }
-
-        if (statusText) {
-          statusText.textContent =
-            "Plan skapad (demo) – olika klipplogik per stil. Redo att skickas till backend / sparas som plan.json.";
-        }
+      const resp = await fetch("/api/build-reel", {
+        method: "POST",
+        body: formData,
       });
-    }
 
-    // Rendera reel (v1 demo – använder dina backend-routes)
-    if (renderBtn) {
-      renderBtn.addEventListener("click", async () => {
-        if (!selectedFiles.length) {
-          alert("Välj minst ett klipp först.");
-          return;
-        }
+      if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error("Serverfel " + resp.status + ": " + text);
+      }
 
-        // DEMO-GRÄNS: max 3 klipp
-        if (selectedFiles.length > 3) {
-          alert("Demo-version: max 3 klipp åt gången. Välj 3 eller färre.");
-          return;
-        }
+      const data = await resp.json();
 
-        const targetSeconds = getTargetSeconds();
-        const formData = new FormData();
-        formData.append("targetSeconds", String(targetSeconds));
-        formData.append("style", selectedStyle);
+      if (!data || !Array.isArray(data.clips)) {
+        logStatus("Plan skapad (demo), men svaret ser konstigt ut. Se konsolen.");
+        console.log("Plan-svar:", data);
+        return;
+      }
 
-        selectedFiles.forEach((file) => {
-          formData.append("clips", file);
-        });
-
-        try {
-          if (statusText) {
-            statusText.textContent = "Laddar upp klipp till backend (demo)...";
-          }
-
-          const uploadRes = await fetch("/api/upload-reel-clips", {
-            method: "POST",
-            body: formData,
-          });
-
-          const uploadData = await uploadRes.json();
-          console.log("Upload-svar:", uploadData);
-
-          if (!uploadData.ok) {
-            alert("Backend fel vid upload: " + (uploadData.error || "okänt fel"));
-            if (statusText) statusText.textContent = "Fel vid upload.";
-            return;
-          }
-
-          if (statusText) {
-            statusText.textContent = "Upload klar – ber backend rendera reelen (demo)...";
-          }
-
-          const renderRes = await fetch("/api/render-reel-demo", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              targetSeconds,
-              style: selectedStyle,
-              sessionId: uploadData.sessionId,
-              files: uploadData.files,
-            }),
-          });
-
-          const renderData = await renderRes.json();
-          console.log("Render-svar:", renderData);
-
-          if (!renderData.ok) {
-            alert("Backend fel vid render: " + (renderData.error || "okänt fel"));
-            if (statusText) statusText.textContent = "Fel vid render.";
-            return;
-          }
-
-          const url = renderData.outputUrl;
-
-          if (renderPreview && url) {
-            renderPreview.innerHTML = `
-              <h3 style="font-size:14px; margin-bottom:6px;">Reel renderad (demo)</h3>
-              <p style="font-size:12px; color:#9ca3af;">Klicka nedan för att spela upp eller ladda ner:</p>
-              <p><a href="${url}" target="_blank" rel="noopener">Öppna reel.mp4</a></p>
-            `;
-          }
-
-          if (statusText) {
-            statusText.textContent = "Reel klar! (demo) – kolla länken ovan.";
-          }
-
-          alert("Reel klar! (demo) – kolla länken i preview-rutan.");
-        } catch (err) {
-          console.error("Fel i upload+render-kedja:", err);
-          alert("Det blev fel när vi försökte ladda upp/rendera reelen.");
-          if (statusText) statusText.textContent = "Tekniskt fel i upload/render.";
-        }
+      const lines = data.clips.map((clip, index) => {
+        const num = index + 1;
+        const type = clip.type || "clip";
+        const dur = clip.duration != null ? clip.duration : "?";
+        const name = clip.filename || "okänt namn";
+        return num + ". " + type + " – " + dur + "s (" + name + ")";
       });
+
+      let header = "Plan klar (demo)\n";
+      header += "Stil: " + selectedStyle + "\n";
+      header += "Session: " + (data.sessionId || sessionId) + "\n\n";
+
+      const text = header + lines.join("\n");
+
+      logStatus("Plan klar (demo).");
+      if (planPreview) {
+        planPreview.textContent = text;
+      }
+    } catch (err) {
+      console.error(err);
+      logStatus("Fel när plan skulle skapas: " + err.message);
     }
+  }
 
-    // Rendera + musik (demo, ingen backend-koppling än)
-    if (renderWithMusicBtn) {
-      renderWithMusicBtn.addEventListener("click", () => {
-        if (!selectedFiles.length) {
-          alert("Välj minst ett klipp först.");
-          return;
-        }
+  // ----- Koppla knappar -----
+  if (createPlanBtn) {
+    createPlanBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      createReelPlan();
+    });
+  }
 
-        if (!audioInput || !audioInput.files.length) {
-          alert("Välj en musikfil först.");
-          return;
-        }
+  if (renderDemoBtn) {
+    renderDemoBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      logStatus("Render-demo: här kommer riktig rendering senare (placeholder).");
+    });
+  }
 
-        if (statusText) {
-          statusText.textContent =
-            "Demo: här skulle backend få både klipp + musik och bygga en synced reel.";
-        }
-
-        alert("Demo-läge: musik-render är inte kopplad till backend ännu.");
-      });
-    }
+  if (renderMusicDemoBtn) {
+    renderMusicDemoBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      logStatus("Render + musik-demo: placeholder tills musik-AI är klar.");
+    });
+  }
+})();
   </script>
 </body>
 </html>
+
