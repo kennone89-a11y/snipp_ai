@@ -366,20 +366,21 @@
     return kenaiReelsSupabaseClient;
   }
 
-      async function uploadSelectedFilesToSupabase() {
+         async function uploadSelectedFilesToSupabase() {
       if (!selectedFiles.length) {
         throw new Error("Inga filer valda för upload.");
       }
 
-      // Max filstorlek ~40 MB
-      const MAX_FILE_BYTES = 40 * 1024 * 1024;
+      // Max filstorlek ~500 MB (Supabase Pro klarar detta lätt)
+      const MAX_FILE_BYTES = 500 * 1024 * 1024;
 
       for (const file of selectedFiles) {
         if (file.size > MAX_FILE_BYTES) {
           const mb = (file.size / (1024 * 1024)).toFixed(1);
-          throw new Error(`Filen "${file.name}" är ${mb} MB. Maxstorlek är ca 40 MB per klipp.`);
+          throw new Error(`Filen "${file.name}" är ${mb} MB. Maxstorlek är ca 500 MB per klipp.`);
         }
       }
+
 
       const client = getReelsSupabaseClient();
 
