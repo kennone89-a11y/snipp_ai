@@ -698,18 +698,25 @@ app.post("/api/render-reel", async (req, res) => {
 // --- Kenai Reels: build reel (demo) ---
 app.post('/api/build-reel', (req, res) => {
   try {
-    const plan = req.body;
-
-    if (!plan || !Array.isArray(plan.files)) {
-      return res.status(400).json({ error: 'Ogiltig reel-plan (saknar files-array).' });
-    }
+    const plan = req.body || {};
+    const files = Array.isArray(plan.files) ? plan.files : [];
+    const totalFiles = files.length;
+    const targetSeconds =
+      typeof plan.targetSeconds === 'number' ? plan.targetSeconds : null;
 
     console.log('Mottog reel-plan:', JSON.stringify(plan, null, 2));
+    console.log('totalFiles:', totalFiles, 'targetSeconds:', targetSeconds);
 
-    // Demo-svar: skicka bara tillbaka planen + enkel status
     return res.json({
       ok: true,
-      message: 'Demo: build-reel backend tog emot planen. Ingen riktig video-render ännu.',
+      message:
+        'Demo: backend tog emot planen med ' +
+        totalFiles +
+        ' klipp och target ' +
+        (targetSeconds !== null ? targetSeconds : 'okänd') +
+        ' sekunder. Ingen riktig video-render ännu.',
+      totalFiles,
+      targetSeconds,
       plan,
     });
   } catch (err) {
@@ -717,7 +724,7 @@ app.post('/api/build-reel', (req, res) => {
     return res.status(500).json({ error: 'Internt serverfel i build-reel.' });
   }
 });
-  
+
 // ---- Starta servern ----
 const PORT = process.env.PORT || 3000;
 
