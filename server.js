@@ -695,6 +695,28 @@ app.post("/api/render-reel", async (req, res) => {
   }
 });
 
+// --- Kenai Reels: build reel (demo) ---
+app.post('/api/build-reel', (req, res) => {
+  try {
+    const plan = req.body;
+
+    if (!plan || !Array.isArray(plan.files)) {
+      return res.status(400).json({ error: 'Ogiltig reel-plan (saknar files-array).' });
+    }
+
+    console.log('Mottog reel-plan:', JSON.stringify(plan, null, 2));
+
+    // Demo-svar: skicka bara tillbaka planen + enkel status
+    return res.json({
+      ok: true,
+      message: 'Demo: build-reel backend tog emot planen. Ingen riktig video-render ännu.',
+      plan,
+    });
+  } catch (err) {
+    console.error('Fel i /api/build-reel:', err);
+    return res.status(500).json({ error: 'Internt serverfel i build-reel.' });
+  }
+});
 
 // ---- Starta servern ----
 const PORT = process.env.PORT || 3000;
