@@ -88,6 +88,9 @@ app.use(express.static(path.join(__dirname, "public")));
 // --- Kenai Timestamps: AI + fallback via fetch ---
 app.post("/api/timestamps", async (req, res) => {
   const { url } = req.body;
+// Kenai Reels – utgående renderade filer (v1)
+const reelsOutputDir = path.join(process.cwd(), "reels-output");
+app.use("/reels-output", express.static(reelsOutputDir));
 
   // 1) Basvalidering
   if (!url || typeof url !== "string") {
@@ -607,204 +610,91 @@ app.post(
 app.post("/api/render-reel", async (req, res) => {
   try {
     const { sessionId, plan_json } = req.body || {};
+    if (!sessionId || !plan_json) {
+      return res
+        .status(400)
+        .json({ ok: false, message: "Saknar sessionId eller plan_json." });
+    }
 
-    if (!plan_json) {
+    const plan =
+      typeof plan_json === "string" ? JSON.parse(plan_json) : plan_json;
+    const files = (plan && plan.files) || [];
+
+    // v1: ta första videoklippet i planen
+    const firstVideo = files.find(
+      (f) => f.type === "video" && f.publicUrl
+    );
+
+    if (!firstVideo) {
       return res.status(400).json({
         ok: false,
-        error: "plan_json saknas i request body",
+        message: "Ingen video hittades i planen (v1 kräver minst 1 video).",
       });
     }
 
-    let plan = null;
-    try {
-      plan = JSON.parse(plan_json);
-    } catch (e) {
-      console.error("Kunde inte parsa plan_json i /api/render-reel:", e);
-    }
+    // Säkerställ output-mapp
+    const outputDir = path.join(process.cwd(), "reels-output");
+    await fs.promises.mkdir(outputDir, { recursive: true });
 
-    const totalFiles =
-      plan && Array.isArray(plan.files) ? plan.files.length : 0;
+    const safeSession = String(sessionId).replace(/[^a-zA-Z0-9_-]/g, "");
+    const outputFilename = `kenai-reel-${safeSession || Date.now()}.mp4`;
+    const outputPath = path.join(outputDir, outputFilename);
+    const publicPath = `/reels-output/${outputFilename}`;
 
-    console.log("=== /api/render-reel DEMO ===");
-    console.log("Session:", sessionId || "ingen");
-    console.log("Stil:", plan?.style);
-    console.log("Mållängd (s):", plan?.targetSeconds);
-    console.log("Antal klipp:", totalFiles);
-    console.log("=============================");
+    const targetSeconds =
+      (plan && plan.targetSeconds && Number(plan.targetSeconds)) || 15;
 
-    // DEMO-svar – ingen riktig rendering ännu
-    return res.json({
-      ok: true,
-      message:
-        "Render-demo mottagen. Ingen riktig video byggs ännu – bara loggning.",
-      sessionId: sessionId || null,
-      summary: {
-        style: plan?.style || null,
-        targetSeconds: plan?.targetSeconds || null,
-        totalFiles,
-      },
-      videoUrl: null, // här kan vi senare skicka riktig URL när vi har ffmpeg/AI
-    });
-  } catch (err) {
-    console.error("Fel i /api/render-reel:", err);
-    return res.status(500).json({
-      ok: false,
-      error: "Internt serverfel i render-demo",
-    });
-  }
-});
-
-
-// ---- Starta servern ----
-// -------------------------------------------------------------
-// API: Upload Reel Clips (v1 demo)
-// Tar emot videoklipp, sparar i /tmp och svarar med paths
-// -------------------------------------------------------------
-app.post(
-  "/api/upload-reel-clips",
-  uploadReelsTmp.array("clips", 20),
-  async (req, res) => {
-    try {
-      console.log("⏳ /api/upload-reel-clips HIT");
-
-      const files = req.files || [];
-      const targetSeconds = parseInt(req.body?.targetSeconds || "10", 10);
-
-      if (!files.length) {
-        return res.status(400).json({
-          ok: false,
-          error: "Inga klipp uppladdade.",
-        });
-      }
-
-      const sessionId = Date.now().toString();
-
-      console.log(
-        "📥 Mottagna klipp:",
-        files.map((f) => ({
-          path: f.path,
-          size: f.size,
-          originalname: f.originalname,
-        }))
-      );
-
-      return res.json({
-        ok: true,
-        message: "Klippen är uppladdade (demo).",
-        sessionId,
-        targetSeconds,
-        files: files.map((f) => ({
-          path: f.path,
-          size: f.size,
-          originalname: f.originalname,
-        })),
-      });
-    } catch (err) {
-      console.error("❌ FEL i /api/upload-reel-clips:", err);
-      return res.status(500).json({
-        ok: false,
-        error: "Serverfel i /api/upload-reel-clips",
-      });
-    }
-  }
-);
-// -------------------------------------------------------------
-// API: Render Reel (v1 demo)
-// Tar emot lista med uppladdade filer (paths från /api/upload-reel-clips)
-// och bygger en enkel concat-reel med bara video-klipp.
-// -------------------------------------------------------------
-app.post("/api/render-reel-demo", async (req, res) => {
-  try {
-    const body = req.body || {};
-    const targetSeconds = parseInt(body.targetSeconds || "10", 10);
-    const files = Array.isArray(body.files) ? body.files : [];
-    const sessionId = body.sessionId || Date.now().toString();
-
-    if (!files.length) {
-      return res.status(400).json({
-        ok: false,
-        error: "Inga filer skickades till render.",
-      });
-    }
-
-    // Filtrera till bara video (enklaste sättet just nu: kolla på filnamn)
-    const videoFiles = files.filter((f) => {
-      const name = (f.originalname || f.path || "").toLowerCase();
-      return (
-        name.endsWith(".mp4") ||
-        name.endsWith(".mov") ||
-        name.endsWith(".webm") ||
-        name.endsWith(".m4v")
-      );
-    });
-
-    if (!videoFiles.length) {
-      return res.status(400).json({
-        ok: false,
-        error: "Hittade inga video-klipp att rendera (bara bilder?).",
-      });
-    }
-
-    const tmpDir = "/tmp"; // Render-vänligt tmp
-    const reelsDir = path.join(tmpDir, "kenai_reels");
-    await fs.mkdir(reelsDir, { recursive: true });
-
-    const listFilePath = path.join(reelsDir, `list-${sessionId}.txt`);
-    const outputFileName = `reel-${sessionId}.mp4`;
-    const outputPath = path.join(reelsDir, outputFileName);
-
-    // Skapa concat-lista för ffmpeg
-    const listContent = videoFiles
-      .map((f) => {
-        // f.path kommer från multer (/tmp/....)
-        const safePath = (f.path || "").replace(/'/g, "'\\''");
-        return `file '${safePath}'`;
-      })
-      .join("\n");
-
-    await fs.writeFile(listFilePath, listContent, "utf8");
-
-    console.log("🎬 Startar FFmpeg render...");
-    console.log("  Lista:", listFilePath);
-    console.log("  Output:", outputPath);
-
-    await new Promise((resolve, reject) => {
-      ffmpeg()
-        .input(listFilePath)
-        .inputOptions(["-f concat", "-safe 0"])
-        .outputOptions(["-c copy"])
-        .on("end", () => {
-          console.log("✅ FFmpeg klar, reel skapad:", outputPath);
-          resolve();
-        })
-        .on("error", (err) => {
-          console.error("❌ FFmpeg-fel i /api/render-reel-demo:", err);
-          reject(err);
-        })
-        .save(outputPath);
-    });
-
-    // Gör /tmp statiskt så vi kan länka direkt
-    // (om du inte redan har denna tidigare i filen)
-    // app.use("/tmp", express.static("/tmp"));
-
-    const publicUrl = `/tmp/kenai_reels/${outputFileName}`;
- 
-    return res.json({
-      ok: true,
-      message: "Reel renderad (demo).",
+    console.log("Startar reel-render v1...", {
+      sessionId,
+      source: firstVideo.publicUrl,
+      outputPath,
       targetSeconds,
-      outputUrl: publicUrl,
-      usedFiles: videoFiles.length,
     });
+
+    ffmpeg(firstVideo.publicUrl)
+      .outputOptions([
+        "-movflags +faststart",
+        "-preset veryfast",
+        `-t ${targetSeconds}`, // klipp till mål-längd
+      ])
+      .videoCodec("libx264")
+      .audioCodec("aac")
+      .size("1080x1920")
+      .on("end", () => {
+        console.log("Reel-render klar:", outputPath);
+        if (!res.headersSent) {
+          res.json({
+            ok: true,
+            message: "Reel render klar (v1 – 1-klippsrender).",
+            style: plan.style || "unknown",
+            targetSeconds,
+            downloadUrl: publicPath,
+          });
+        }
+      })
+      .on("error", (err) => {
+        console.error("Reel render fel:", err);
+        if (!res.headersSent) {
+          res.status(500).json({
+            ok: false,
+            message: "Reel render fel.",
+            error: String(err.message || err),
+          });
+        }
+      })
+      .save(outputPath);
   } catch (err) {
-    console.error("❌ FEL i /api/render-reel-demo:", err);
-    return res.status(500).json({
-      ok: false,
-      error: "Serverfel i /api/render-reel-demo",
-    });
+    console.error("/api/render-reel exception:", err);
+    if (!res.headersSent) {
+      res.status(500).json({
+        ok: false,
+        message: "Reel render kraschade.",
+        error: String(err.message || err),
+      });
+    }
   }
 });
+
 
 // ---- Starta servern ----
 const PORT = process.env.PORT || 3000;

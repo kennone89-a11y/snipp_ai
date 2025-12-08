@@ -664,43 +664,33 @@ let supabaseClient = null;
 
       logStatus("Render-demo: skickar plan till backend ...");
 
-      try {
-        const resp = await fetch("/api/render-reel", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            sessionId,
-            plan_json: JSON.stringify(currentPlan),
-          }),
-        });
+            const data = await resp.json();
+      console.log("Render-demo svar:", data);
 
-        if (!resp.ok) {
-          const text = await resp.text();
-          throw new Error("Serverfel " + resp.status + ": " + text);
-        }
-
-        const data = await resp.json();
-
-        // För demo: visa meddelande + ev. länk om backend skickar tillbaka videoUrl
-        const message =
-          data.message ||
-          "Render-demo klar (ingen riktig video ännu – bara test av flöde).";
-
-        if (data.videoUrl) {
-          logStatus(message + " URL: " + data.videoUrl);
-        } else {
-          logStatus(message);
-        }
- 
-        console.log("Render-demo svar:", data);
-      } catch (err) {
-        console.error(err);
-        logStatus("Fel i render-demo: " + err.message);
+      if (!resp.ok || !data.ok) {
+        logStatus(
+          "Render misslyckades: " + (data && data.message
+            ? data.message
+            : "okänt fel.")
+        );
+        return;
       }
-    });
-  }
+
+      // Bygg full URL till filen
+      const base = window.location.origin;
+      const downloadUrl = data.downloadUrl
+        ? base + data.downloadUrl
+        : null;
+
+      if (downloadUrl) {
+        logStatus(
+          "Reel klar! Ladda ner här: " + downloadUrl
+        );
+      } else {
+        logStatus(
+          "Reel klar (v1), men ingen downloadUrl returnerades."
+        );
+      }
 
 
   if (renderMusicDemoBtn) {
