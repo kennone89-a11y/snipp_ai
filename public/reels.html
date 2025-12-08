@@ -362,6 +362,7 @@
 </div>
 
       <h2 style="font-size: 16px; margin-bottom: 8px;">3. Förhandsgranska plan (vad AI skulle göra)</h2>
+      <p id="renderStatus" style="margin-top:4px; font-size:13px; opacity:0.9;"></p>
   <p>Ingen plan ännu, välj stil, filer och klicka på "Skapa reel-plan".</p>
       <div style="margin-bottom:8px;">
         <span class="pill pill-style" id="pillStyle">
@@ -391,6 +392,15 @@
  
  
    <script>
+   const originalAlert = window.alert;
+window.alert = function (msg) {
+  const statusEl = document.getElementById('renderStatus');
+  if (statusEl && typeof msg === 'string') {
+    statusEl.textContent = msg;
+  }
+  originalAlert(msg);
+};
+ 
   // Hämta alla viktiga element från sidan
   const fileInput = document.querySelector('input[type="file"]');
   const targetSelect = document.querySelector("select");
