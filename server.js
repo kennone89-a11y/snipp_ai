@@ -717,7 +717,7 @@ app.post('/api/build-reel', (req, res) => {
     return res.status(500).json({ error: 'Internt serverfel i build-reel.' });
   }
 });
-
+  
 // ---- Starta servern ----
 const PORT = process.env.PORT || 3000;
 
