@@ -645,15 +645,15 @@ let supabaseClient = null;
 
 
 
-  // ----- Koppla knappar -----
+    // ----- Koppla knappar -----
   if (createPlanBtn) {
-    createPlanBtn.addEventListener("click", (event) => {
+    createPlanBtn.addEventListener("click", async (event) => {
       event.preventDefault();
-      createReelPlan();
+      await createReelPlan();
     });
   }
- 
-    if (renderDemoBtn) {
+
+  if (renderDemoBtn) {
     renderDemoBtn.addEventListener("click", async (event) => {
       event.preventDefault();
 
@@ -664,43 +664,50 @@ let supabaseClient = null;
 
       logStatus("Render-demo: skickar plan till backend ...");
 
-            const data = await resp.json();
-      console.log("Render-demo svar:", data);
+      try {
+        const resp = await fetch("/api/render-reel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId,
+            plan_json: JSON.stringify(currentPlan),
+          }),
+        });
 
-      if (!resp.ok || !data.ok) {
+        const data = await resp.json();
+        console.log("Render-demo svar:", data);
+
+        if (!resp.ok || !data.ok) {
+          logStatus(
+            "Render misslyckades: " +
+              (data && data.message ? data.message : "okänt fel.")
+          );
+          return;
+        }
+
+        const base = window.location.origin;
+        const downloadUrl = data.downloadUrl
+          ? base + data.downloadUrl
+          : null;
+
+        if (downloadUrl) {
+          logStatus("Reel klar! Ladda ner här: " + downloadUrl);
+        } else {
+          logStatus(
+            "Reel klar (v1), men ingen downloadUrl returnerades."
+          );
+        }
+      } catch (err) {
+        console.error("Render-demo fel:", err);
         logStatus(
-          "Render misslyckades: " + (data && data.message
-            ? data.message
-            : "okänt fel.")
+          "Render fel: " + (err && err.message ? err.message : err)
         );
-        return;
       }
-
-      // Bygg full URL till filen
-      const base = window.location.origin;
-      const downloadUrl = data.downloadUrl
-        ? base + data.downloadUrl
-        : null;
-
-      if (downloadUrl) {
-        logStatus(
-          "Reel klar! Ladda ner här: " + downloadUrl
-        );
-      } else {
-        logStatus(
-          "Reel klar (v1), men ingen downloadUrl returnerades."
-        );
-      }
-
-
-  if (renderMusicDemoBtn) {
-    renderMusicDemoBtn.addEventListener("click", (event) => {
-      event.preventDefault();
-      logStatus("Render + musik-demo: placeholder tills musik-AI är klar.");
     });
   }
-})();
-  </script>
+</script>
 </body>
 </html>
+ 
+
 
