@@ -10,6 +10,11 @@ import { fileURLToPath } from "url";
 import OpenAI from "openai";
 import fs from "fs/promises";   // ✅ rätt variant
 import ffmpeg from "fluent-ffmpeg";
+import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
+import ffprobeInstaller from '@ffprobe-installer/ffprobe';
+
+ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+ffmpeg.setFfprobePath(ffprobeInstaller.path);
 import ffmpegPath from "ffmpeg-static";
 import multer from "multer";
 
