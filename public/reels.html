@@ -531,25 +531,78 @@ let supabaseClient = null;
   logStatus("Reel-plan (frontend demo + upload) ...");
 
 
-    // 2) Fördela tid per klipp
-    const perClip = n > 0 ? Number((targetSeconds / n).toFixed(1)) : 3;
+     // 2) Fördela tid per klipp beroende på stil
+  const styleKey =
+    window.__kenaiStyle ||
+    (typeof currentStyle !== "undefined" ? currentStyle : "basic");
 
-    // 3) Bygg file-lista med URL + storagePath
-    const files = uploaded.map((item) => {
-      const f = item.file;
-      const idx = item.index;
-      return {
-        index: idx,
-        type: f.type && f.type.startsWith("image/") ? "image" : "video",
-        role: "clip",
-        filename: f.name,
-        size: f.size,
-        plannedDuration: perClip,
-        storagePath: item.storagePath,
-        publicUrl: item.publicUrl,
-        effects: {}, // här lägger vi Marvel/Tarantino-effekter sen
-      };
-    });
+  const durations = [];
+
+  if (n === 0) {
+    // inget att göra, lämna tom durations
+  } else if (styleKey === "marvel") {
+    // MARVEL-INTRO:
+    // - Första N-1 klipp = snabba “flashar”
+    // - Sista klippet = längre hero/logga-moment
+    const total = targetSeconds || 10;
+    const count = n;
+
+    if (count === 1) {
+      // fallback – bara ett klipp, ge allt till det
+      durations.push(total);
+    } else {
+      const shortCount = count - 1;
+
+      // Min 0.7s per flash, max ~55% av totala tiden till flashar
+      const minShort = 0.7;
+      const maxShortPortion = 0.55;
+
+      const maxShortTotal = total * maxShortPortion;
+      const minShortTotal = minShort * shortCount;
+
+      // lämna minst ~1.5s till sista "hero"-klippet
+      const shortTotal = Math.max(
+        minShortTotal,
+        Math.min(maxShortTotal, total - 1.5)
+      );
+      const shortDur = shortTotal / shortCount;
+      const heroDur = Math.max(total - shortDur * shortCount, 1.5);
+
+      for (let i = 0; i < count; i++) {
+        durations.push(i === count - 1 ? heroDur : shortDur);
+      }
+    }
+  } else {
+    // Basic / Tarantino / Kenai Classic – jämn fördelning
+    const perClip = Number((targetSeconds / n).toFixed(1));
+    for (let i = 0; i < n; i++) {
+      durations.push(perClip);
+    }
+  }
+
+  // 3) Bygg file-lista med URL + storagePath
+  const files = uploaded.map((item, idx) => {
+    const f = item.file;
+    const index = item.index;
+    const isImage = f && f.type && f.type.startsWith("image/");
+    const baseDur =
+      durations[idx] !== undefined
+        ? durations[idx]
+        : n > 0
+        ? Number((targetSeconds / n).toFixed(1))
+        : 3;
+
+    return {
+      index,
+      type: isImage ? "image" : "video",
+      filename: f.name,
+      plannedDuration: Number(baseDur.toFixed(2)),
+      storagePath: item.storagePath,
+      publicUrl: item.publicUrl,
+      effects: [], // här lägger vi Marvel/Tarantino-effekter sen
+    };
+  });
+
 
     const plan = {
       style: selectedStyle,
@@ -557,7 +610,7 @@ let supabaseClient = null;
       totalFiles: n,
       files,
     };
-
+ 
     // 4) Spara planen globalt
     currentPlan = plan;
 
