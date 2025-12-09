@@ -541,9 +541,9 @@ if (renderBasicBtn) {
 <script>
   async function renderReelApi() {
     try {
-      console.log("Startar riktig render via /api/render-reel");
+     console.log("Startar riktig render via /api/render-reel (v1)");
+     const res = await fetch("/api/render-reel", {
 
-      const res = await fetch("/api/render-reel-test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}), // backend använder test_clips just nu
