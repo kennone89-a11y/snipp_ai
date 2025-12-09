@@ -539,18 +539,32 @@ if (renderBasicBtn) {
   }
 </script>
 <script>
-  async function renderReelApi() {
-    try {
-     console.log("Startar riktig render via /api/render-reel (v1)");
-     const res = await fetch("/api/render-reel", {
+  async function renderReelApi(styleKey, withMusic = false) {
+  console.log("Startar riktig render via /api/render-reel (v1)");
 
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}), // backend använder test_clips just nu
-      });
+  // plan som skapades i "Skapa reel-plan (demo)"
+  const plan = window.currentPlan;
 
-      const data = await res.json();
-      console.log("Render-svar:", data);
+  if (!plan) {
+    console.error("Ingen plan hittad – kör 'Skapa reel-plan (demo)' först.");
+    alert("Ingen plan hittad – kör 'Skapa reel-plan (demo)' först.");
+    return;
+  }
+
+  const payload = {
+    plan: plan,
+  };
+
+  const res = await fetch("/api/render-reel", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json();
+  console.log("Render-svar:", data);
+  return data;
+}
 
       if (!res.ok || !data.ok) {
         alert(data.error || "Fel vid render");
