@@ -612,7 +612,7 @@ app.post(
 // Tar emot plan eller plan_json och gör enkel koll + demo-respons (ingen riktig render än).
 app.post("/api/render-reel", async (req, res) => {
   try {
-    const { sessionId, plan_json, plan: planDirect } = req.body || {};
+       const { sessionId, plan_json, plan: planDirect } = req.body || {};
 
     // Tillåt antingen plan (direkt) eller plan_json (string/objekt)
     let plan;
