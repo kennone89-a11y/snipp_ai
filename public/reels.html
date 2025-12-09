@@ -539,17 +539,12 @@ if (renderBasicBtn) {
   }
 </script>
 <script>
-  async function renderReelApi(styleKey, withMusic = false) {
-  console.log("Startar riktig render via /api/render-reel (v1)");
+  async function renderReelApi() {
+  alert("Reel-render kommer snart – backend byggs fortfarande.");
+  console.log("renderReelApi är tillfälligt avstängd.");
+  return;
+}
 
-  // plan som skapades i "Skapa reel-plan (demo)"
-  const plan = window.currentPlan;
-
-  if (!plan) {
-    console.error("Ingen plan hittad – kör 'Skapa reel-plan (demo)' först.");
-    alert("Ingen plan hittad – kör 'Skapa reel-plan (demo)' först.");
-    return;
-  }
 
   const payload = {
     plan: plan,
