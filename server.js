@@ -621,9 +621,29 @@ app.post("/api/render-reel", async (req, res) => {
         .json({ ok: false, message: "Saknar sessionId eller plan_json." });
     }
 
-    const plan =
+        const plan =
       typeof plan_json === "string" ? JSON.parse(plan_json) : plan_json;
     const files = (plan && plan.files) || [];
+
+    // --- NYTT: enkel total size-limit för att undvika OOM på Render ---
+    const MAX_BYTES = 200 * 1024 * 1024; // ca 200 MB totalt
+    const totalSize = files.reduce((sum, f) => sum + (f.size || 0), 0);
+
+    if (totalSize > MAX_BYTES) {
+      const totalMB = Number((totalSize / 1024 / 1024).toFixed(1));
+      const maxMB = MAX_BYTES / 1024 / 1024;
+
+      console.log("Render-plan för stor:", totalMB, "MB");
+
+      return res.status(400).json({
+        ok: false,
+        error: `Filerna är för stora för nuvarande server (max ca ${maxMB} MB, du skickade ${totalMB} MB). Komprimera klippen eller använd kortare klipp.`,
+        tooBig: true,
+        totalMB,
+        maxMB,
+      });
+    }
+    // --- SLUT NYTT ---
 
     // v1: ta första videoklippet i planen
     const firstVideo = files.find(
