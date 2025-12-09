@@ -349,9 +349,15 @@
   Skapa reel-plan (demo)
 </button>
 
-<button id="renderBtn" class="primary" style="margin-left:8px;">
+<button
+  id="renderBtn"
+  class="primary"
+  style="margin-left:8px;"
+  onclick="renderReelApi()"
+>
   Rendera reel (v1 demo)
 </button>
+
 
 <button id="renderWithMusicBtn" class="primary" style="margin-left:8px;">
   Rendera + musik (demo)
@@ -530,6 +536,32 @@ if (renderBasicBtn) {
 
       alert("Demo-läge: musik-render är inte kopplad till backend ännu.");
     });
+  }
+</script>
+<script>
+  async function renderReelApi() {
+    try {
+      console.log("Startar riktig render via /api/render-reel");
+
+      const res = await fetch("/api/render-reel-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}), // backend använder test_clips just nu
+      });
+
+      const data = await res.json();
+      console.log("Render-svar:", data);
+
+      if (!res.ok || !data.ok) {
+        alert(data.error || "Fel vid render");
+        return;
+      }
+
+      alert(data.message || "Reel render klar – kolla test_output/reel-from-api.mp4 på servern.");
+    } catch (err) {
+      console.error("Fel i renderReelApi():", err);
+      alert("Något gick fel vid render.");
+     }
   }
 </script>
 </body>

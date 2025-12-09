@@ -2,26 +2,22 @@
 import dotenv from "dotenv";
 dotenv.config({ override: true });
 
-
 import express from "express";
 import path from "path";
-import PDFDocument from "pdfkit";
-import { fileURLToPath } from "url";
+import bodyParser from "body-parser";
 import OpenAI from "openai";
-import fs from "fs/promises";   // ✅ rätt variant
+import fs from "fs";
 import ffmpeg from "fluent-ffmpeg";
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
-import ffprobeInstaller from '@ffprobe-installer/ffprobe';
+import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
+import ffprobeInstaller from "@ffprobe-installer/ffprobe";
+import multer from "multer";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 ffmpeg.setFfprobePath(ffprobeInstaller.path);
-import ffmpegPath from "ffmpeg-static";
-import multer from "multer";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = path.resolve();
 
-// ---- OpenAI-klient + helper ----
+// --- OpenAI-klient + helper ---
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -33,6 +29,10 @@ function requireOpenAIKey() {
   }
   return key;
 }
+
+// --- här nedanför ska det fortsätta som du redan har ---
+// --- Multer: spara filer i /tmp (Render-vänligt) ----
+
 
 const app = express();
 
@@ -57,7 +57,7 @@ const upload = multer({
 const uploadReelsTmp = upload;
 
 // Koppla fluent-ffmpeg till ffmpeg-static binären
-ffmpeg.setFfmpegPath(ffmpegPath);
+
 
 app.set("trust proxy", 1);
 
@@ -729,6 +729,84 @@ app.post('/api/build-reel', (req, res) => {
     return res.status(500).json({ error: 'Internt serverfel i build-reel.' });
   }
 });
+app.post('/api/render-reel-test', async (req, res) => {
+  try {
+    console.log('API /api/render-reel-test body:', req.body);
+
+    // 1) Kataloger och filer
+    const inputDir = path.join(__dirname, 'test_clips');
+    const outputDir = path.join(__dirname, 'test_output');
+    const outputFile = path.join(outputDir, 'reel-from-api.mp4');
+
+    // Här använder vi dina två test-klipp
+    const clips = [
+      path.join(inputDir, 'clip1.MOV.MOV'),
+      path.join(inputDir, 'clip2.MOV.MOV'),
+    ];
+
+    // 2) Se till att output-mapp finns
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    // 3) Kolla att alla klipp finns
+    for (const file of clips) {
+      if (!fs.existsSync(file)) {
+        console.error('Hittar inte klipp:', file);
+        return res.status(400).json({
+          ok: false,
+          error: `Hittar inte klipp: ${file}`,
+        });
+      }
+    }
+
+    console.log('Bygger reel av klipp (API):');
+    clips.forEach((c, i) => console.log(`${i + 1}: ${c}`));
+    console.log('Utfil:', outputFile);
+
+    // 4) Bygg ffmpeg-kommando
+    const command = ffmpeg();
+    clips.forEach((file) => {
+      command.input(file);
+    });
+
+    command
+      .on('start', (cmd) => {
+        console.log('FFmpeg start:', cmd);
+      })
+      .on('error', (err) => {
+        console.error('FFmpeg error:', err);
+        if (!res.headersSent) {
+          res.status(500).json({
+            ok: false,
+            error: 'FFmpeg misslyckades',
+            details: String(err),
+          });
+        }
+      })
+      .on('end', () => {
+        console.log('FFmpeg klar, skapade:', outputFile);
+        if (!res.headersSent) {
+          res.json({
+            ok: true,
+            message: 'Reel render klar',
+            outputPath: '/test_output/reel-from-api.mp4',
+          });
+        }
+      })
+      .mergeToFile(outputFile, outputDir);
+  } catch (err) {
+    console.error('Fel i /api/render-reel-test:', err);
+    if (!res.headersSent) {
+      res.status(500).json({
+        ok: false,
+        error: 'Serverfel i /api/render-reel-test',
+        details: String(err),
+      });
+    }
+  }
+});
+
 
 // ---- Starta servern ----
 const PORT = process.env.PORT || 3000;
