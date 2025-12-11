@@ -328,14 +328,21 @@ app.post(
   upload.array("clips", 10),
   async (req, res) => {
     try {
-      const files = req.files || [];
+         // Lista med klipp att rendera (antingen plan.files eller plan.clips)
+    const files =
+      Array.isArray(plan.files) && plan.files.length > 0
+        ? plan.files
+        : Array.isArray(plan.clips) && plan.clips.length > 0
+        ? plan.clips
+        : [];
 
-      if (!files.length) {
-        return res.status(400).json({
-          ok: false,
-          error: "Inga klipp skickades till render-basic.",
-        });
-      }
+    if (!files.length) {
+      return res.status(400).json({
+        ok: false,
+        message: "Inga klipp i planen (plan.files eller plan.clips).",
+      });
+    }
+
 
       const imageFiles = files.filter((f) =>
         (f.mimetype || "").startsWith("image/")
