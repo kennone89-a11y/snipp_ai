@@ -613,6 +613,33 @@ app.post(
   });
 }
 });  
+2. På den tomma raden: klistra in detta block:
+
+```js
+// --- Kenai Recorder: /api/summarize (enkel version) ---
+app.post("/api/summarize", async (req, res) => {
+try {
+ const { publicUrl } = req.body || {};
+ console.log("/api/summarize kallad, publicUrl =", publicUrl);
+
+ // Enkel placeholder-sammanfattning så allt flöde funkar.
+ const summaryText =
+   "Backend /api/summarize svarar. AI-sammanfattningen är inte helt inkopplad i denna build, men URL:en togs emot korrekt.";
+
+ return res.status(200).json({
+   ok: true,
+   summary: summaryText,
+   publicUrl,
+ });
+} catch (err) {
+ console.error("Fel i /api/summarize:", err);
+ return res.status(500).json({
+   ok: false,
+   message: "Serverfel i /api/summarize.",
+   error: String(err && err.message ? err.message : err),
+ });
+}
+});
 
  
 
