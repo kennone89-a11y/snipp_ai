@@ -610,7 +610,9 @@ app.post(
       return res.status(500).json({
         ok: false,
         error: "Serverfel i render-with-audio.",
-
+  });
+}
+});  
 
 
 
