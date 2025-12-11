@@ -612,27 +612,7 @@ app.post(
         error: "Serverfel i render-with-audio.",
       });
     }
-  }
-);
-
-
-
-
-
-      })
-      .save(outputPath);
-  } catch (err) {
-    console.error("/api/render-reel exception:", err);
-    if (!res.headersSent) {
-      res.status(500).json({
-        ok: false,
-        message: "Reel render kraschade.",
-        error: String(err.message || err),
-      });
-    }
-  }
-});
-
+   );
 
 
 // --- Reels: test-render med fasta klipp (för testning) ---
