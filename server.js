@@ -610,9 +610,8 @@ app.post(
       return res.status(500).json({
         ok: false,
         error: "Serverfel i render-with-audio.",
-      });
-    }
-   );
+
+
 
 
 // --- Reels: test-render med fasta klipp (för testning) ---
