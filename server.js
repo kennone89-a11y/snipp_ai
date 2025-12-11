@@ -657,27 +657,6 @@ app.post("/api/render-reel", async (req, res) => {
       });
     }
 
-    const files = Array.isArray(plan.files) ? plan.files : [];
-
-    // --- enkel total size-limit för att undvika OOM på Render ---
-    const MAX_BYTES = 200 * 1024 * 1024; // ca 200 MB totalt
-    const totalSize = files.reduce((sum, f) => sum + (f.size || 0), 0);
-
-    if (totalSize > MAX_BYTES) {
-      const totalMB = Number((totalSize / 1024 / 1024).toFixed(1));
-      const maxMB = MAX_BYTES / 1024 / 1024;
-
-      console.log("Render-plan för stor:", totalMB, "MB");
-
-      return res.status(400).json({
-        ok: false,
-        error: `Filerna är för stora för nuvarande server (max ca ${maxMB} MB, du skickade ${totalMB} MB).`,
-        tooBig: true,
-        totalMB,
-        maxMB,
-      });
-    }
-    // --- slut size-limit ---
 
     // v1: ta första videon (kan användas senare för riktig ffmpeg-render)
     const firstVideo = files.find((f) => f.type === "video" && f.publicUrl);
@@ -816,45 +795,7 @@ app.post("/api/render-reel", async (req, res) => {
 // Rutt: Build Reel (v1 demo backend) – enkel version
 
 
-// Enkel demo: tar emot plan och svarar med text (ingen riktig render än).
-app.post("/api/render-reel", async (req, res) => {
-  try {
-    // frontend ska skicka plan här
-    const plan = req.body.plan || null;
 
-    if (!plan) {
-      return res.status(400).json({
-        ok: false,
-        message: "Saknar plan i requesten (body.plan).",
-      });
-    }
-
-    const files = Array.isArray(plan.files) ? plan.files : [];
-    const targetSeconds =
-      typeof plan.targetSeconds === "number" ? plan.targetSeconds : null;
-
-    console.log("Render v1-demo – plan:", {
-      totalFiles: files.length,
-      targetSeconds,
-    });
-
-    // DEMO-svar (ingen riktig video-render ännu)
-    return res.json({
-      ok: true,
-      message: `Demo: backend tog emot planen med ${files.length} klipp och target ${targetSeconds} sekunder. Ingen riktig video-render ännu.`,
-      totalFiles: files.length,
-      targetSeconds,
-      plan,
-    });
-  } catch (err) {
-    console.error("Fel i /api/render-reel:", err);
-    return res.status(500).json({
-      ok: false,
-      message: "Serverfel i /api/render-reel.",
-      error: String((err && err.message) || err),
-    });
-  }
-});
 
 
 // --- Kenai Reels: build reel (demo) ---
