@@ -797,11 +797,6 @@ app.post("/api/render-reel", async (req, res) => {
 
 
 
-
-// --- Kenai Reels: build reel (demo) ---
-app.post("/api/build-reel", (req, res) => {
-  ...
-});
 // --- Kenai Reels: build reel (demo) ---
 app.post('/api/build-reel', (req, res) => {
   try {
