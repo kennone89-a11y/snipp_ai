@@ -635,30 +635,31 @@ app.post(
 
 
 
-app.post('/api/render-reel-test', async (req, res) => {
+// --- Reels: test-render med fasta klipp (för testning) ---
+app.post("/api/render-reel-test", async (req, res) => {
   try {
-    console.log('API /api/render-reel-test body:', req.body);
+    console.log("/api/render-reel-test body:", req.body);
 
-    // 1) Kataloger och filer
-    const inputDir = path.join(__dirname, 'test_clips');
-    const outputDir = path.join(__dirname, 'test_output');
-    const outputFile = path.join(outputDir, 'reel-from-api.mp4');
-
-    // Här använder vi dina två test-klipp
-    const clips = [
-      path.join(inputDir, 'clip1.MOV.MOV'),
-      path.join(inputDir, 'clip2.MOV.MOV'),
-    ];
+    // 1) Kataloger och filnamn
+    const clipsDir = path.join(__dirname, "test_clips");
+    const outputDir = path.join(__dirname, "test_output");
+    const outputFile = path.join(outputDir, "reel-from-api.mp4");
 
     // 2) Se till att output-mapp finns
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    // 3) Kolla att alla klipp finns
+    // 3) En enkel lista med dina test-klipp
+    const clips = [
+      path.join(clipsDir, "clip1.MOV"),
+      path.join(clipsDir, "clip2.MOV"),
+    ];
+
+    // 4) Kolla att alla klipp finns
     for (const file of clips) {
       if (!fs.existsSync(file)) {
-        console.error('Hittar inte klipp:', file);
+        console.error("Hittar inte klipp:", file);
         return res.status(400).json({
           ok: false,
           error: `Hittar inte klipp: ${file}`,
@@ -666,58 +667,55 @@ app.post('/api/render-reel-test', async (req, res) => {
       }
     }
 
-    console.log('Bygger reel av klipp (API):');
-    clips.forEach((c, i) => console.log(`${i + 1}: ${c}`));
-    console.log('Utfil:', outputFile);
+    console.log("Bygger reel av klipp (API):");
+    clips.forEach((f, i) => console.log(`${i + 1}: ${f}`));
+    console.log("Outputfil:", outputFile);
 
-    // 4) Bygg ffmpeg-kommando
+    // 5) Bygg ffmpeg-kommando
     const command = ffmpeg();
     clips.forEach((file) => {
       command.input(file);
     });
 
     command
-      .on('start', (cmd) => {
-        console.log('FFmpeg start:', cmd);
+      .on("start", (cmd) => {
+        console.log("FFmpeg start:", cmd);
       })
-      .on('error', (err) => {
-        console.error('FFmpeg error:', err);
+      .on("error", (err) => {
+        console.error("FFmpeg error:", err);
         if (!res.headersSent) {
-          res.status(500).json({
+          return res.status(500).json({
             ok: false,
-            error: 'FFmpeg misslyckades',
+            message: "FFmpeg misslyckades.",
             details: String(err),
           });
         }
       })
-      .on('end', () => {
-        console.log('FFmpeg klar, skapade:', outputFile);
+      .on("end", () => {
+        console.log("FFmpeg klar, skapade:", outputFile);
         if (!res.headersSent) {
-          res.json({
+          return res.json({
             ok: true,
-            message: 'Reel render klar',
-            outputPath: '/test_output/reel-from-api.mp4',
+            message: "Reel render klar.",
+            outputPath: "/test_output/reel-from-api.mp4",
           });
         }
       })
       .mergeToFile(outputFile, outputDir);
   } catch (err) {
-    console.error('Fel i /api/render-reel-test:', err);
+    console.error("Fel i /api/render-reel-test:", err);
     if (!res.headersSent) {
-      res.status(500).json({
+      return res.status(500).json({
         ok: false,
-        error: 'Serverfel i /api/render-reel-test',
+        message: "Serverfel i /api/render-reel-test.",
         details: String(err),
       });
     }
   }
 });
 
-
-// ---- Starta servern ----
+// --- Starta servern ---
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
   console.log(`Kenai backend kör på port ${PORT}`);
 });
-
