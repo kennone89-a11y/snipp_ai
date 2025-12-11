@@ -613,8 +613,6 @@ app.post(
   });
 }
 });  
-2. På den tomma raden: klistra in detta block:
-
 ```js
 // --- Kenai Recorder: /api/summarize (enkel version) ---
 app.post("/api/summarize", async (req, res) => {
