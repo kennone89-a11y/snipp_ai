@@ -1,0 +1,327 @@
+/* Baslayout */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Segoe UI", sans-serif;
+  background: #020617;
+  color: #e5e7eb;
+}
+
+#app {
+  position: relative;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Bakgrunds-glow */
+.bg-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(59, 130, 246, 0.35), transparent 55%),
+    radial-gradient(circle at 80% 100%, rgba(236, 72, 153, 0.35), transparent 55%),
+    radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 1), rgba(2, 6, 23, 1));
+  filter: blur(2px);
+  z-index: 0;
+}
+
+/* Intro-container */
+.intro-container {
+  position: relative;
+  z-index: 1;
+  width: min(900px, 90vw);
+  aspect-ratio: 16 / 9;
+  border-radius: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: radial-gradient(circle at top, #020617, #020617 40%, #030712 100%);
+  box-shadow:
+    0 40px 80px rgba(15, 23, 42, 0.9),
+    0 0 60px rgba(59, 130, 246, 0.3);
+  overflow: hidden;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Panel-rad (fejk Marvel-klipp) */
+.panel-strip {
+  display: flex;
+  gap: 8px;
+  width: 140%;
+  transform: translateX(-20%);
+  margin-bottom: 12px;
+  animation: slide-panels 2s ease-in-out forwards;
+}
+
+.panel {
+  flex: 1;
+  height: 80px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(248, 250, 252, 0.8);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Olika färg/grain per panel – här lägger vi senare riktiga bilder/klipp */
+.panel-1 {
+  background: linear-gradient(135deg, #0f172a, #1d4ed8);
+}
+.panel-2 {
+  background: linear-gradient(135deg, #020617, #be123c);
+}
+.panel-3 {
+  background: linear-gradient(135deg, #020617, #22c55e);
+}
+.panel-4 {
+  background: linear-gradient(135deg, #0f172a, #7c3aed);
+}
+/* Paneler när de har bilder */
+.panel.has-image {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Lite mörk overlay så texten syns om bild är ljus */
+.panel.has-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at center,
+    rgba(15, 23, 42, 0.2),
+    rgba(15, 23, 42, 0.7)
+  );
+}
+
+/* Rad för file input */
+.upload-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.upload-row input[type="file"] {
+  font-size: 11px;
+}
+
+
+/* Fejk "scanlines" */
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(15, 23, 42, 0.2) 0,
+    rgba(15, 23, 42, 0.2) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: soft-light;
+}
+
+/* Centrala loggan */
+.logo-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-border {
+  padding: 8px;
+  border-radius: 12px;
+  border: 2px solid rgba(248, 250, 252, 0.8);
+  box-shadow:
+    0 0 30px rgba(59, 130, 246, 0.7),
+    0 0 60px rgba(129, 140, 248, 0.6);
+  animation: logo-glow 2.4s ease-in-out infinite alternate;
+}
+.logo-image {
+  display: block;
+  width: clamp(140px, 40%, 240px);
+  height: auto;
+  border-radius: 999px;
+  object-fit: cover;
+  box-shadow: 0 0 30px rgba(56, 189, 248, 0.7);
+  transform-origin: center;
+  animation:
+    coin-pop 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    coin-pulse 2.4s ease-in-out infinite 0.8s;
+}
+@keyframes coin-pop {
+  0% {
+    transform: scale(0.4) rotate(-10deg);
+    opacity: 0;
+  }
+  40% {
+    transform: scale(1.08) rotate(4deg);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.96) rotate(-2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+ 
+@keyframes coin-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 40px rgba(56, 189, 248, 0.9);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+  }
+}
+
+.logo-wordmark {
+  margin-top: 12px;
+  padding: 6px 24px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #020617, #0f172a, #020617);
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(248, 250, 252, 0.9);
+  text-align: center;
+  text-indent: 0.28em;
+  box-shadow: 0 0 18px rgba(15, 23, 42, 0.9);
+}
+ 
+
+
+.logo-text {
+  padding: 10px 40px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #f97316, #dc2626);
+  color: #f9fafb;
+  font-weight: 900;
+  letter-spacing: 0.35em;
+  text-indent: 0.35em;
+  font-size: clamp(20px, 3vw, 32px);
+  text-transform: uppercase;
+  box-shadow: 0 0 20px rgba(248, 113, 113, 0.8);
+}
+
+/* Undertext */
+.subtitle {
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+/* Replay-knapp */
+#replay-btn {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  z-index: 2;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.8);
+  background: rgba(15, 23, 42, 0.9);
+  padding: 8px 16px;
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #e5e7eb;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+#replay-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.8);
+  border-color: rgba(248, 250, 252, 0.9);
+}
+
+/* Animationer */
+@keyframes slide-panels {
+  0% {
+    transform: translateX(-60%);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-10%);
+    opacity: 1;
+  }
+}
+
+@keyframes logo-glow {
+  0% {
+    box-shadow:
+      0 0 10px rgba(59, 130, 246, 0.5),
+      0 0 25px rgba(129, 140, 248, 0.4);
+    transform: scale(0.98);
+  }
+  100% {
+    box-shadow:
+      0 0 25px rgba(59, 130, 246, 0.9),
+      0 0 55px rgba(129, 140, 248, 0.9);
+    transform: scale(1.02);
+  }
+}
+
+/* Mobilfix */
+@media (max-width: 600px) {
+  .intro-container {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .panel-strip {
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    font-size: 9px;
+    letter-spacing: 0.18em;
+  }
+
+  #replay-btn {
+    bottom: 12px;
+    right: 12px;
+    padding: 6px 12px;
+  }
+}
