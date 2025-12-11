@@ -792,54 +792,8 @@ app.post("/api/render-reel", async (req, res) => {
     }
   }
 });
-// Rutt: Build Reel (v1 demo backend) – enkel version
 
 
-
-
-/// --- Kenai Reels: build reel (demo) ---
-app.post("/api/build-reel", (req, res) => {
-  try {
-    const plan = req.body.plan || null;
-
-    if (!plan) {
-      return res.status(400).json({
-        ok: false,
-        message: "Saknar plan i requesten (body.plan).",
-      });
-    }
-
-    const files = Array.isArray(plan.files) ? plan.files : [];
-    const totalFiles = files.length;
-    const targetSeconds =
-      typeof plan.targetSeconds === "number" ? plan.targetSeconds : null;
-
-    console.log("Reel build plan (demo):", {
-      totalFiles,
-      targetSeconds,
-      plan,
-    });
-
-    // DEMO-svar (ingen riktig video-render ännu)
-    return res.json({
-      ok: true,
-      note:
-        "Demo: backend tog emot planen med " +
-        `${totalFiles} klipp och target ${targetSeconds ?? "okänt"} sekunder. ` +
-        "Riktig video-render kommer i nästa version.",
-      totalFiles,
-      targetSeconds,
-      plan,
-    });
-  } catch (err) {
-    console.error("Fel i /api/build-reel (demo):", err);
-    return res.status(500).json({
-      ok: false,
-      message: "Serverfel i /api/build-reel (demo).",
-      error: String(err && err.message) || String(err),
-    });
-  }
-});
 
 app.post('/api/render-reel-test', async (req, res) => {
   try {
