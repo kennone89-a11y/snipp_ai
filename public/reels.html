@@ -398,8 +398,12 @@
  
 <script>
 (() => {
-// Elements
+  const API_BASE = location.origin.includes("localhost")
+  ? "http://65.109.1.72:3000"
+  : location.origin;
 
+// Elements
+ 
 const fileInputMulti  = document.getElementById("fileInputMulti");
 
 const targetSelect = document.querySelector("select");
@@ -480,8 +484,8 @@ async function createReelPlan() {
     const fd = new FormData();
     fd.append("plan", JSON.stringify(plan));
     for (const f of files) fd.append("clips", f);
-
-    const res = await fetch("/api/reels/render", { method: "POST", body: fd });
+ 
+    const res = awaitfetch(`${API_BASE}/api/render-reel`, {method: "POST", body: fd });
 
     const ct = (res.headers.get("content-type") || "").toLowerCase();
     let data = null;

@@ -35,9 +35,11 @@ function requireOpenAIKey() {
   return key;
 }
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // kan vara undefined i dev; vissa routes kräver key
-});
+function getOpenAI() {
+  const key = requireOpenAIKey();
+  return new OpenAI({ apiKey: key });
+}
+
 
 // ---- Multer: spara filer i /tmp (Render-vänligt) ----
 const storage = multer.diskStorage({
@@ -462,11 +464,37 @@ app.post(
 ========================= */
 app.post("/api/summarize", async (req, res) => {
   try {
-    const { publicUrl } = req.body || {};
-    const summaryText =
-      "Backend /api/summarize svarar. AI-sammanfattningen är inte helt inkopplad i denna build, men URL:en togs emot korrekt.";
+    const { text, publicUrl } = req.body || {};
 
-    return res.status(200).json({ ok: true, summary: summaryText, publicUrl });
+    // 1) Om frontend redan skickar text (t.ex. transcript) -> sammanfatta direkt.
+    if (text && typeof text === "string" && text.trim().length > 0) {
+      const openai = getOpenAI();
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4.1-mini",
+        temperature: 0.4,
+        messages: [
+          { role: "system", content: "Du skriver korta, tydliga sammanfattningar på svenska." },
+          {
+            role: "user",
+            content:
+              "Sammanfatta detta i 6-10 bullet points + 1 kort slutsats:\n\n" + text.trim(),
+          },
+        ],
+      });
+
+      const summary = (completion.choices?.[0]?.message?.content || "").trim();
+      if (!summary) return res.status(500).json({ ok: false, error: "Tomt AI-svar" });
+
+      return res.json({ ok: true, summary, publicUrl: publicUrl || null });
+    }
+
+    // 2) Om du bara skickar publicUrl men ingen text ännu:
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Saknar 'text' i body. Den här builden sammanfattar text. Skicka { text: '...', publicUrl?: '...' }.",
+    });
   } catch (err) {
     console.error("Fel i /api/summarize:", err);
     return res.status(500).json({
@@ -476,6 +504,7 @@ app.post("/api/summarize", async (req, res) => {
     });
   }
 });
+
 
 /* =========================
    Test: render reel from fixed local clips
@@ -541,6 +570,25 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
+app.use((err, req, res, next) => {
+  if (err && err.name === "MulterError") {
+    return res.status(400).json({ ok: false, error: err.code, message: err.message });
+  }
+  next(err);
+});
+
+app.get("/api/health", (req, res) => {
+  res.json({
+    ok: true,
+    hasOpenAIKey: Boolean(process.env.OPENAI_API_KEY),
+    node: process.version,
+  });
+});
+
+// ---- Start ----
+app.listen(PORT, () => {
+  console.log("Kenai backend kör på port " + PORT);
+});
 
 // ---- Start ----
 app.listen(PORT, () => {
