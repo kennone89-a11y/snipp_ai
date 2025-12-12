@@ -279,7 +279,8 @@
     <button id="uploadBtn" class="primary" onclick="uploadRecording()">
   Ladda upp & AI-sammanfatta
 </button>
-<p id="aiStatus" style="font-size:13px;color:#9aa0c2;margin-top:6px;"></p>
+<p id="aiStatusText" style="font-size:13px;color:#9aa0c2;margin-top:6px;"></p>
+
 
 
   </div>
@@ -357,47 +358,34 @@
     const { createClient } = supabase;
     const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // DOM-element
+ // DOM-element
 const startBtn = document.getElementById("startBtn");
 const stopBtn = document.getElementById("stopBtn");
+const uploadBtn = document.getElementById("uploadBtn");
+const summaryBtn = document.getElementById("summaryBtn");
+const pdfBtn = document.getElementById("pdfBtn");
+const mailBtn = document.getElementById("mailBtn");
+const mailInput = document.getElementById("mailInput");
+
 const timerEl = document.getElementById("timer");
 const player = document.getElementById("player");
 const urlInput = document.getElementById("urlInput");
 const summaryEl = document.getElementById("summary");
 const statusEl = document.getElementById("status");
 const logEl = document.getElementById("log");
-const aiStatusEl = document.getElementById("aiStatus"); // 👈 nytt id
 
-function setAIStatus(msg) {
-  if (!aiStatusEl) return;
-  aiStatusEl.textContent = msg || "";
-}
+const aiStatusEl = document.getElementById("aiStatus");       // div.ai-status
+const aiStatusTextEl = document.getElementById("aiStatusText"); // p under upload
 
-
-// Inspelnings­tillstånd (LÅT DETTA OCH ALLT NEDAN VARA KVAR)
-let mediaRecorder = null;
-let chunks = [];
-let audioBlob = null;
-let publicUrl = null;
-let timerId = null;
-let startTime = 0;
-
-function setStatus(t) {
-  if (statusEl) statusEl.textContent = t || "";
-  console.log("STATUS:", t);
-}
-
-function setLog(t) {
-  if (logEl) logEl.textContent = t || "";
-  console.log("LOG:", t);
-}
-
-// AI-jobbar status
 function setAIStatus(message, done = false) {
+  // liten text under upload-knappen
+  if (aiStatusTextEl) aiStatusTextEl.textContent = message || "";
+
+  // fancy status i steg 3
   if (!aiStatusEl) return;
 
   if (!message) {
-    aiStatusEl.textContent = "";
+    aiStatusEl.innerHTML = "";
     aiStatusEl.classList.remove("done");
     return;
   }
@@ -408,6 +396,7 @@ function setAIStatus(message, done = false) {
     <span>${message}</span>
   `;
 }
+
 
 
     function fmt(seconds) {
@@ -556,7 +545,7 @@ setLog("Public URL hämtad.");
     res = await fetch(`${backendBase}/api/summarize`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ publicUrl: url }),
     });
 
     txt = await res.text();

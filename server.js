@@ -464,46 +464,62 @@ app.post(
 ========================= */
 app.post("/api/summarize", async (req, res) => {
   try {
-    const { text, publicUrl } = req.body || {};
+    const { publicUrl, url } = req.body || {};
+    const audioUrl = publicUrl || url;
 
-    // 1) Om frontend redan skickar text (t.ex. transcript) -> sammanfatta direkt.
-    if (text && typeof text === "string" && text.trim().length > 0) {
-      const openai = getOpenAI();
-
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4.1-mini",
-        temperature: 0.4,
-        messages: [
-          { role: "system", content: "Du skriver korta, tydliga sammanfattningar på svenska." },
-          {
-            role: "user",
-            content:
-              "Sammanfatta detta i 6-10 bullet points + 1 kort slutsats:\n\n" + text.trim(),
-          },
-        ],
-      });
-
-      const summary = (completion.choices?.[0]?.message?.content || "").trim();
-      if (!summary) return res.status(500).json({ ok: false, error: "Tomt AI-svar" });
-
-      return res.json({ ok: true, summary, publicUrl: publicUrl || null });
+    if (!audioUrl || typeof audioUrl !== "string") {
+      return res.status(400).json({ ok: false, error: "Saknar publicUrl (eller url) i body." });
     }
 
-    // 2) Om du bara skickar publicUrl men ingen text ännu:
-    return res.status(400).json({
-      ok: false,
-      error:
-        "Saknar 'text' i body. Den här builden sammanfattar text. Skicka { text: '...', publicUrl?: '...' }.",
+    const openai = getOpenAI();
+
+    // 1) Ladda ner ljudet från Supabase public URL
+    const r = await fetch(audioUrl);
+    if (!r.ok) {
+      return res.status(400).json({ ok: false, error: "Kunde inte hämta ljud från publicUrl." });
+    }
+
+    const contentType = r.headers.get("content-type") || "audio/webm";
+    const arrayBuf = await r.arrayBuffer();
+    const audioBuf = Buffer.from(arrayBuf);
+
+    // 2) Transkribera
+    const transcriptResp = await openai.audio.transcriptions.create({
+      model: "gpt-4o-mini-transcribe",
+      file: new File([audioBuf], "audio.webm", { type: contentType }),
     });
+
+    const transcript = (transcriptResp?.text || "").trim();
+    if (!transcript) {
+      return res.status(500).json({ ok: false, error: "Transkribering gav tomt resultat." });
+    }
+
+    // 3) Sammanfatta
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      temperature: 0.4,
+      messages: [
+        { role: "system", content: "Du skriver korta, tydliga sammanfattningar på svenska." },
+        {
+          role: "user",
+          content: "Sammanfatta detta i 6–10 bullet points + 1 kort slutsats:\n\n" + transcript,
+        },
+      ],
+    });
+
+    const summary = (completion.choices?.[0]?.message?.content || "").trim();
+    if (!summary) return res.status(500).json({ ok: false, error: "Tomt AI-svar" });
+
+    return res.json({ ok: true, publicUrl: audioUrl, transcript, summary });
   } catch (err) {
     console.error("Fel i /api/summarize:", err);
     return res.status(500).json({
       ok: false,
-      message: "Serverfel i /api/summarize.",
       error: String(err?.message || err),
     });
   }
 });
+
 
 
 /* =========================
