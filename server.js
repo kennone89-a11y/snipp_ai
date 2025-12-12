@@ -589,8 +589,3 @@ app.get("/api/health", (req, res) => {
 app.listen(PORT, () => {
   console.log("Kenai backend kör på port " + PORT);
 });
-
-// ---- Start ----
-app.listen(PORT, () => {
-  console.log("Kenai backend kör på port " + PORT);
-});
