@@ -353,7 +353,7 @@
   id="renderBtn"
   class="primary"
   style="margin-left:8px;"
-  onclick="renderReelApi()"
+ onclick="window.__renderNow && window.__renderNow()"
 >
   Rendera reel (v1 demo)
 </button>
@@ -463,7 +463,7 @@ window.alert = function (msg) {
           size: f.size,
         })),
       };
-
+window.__PLAN = plan;
       console.log("Reel-plan:", plan);
 
       if (previewContainer) {
@@ -497,23 +497,14 @@ if (renderBasicBtn) {
         size: f.size,
       })),
     };
- 
-    try {
-      const res = await fetch("/api/build-reel", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(plan),
-      });
- 
-      const data = await res.json();
-      console.log("Backend svar:", data);
-      alert(data.message || "Backend mottog planen korrekt (kolla konsolen)!");
-    } catch (err) {
-      console.error("Fel mot /api/build-reel:", err);
-      alert("Något gick fel mot backend, kolla konsolen.");
-    }
-  });
+ window.__PLAN = plan;
+   try {
+  await renderReelApi(window.__PLAN);
+} catch (err) {
+  console.error("Render-fel:", err);
+  alert("Något gick fel vid render (kolla konsolen).");
 }
+
 
 
   // 4) Rendera + musik (demo)
@@ -539,39 +530,49 @@ if (renderBasicBtn) {
   }
 </script>
 <script>
-  async function renderReelApi() {
-  alert("Reel-render kommer snart – backend byggs fortfarande.");
-  console.log("renderReelApi är tillfälligt avstängd.");
-  return;
-}
+ async function renderReelApi(plan) {
+  try {
+    const payload = {
+      style: plan?.style || plan?.styleKey || "Basic",
+      clips: plan?.files || plan?.clips || [],
+      targetSeconds: plan?.targetSeconds || plan?.target || 10,
+    };
 
+    const res = await fetch("/api/reels/render-demo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-  const payload = {
-    plan: plan,
-  };
+    const data = await res.json().catch(() => ({}));
+    console.log("Render-svar:", data);
 
-  const res = await fetch("/api/render-reel", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+    if (!res.ok || data.ok === false) {
+      alert((data && (data.error || data.message)) || "Fel vid render");
+      return null;
+    }
 
-  const data = await res.json();
-  console.log("Render-svar:", data);
-  return data;
-}
-
-      if (!res.ok || !data.ok) {
-        alert(data.error || "Fel vid render");
-        return;
-      }
-
-      alert(data.message || "Reel render klar – kolla test_output/reel-from-api.mp4 på servern.");
-    } catch (err) {
-      console.error("Fel i renderReelApi():", err);
-      alert("Något gick fel vid render.");
-     }
+    alert(data.message || "Render-demo OK");
+    return data;
+  } catch (err) {
+    console.error("Fel i renderReelApi():", err);
+    alert("Något gick fel vid render.");
+    return null;
   }
+}
+window.__renderNow = async () => {
+  try {
+    if (!window.__PLAN) {
+      alert("Ingen plan ännu. Klicka först 'Skapa reel-plan (demo)'.");
+      return;
+    }
+    await renderReelApi(window.__PLAN);
+  } catch (e) {
+    console.error("Render wrapper error:", e);
+    alert("Render-fel (kolla konsolen).");
+  }
+};
+ 
 </script>
 </body>
 </html>
