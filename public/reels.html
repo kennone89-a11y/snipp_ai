@@ -398,181 +398,119 @@
  
  
    <script>
-   const originalAlert = window.alert;
-window.alert = function (msg) {
-  const statusEl = document.getElementById('renderStatus');
-  if (statusEl && typeof msg === 'string') {
-    statusEl.textContent = msg;
-  }
-  originalAlert(msg);
-};
- 
-  // Hämta alla viktiga element från sidan
+(() => {
+  // Elements
   const fileInput = document.querySelector('input[type="file"]');
-  const targetSelect = document.querySelector("select");
-  const allButtons = Array.from(document.querySelectorAll("button"));
-  const audioInput = document.getElementById("audioInput");
+  const targetSelect = document.querySelector('select');
+  const planBtn = document.getElementById("buildPlanBtn");
+  const renderBtn = document.getElementById("renderBtn");
+  const renderWithMusicBtn = document.getElementById("renderWithMusicBtn");
   const statusText = document.getElementById("statusText");
-
-  const renderWithMusicBtn = allButtons.find((b) =>
-    b.textContent.toLowerCase().includes("rendera + musik")
-  );
-
-  const planBtn = allButtons.find((b) =>
-    b.textContent.toLowerCase().includes("skapa reel-plan")
-  );
-
-  const renderBasicBtn = allButtons.find((b) =>
-    b.textContent.toLowerCase().includes("rendera reel")
-  );
-
-  const previewContainer =
-    document.getElementById("renderPreview") ||
-    document.querySelector('[data-role="reel-preview"]');
+  const previewContainer = document.getElementById("previewContainer");
 
   let selectedFiles = [];
 
-  // 1) Spara valda klipp/bilder
-  if (fileInput) {
-    fileInput.addEventListener("change", (e) => {
-      selectedFiles = Array.from(e.target.files || []);
-      console.log("Valda filer:", selectedFiles.map((f) => f.name));
-
-      if (statusText) {
-        statusText.textContent = `Valda filer: ${selectedFiles.length}`;
-      }
-    });
+  function setStatus(msg) {
+    if (statusText) statusText.textContent = msg;
   }
 
-  // 2) Skapa reel-plan (demo) – visar bara en plan i rutan
-  if (planBtn) {
-    planBtn.addEventListener("click", async () => {
-      if (!selectedFiles.length) {
-        alert("Välj minst ett klipp först.");
-        return;
-      }
-
-      const targetSeconds = parseInt(targetSelect?.value || "10", 10);
-
-      const plan = {
-        targetSeconds,
-        totalFiles: selectedFiles.length,
-        files: selectedFiles.map((f) => ({
-          name: f.name,
-          type: f.type.startsWith("image/") ? "image" : "video",
-          size: f.size,
-        })),
-      };
-window.__PLAN = plan;
-      console.log("Reel-plan:", plan);
-
-      if (previewContainer) {
-        previewContainer.innerHTML = `
-          <h5>AI-plan (demo)</h5>
-          <pre>${JSON.stringify(plan, null, 2)}</pre>
-        `;
-      }
-
-      if (statusText) {
-        statusText.textContent =
-          "Plan skapad (demo) – redo att skickas till backend.";
-      }
-    });
+  function getTargetSeconds() {
+    const v = parseInt((targetSelect && targetSelect.value) || "10", 10);
+    return Number.isFinite(v) ? v : 10;
   }
-// 3) Rendera reel (v1 demo)
-if (renderBasicBtn) {
-  renderBasicBtn.addEventListener("click", async () => {
-    if (!selectedFiles.length) {
-      alert("Välj minst ett klipp först.");
-      return;
-    }
 
-    const targetSeconds = parseInt(targetSelect?.value || "10", 10);
-
+  function buildPlan() {
+    const targetSeconds = getTargetSeconds();
     const plan = {
       targetSeconds,
-      files: selectedFiles.map((f) => ({
+      totalFiles: selectedFiles.length,
+      files: selectedFiles.map(f => ({
         name: f.name,
-        type: f.type.startsWith("image/") ? "image" : "video",
-        size: f.size,
-      })),
+        type: (f.type || "").startsWith("image/") ? "image" : "video",
+        size: f.size
+      }))
     };
- window.__PLAN = plan;
-   try {
-  await renderReelApi(window.__PLAN);
-} catch (err) {
-  console.error("Render-fel:", err);
-  alert("Något gick fel vid render (kolla konsolen).");
-}
 
+    window.__PLAN = plan;
 
+    if (previewContainer) {
+      previewContainer.innerHTML =
+        `<h5>AI-plan (demo)</h5><pre>${JSON.stringify(plan, null, 2)}</pre>`;
+    }
 
-  // 4) Rendera + musik (demo)
-  if (renderWithMusicBtn) {
-    renderWithMusicBtn.addEventListener("click", () => {
-      if (!selectedFiles.length) {
-        alert("Välj minst ett klipp först.");
-        return;
-      }
-
-      if (!audioInput || !audioInput.files.length) {
-        alert("Välj en musikfil först.");
-        return;
-      }
-
-      if (statusText) {
-        statusText.textContent =
-          "Demo: här skulle backend få både klipp + musik och bygga en synced reel.";
-      }
-
-      alert("Demo-läge: musik-render är inte kopplad till backend ännu.");
-    });
+    setStatus("Plan skapad (demo) – redo att skickas till backend.");
+    return plan;
   }
 
+  async function renderReelApi(plan) {
+    const p = plan || window.__PLAN;
+    if (!p) {
+      alert("Ingen plan ännu. Klicka först 'Skapa reel-plan (demo)'.");
+      return null;
+    }
 
- async function renderReelApi(plan) {
-  try {
     const payload = {
-      style: plan?.style || plan?.styleKey || "Basic",
-      clips: plan?.files || plan?.clips || [],
-      targetSeconds: plan?.targetSeconds || plan?.target || 10,
+      style: p.style || p.styleKey || "Basic",
+      clips: p.files || p.clips || [],
+      targetSeconds: p.targetSeconds || p.target || 10
     };
 
     const res = await fetch("/api/reels/render-demo", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     });
 
-    const data = await res.json().catch(() => ({}));
-    console.log("Render-svar:", data);
+    let data = null;
+    try { data = await res.json(); } catch (_) { data = null; }
 
-    if (!res.ok || data.ok === false) {
-      alert((data && (data.error || data.message)) || "Fel vid render");
+    console.log("Render svar:", res.status, data);
+
+    if (!res.ok) {
+      alert((data && (data.error || data.message)) || `Render fel (${res.status})`);
       return null;
     }
 
-    alert(data.message || "Render-demo OK");
+    alert((data && data.message) || "Render-demo OK");
     return data;
-  } catch (err) {
-    console.error("Fel i renderReelApi():", err);
-    alert("Något gick fel vid render.");
-    return null;
   }
-}
-window.__renderNow = async () => {
-  try {
-    if (!window.__PLAN) {
-      alert("Ingen plan ännu. Klicka först 'Skapa reel-plan (demo)'.");
-      return;
-    }
-    await renderReelApi(window.__PLAN);
-  } catch (e) {
-    console.error("Render wrapper error:", e);
-    alert("Render-fel (kolla konsolen).");
+
+  // Expose for any inline onclick that still exists
+  window.renderReelApi = renderReelApi;
+  window.__renderNow = async () => renderReelApi(window.__PLAN);
+
+  // Wire events
+  if (fileInput) {
+    fileInput.addEventListener("change", () => {
+      selectedFiles = Array.from(fileInput.files || []);
+      setStatus(`Valda filer: ${selectedFiles.length}`);
+    });
   }
-};
- 
+
+  if (planBtn) {
+    planBtn.addEventListener("click", () => {
+      if (!selectedFiles.length) return alert("Välj minst ett klipp först.");
+      buildPlan();
+    });
+  }
+
+  if (renderBtn) {
+    renderBtn.addEventListener("click", async () => {
+      if (!selectedFiles.length) return alert("Välj minst ett klipp först.");
+      if (!window.__PLAN) buildPlan();
+      await renderReelApi(window.__PLAN);
+    });
+  }
+
+  if (renderWithMusicBtn) {
+    renderWithMusicBtn.addEventListener("click", () => {
+      alert("Demo-läge: musik-render är inte kopplad till backend ännu.");
+    });
+  }
+
+  // Boot
+  setStatus("Redo.");
+})();
 </script>
 </body>
 </html>
