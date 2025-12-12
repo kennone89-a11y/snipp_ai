@@ -460,41 +460,67 @@ app.post(
 );
 
 /* =========================
-   Recorder: summarize (placeholder)
+   Recorder: summarize (url OR text)
 ========================= */
 app.post("/api/summarize", async (req, res) => {
-  try {
-    const { publicUrl, url } = req.body || {};
-    const audioUrl = publicUrl || url;
+  let tmpPath = null;
 
-    if (!audioUrl || typeof audioUrl !== "string") {
-      return res.status(400).json({ ok: false, error: "Saknar publicUrl (eller url) i body." });
-    }
+  try {
+    const { text, publicUrl, url } = req.body || {};
+    const audioUrl = url || publicUrl;
 
     const openai = getOpenAI();
 
-    // 1) Ladda ner ljudet från Supabase public URL
-    const r = await fetch(audioUrl);
-    if (!r.ok) {
-      return res.status(400).json({ ok: false, error: "Kunde inte hämta ljud från publicUrl." });
+    // A) Om frontend skickar text -> sammanfatta direkt
+    if (text && typeof text === "string" && text.trim().length > 0) {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4.1-mini",
+        temperature: 0.4,
+        messages: [
+          { role: "system", content: "Du skriver korta, tydliga sammanfattningar på svenska." },
+          {
+            role: "user",
+            content:
+              "Sammanfatta detta i 6-10 bullet points + 1 kort slutsats:\n\n" + text.trim(),
+          },
+        ],
+      });
+
+      const summary = (completion.choices?.[0]?.message?.content || "").trim();
+      if (!summary) return res.status(500).json({ ok: false, error: "Tomt AI-svar" });
+
+      return res.json({ ok: true, summary, publicUrl: audioUrl || null });
     }
 
-    const contentType = r.headers.get("content-type") || "audio/webm";
-    const arrayBuf = await r.arrayBuffer();
-    const audioBuf = Buffer.from(arrayBuf);
+    // B) Om frontend skickar url/publicUrl -> transkribera ljudet och sammanfatta
+    if (!audioUrl || typeof audioUrl !== "string") {
+      return res.status(400).json({
+        ok: false,
+        error: "Saknar 'url' i body. Skicka { url: 'https://...' }",
+      });
+    }
 
-    // 2) Transkribera
+    // 1) Ladda ner ljudfilen till /tmp
+    const r = await fetch(audioUrl);
+    if (!r.ok) {
+      return res.status(400).json({ ok: false, error: "Kunde inte hämta audio-URL (fetch fail)." });
+    }
+    const ab = await r.arrayBuffer();
+    tmpPath = path.join("/tmp", `kenai-audio-${Date.now()}.webm`);
+    await fs.promises.writeFile(tmpPath, Buffer.from(ab));
+
+    // 2) Transkribera (Whisper)
     const transcriptResp = await openai.audio.transcriptions.create({
-      model: "gpt-4o-mini-transcribe",
-      file: new File([audioBuf], "audio.webm", { type: contentType }),
+      model: "whisper-1",
+      file: fs.createReadStream(tmpPath),
     });
 
     const transcript = (transcriptResp?.text || "").trim();
     if (!transcript) {
-      return res.status(500).json({ ok: false, error: "Transkribering gav tomt resultat." });
+      return res.status(500).json({ ok: false, error: "Tom transkription från AI." });
     }
 
-    // 3) Sammanfatta
+    // 3) Sammanfatta transkript
     const completion = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
       temperature: 0.4,
@@ -502,7 +528,9 @@ app.post("/api/summarize", async (req, res) => {
         { role: "system", content: "Du skriver korta, tydliga sammanfattningar på svenska." },
         {
           role: "user",
-          content: "Sammanfatta detta i 6–10 bullet points + 1 kort slutsats:\n\n" + transcript,
+          content:
+            "Här är en transkription. Sammanfatta i 6-10 bullet points + 1 kort slutsats:\n\n" +
+            transcript,
         },
       ],
     });
@@ -510,15 +538,21 @@ app.post("/api/summarize", async (req, res) => {
     const summary = (completion.choices?.[0]?.message?.content || "").trim();
     if (!summary) return res.status(500).json({ ok: false, error: "Tomt AI-svar" });
 
-    return res.json({ ok: true, publicUrl: audioUrl, transcript, summary });
+    return res.json({ ok: true, summary, transcript, publicUrl: audioUrl });
   } catch (err) {
     console.error("Fel i /api/summarize:", err);
     return res.status(500).json({
       ok: false,
+      message: "Serverfel i /api/summarize.",
       error: String(err?.message || err),
     });
+  } finally {
+    if (tmpPath) {
+      fs.promises.unlink(tmpPath).catch(() => {});
+    }
   }
 });
+
 
 
 

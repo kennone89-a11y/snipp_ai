@@ -545,7 +545,7 @@ setLog("Public URL hämtad.");
     res = await fetch(`${backendBase}/api/summarize`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ publicUrl: url }),
+      body: JSON.stringify({ url: url }),
     });
 
     txt = await res.text();
