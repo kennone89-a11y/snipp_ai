@@ -1,65 +1,49 @@
-// server.js (ESM) – Kenai backend: summarize + pdf + reels + trends
+// server.js (ESM) — Kenai backend: timestamps + reels + summarize + ffmpeg tests
 import dotenv from "dotenv";
 dotenv.config({ override: true });
 
 import express from "express";
 import path from "path";
-import bodyParser from "body-parser";
-import OpenAI from "openai";
 import fs from "fs";
+import multer from "multer";
+import OpenAI from "openai";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
 import ffprobeInstaller from "@ffprobe-installer/ffprobe";
-import multer from "multer";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 ffmpeg.setFfprobePath(ffprobeInstaller.path);
 
 const __dirname = path.resolve();
+const app = express();
+app.set("trust proxy", 1);
 
-// --- OpenAI-klient + helper ---
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// ---- ENV / helpers ----
+const PORT = process.env.PORT || 3000;
 
 function requireOpenAIKey() {
   const key = process.env.OPENAI_API_KEY;
-  if (!key) {
-    throw new Error("OPENAI_API_KEY saknas i environment variables");
-  }
+  if (!key) throw new Error("OPENAI_API_KEY saknas i environment variables");
   return key;
 }
 
-// --- här nedanför ska det fortsätta som du redan har ---
-// --- Multer: spara filer i /tmp (Render-vänligt) ----
-
-
-const app = express();
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY, // kan vara undefined i dev; vissa routes kräver key
+});
 
 // ---- Multer: spara filer i /tmp (Render-vänligt) ----
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    // Render har en skrivbar /tmp-katalog
-    cb(null, "/tmp");
-  },
-  
+  destination: (req, file, cb) => cb(null, "/tmp"),
   filename: (req, file, cb) => {
-    const safeName = file.originalname.replace(/\s+/g, "_");
-    cb(null, `kenai-${Date.now()}-${safeName}`);
+    const safeName = (file.originalname || "file").replace(/\s+/g, "_");
+    cb(null, "kenai-" + Date.now() + "-" + safeName);
   },
 });
 
-// Multer för att ta emot klipp (video eller bild)
 const upload = multer({
   storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB per klipp
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB per fil (demo)
 });
-const uploadReelsTmp = upload;
-
-// Koppla fluent-ffmpeg till ffmpeg-static binären
-
-
-app.set("trust proxy", 1);
 
 // ---- CORS (ingen cors-dependency) ----
 const ALLOWED_ORIGINS = new Set([
@@ -71,42 +55,35 @@ const ALLOWED_ORIGINS = new Set([
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-
   if (origin && ALLOWED_ORIGINS.has(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
   }
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
 });
 
-// ---- Body-parsing + statiska filer ----
+// ---- Body + static ----
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ extended: true, limit: "100mb" }));
-
-// Servera alla statiska filer i /public (html, bilder, js)
 app.use(express.static(path.join(__dirname, "public")));
 
-// --- Kenai Timestamps: AI + fallback via fetch ---
-app.post("/api/timestamps", async (req, res) => {
-  const { url } = req.body;
-// Kenai Reels – utgående renderade filer (v1)
+// ---- Reels output static (om du skriver filer dit senare) ----
 const reelsOutputDir = path.join(process.cwd(), "reels-output");
 app.use("/reels-output", express.static(reelsOutputDir));
 
-  // 1) Basvalidering
+/* =========================
+   Kenai Timestamps
+========================= */
+app.post("/api/timestamps", async (req, res) => {
+  const { url } = req.body || {};
+
   if (!url || typeof url !== "string") {
-    return res.status(400).json({
-      error: "Ingen URL skickades in till /api/timestamps.",
-    });
+    return res.status(400).json({ error: "Ingen URL skickades in till /api/timestamps." });
   }
 
-  console.log("Kenai Timestamps: tog emot URL:", url);
-
-  // 2) Fejkdata som fallback om OpenAI strular
   const fallback = {
     title: "Exempel-titel från Kenai Timestamps (fejk)",
     summary:
@@ -122,10 +99,8 @@ app.use("/reels-output", express.static(reelsOutputDir));
   };
 
   try {
-    // 3) Hämta API-nyckel
     const key = requireOpenAIKey();
 
-    // 4) Anropa OpenAI Chat Completions via fetch
     const body = {
       model: "gpt-4o-mini",
       temperature: 0.6,
@@ -134,61 +109,40 @@ app.use("/reels-output", express.static(reelsOutputDir));
           role: "system",
           content:
             "Du är Kenai Timestamps, ett verktyg som hjälper creators att få " +
-            "titel, sammanfattning, hashtags och kapitel till YouTube-videor och poddar. " +
-            "Du får OFTA bara en URL och kan ibland inte se själva innehållet. " +
-            "Gör då en smart, rimlig gissning baserat på titel/slug/kontext. " +
-            "Svara ALLTID med STRIKT JSON (ingen text runtom, ingen markdown, inga kommentarer) " +
-            'i EXAKT detta schema: { "title": "...", "summary": "...", "hashtags": ["#..."], "chapters": [ { "time": "mm:ss", "label": "..." }, ... ] }. ' +
-            'Tiderna ska alltid börja vid "00:00" och ökas i rimliga steg (t.ex. 00:00, 02:30, 05:00, 08:30 osv). ' +
-            "Sammanfattningen ska vara 3–6 meningar på svenska. Hashtags ska vara 5–10 st, relevanta och populära.",
+            "titel, sammanfattning, hashtags och kapitel. " +
+            "Svara ALLTID med STRIKT JSON (ingen markdown) i detta schema: " +
+            '{ "title": "...", "summary": "...", "hashtags": ["#..."], "chapters": [ { "time": "mm:ss", "label": "..." } ] }. ' +
+            'Tiderna ska börja vid "00:00". Sammanfattning 3–6 meningar på svenska.',
         },
         {
           role: "user",
           content:
-            `Video/podd-URL: ${url}\n\n` +
-            "Utgå från vad titeln och URL:en antyder. Om du inte vet exakt innehåll, " +
-            "skapa en rimlig generell kapitelstruktur som skulle passa en sådan video/podd.",
+            "Video/podd-URL: " +
+            url +
+            "\n\nUtgå från vad titeln och URL:en antyder. Om du inte vet exakt innehåll, skapa en rimlig generell kapitelstruktur.",
         },
       ],
     };
 
     const r = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
 
     const data = await r.json().catch(() => ({}));
-
-    if (!r.ok) {
-      console.error("Kenai Timestamps: OpenAI-svar inte OK:", r.status, data);
-      return res.json(fallback);
-    }
+    if (!r.ok) return res.json(fallback);
 
     const raw = (data.choices?.[0]?.message?.content || "").trim();
-    console.log("Kenai Timestamps: rå OpenAI-svar:", raw);
+    const cleaned = raw.replace("```json", "").replace("```", "").trim();
 
-    // 5) Försök parsa JSON från modellen
     let parsed;
     try {
-      const cleaned = raw
-        .replace(/```json/gi, "")
-        .replace(/```/g, "")
-        .trim();
-
       parsed = JSON.parse(cleaned);
-    } catch (parseErr) {
-      console.error(
-        "Kenai Timestamps: kunde inte parsa JSON, använder fallback.",
-        parseErr
-      );
+    } catch {
       return res.json(fallback);
     }
 
-    // 6) Minimal sanity-check på resultatet
     if (
       !parsed ||
       typeof parsed.title !== "string" ||
@@ -196,22 +150,19 @@ app.use("/reels-output", express.static(reelsOutputDir));
       !Array.isArray(parsed.hashtags) ||
       !Array.isArray(parsed.chapters)
     ) {
-      console.error(
-        "Kenai Timestamps: ogiltig struktur i AI-svar, använder fallback."
-      );
       return res.json(fallback);
     }
 
-    console.log("Kenai Timestamps: AI-svar OK, skickar vidare till frontend.");
     return res.json(parsed);
   } catch (err) {
-    console.error("Fel i /api/timestamps (yttersta catch):", err);
-    // Viktigt: vi skickar inte 500 här, utan vår fallback så UI alltid funkar
+    console.error("Fel i /api/timestamps:", err);
     return res.json(fallback);
   }
 });
 
-// --- Reels: hooks/hashtags ---
+/* =========================
+   Reels: hooks/hashtags
+========================= */
 app.post("/api/reels/hooks", async (req, res) => {
   try {
     const { idea } = req.body || {};
@@ -219,88 +170,65 @@ app.post("/api/reels/hooks", async (req, res) => {
       return res.status(400).json({ error: "Missing idea" });
     }
 
-    const userPrompt = `
-Du är en svensk expert på TikTok/Instagram Reels.
+    requireOpenAIKey();
 
-Användarens reel-idé:
-"${idea}"
-
-1) Skriv 3–5 korta, klickbara hooks på svenska (en mening var).
-2) Skriv 8–15 relevanta hashtags (utan förklaringar).
-
-Svar MÅSTE vara JSON på formen:
-{
-  "hooks": ["...", "..."],
-  "hashtags": ["#tag1", "#tag2"]
-}
-`;
+    const userPrompt =
+      "Du är en svensk expert på TikTok/Instagram Reels.\n\n" +
+      "Användarens reel-idé:\n" +
+      idea +
+      "\n\n" +
+      "1) Skriv 3–5 korta, klickbara hooks på svenska (en mening var).\n" +
+      "2) Skriv 8–15 relevanta hashtags (utan förklaringar).\n\n" +
+      "Svar MÅSTE vara JSON på formen:\n" +
+      '{ "hooks": ["..."], "hashtags": ["#tag1"] }';
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
       messages: [
-        {
-          role: "system",
-          content:
-            "Du hjälper creators att skriva hooks och hashtags på svenska.",
-        },
+        { role: "system", content: "Du hjälper creators att skriva hooks och hashtags på svenska." },
         { role: "user", content: userPrompt },
       ],
     });
 
+    const raw = (completion.choices?.[0]?.message?.content || "").trim();
+
     let hooks = [];
     let hashtags = [];
-
     try {
-      const raw = completion.choices[0].message.content.trim();
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed.hooks)) hooks = parsed.hooks;
       if (Array.isArray(parsed.hashtags)) hashtags = parsed.hashtags;
     } catch (e) {
-      console.error("JSON-parse error for /api/reels/hooks", e);
+      console.error("JSON-parse error /api/reels/hooks:", e);
     }
 
     if (!hooks.length && !hashtags.length) {
       return res.status(500).json({ error: "AI gav inget användbart svar" });
     }
 
-    res.json({ hooks, hashtags });
+    return res.json({ hooks, hashtags });
   } catch (err) {
     console.error("Error in /api/reels/hooks:", err);
-    res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ error: "Server error" });
   }
 });
 
-// --- Reels: render demo-endpoint (ingen riktig video ännu) ---
+/* =========================
+   Reels: render demo
+========================= */
 app.post("/api/reels/render-demo", async (req, res) => {
   try {
     const { style, clips, targetSeconds } = req.body || {};
-
-    console.log("Reels render-demo hit:", {
-      style,
-      clipCount: Array.isArray(clips) ? clips.length : 0,
-      targetSeconds,
-    });
-
     if (!Array.isArray(clips) || clips.length === 0) {
-      return res.status(400).json({
-        ok: false,
-        error: "Inga klipp skickades till render-demo.",
-      });
+      return res.status(400).json({ ok: false, error: "Inga klipp skickades till render-demo." });
     }
-
     if (!targetSeconds || targetSeconds <= 0) {
-      return res.status(400).json({
-        ok: false,
-        error: "Ogiltig mållängd.",
-      });
+      return res.status(400).json({ ok: false, error: "Ogiltig mållängd." });
     }
 
-    // Här kommer vi i nästa steg koppla in riktig FFmpeg-rendering.
-    // Just nu låtsas vi bara att allting gick bra.
     return res.json({
       ok: true,
-      message:
-        "Render-demo mottagen. FFmpeg-rendering kopplas på i nästa steg.",
+      message: "Render-demo mottagen. FFmpeg-rendering kopplas på i nästa steg.",
       debug: {
         style: style || "Basic",
         clips: clips.map((c) => ({
@@ -312,225 +240,109 @@ app.post("/api/reels/render-demo", async (req, res) => {
     });
   } catch (err) {
     console.error("Fel i /api/reels/render-demo:", err);
-    return res.status(500).json({
-      ok: false,
-      error: "Serverfel i render-demo.",
-    });
+    return res.status(500).json({ ok: false, error: "Serverfel i render-demo." });
   }
 });
 
-/// --- Reels: basic rendering (v1 – enkel) ---
-// Video-only: använd första videon.
-// Image-only: gör 3 sek video av första bilden.
-// Mix (bild + video): ger 400 med tydligt felmeddelande.
-app.post(
-  "/api/reels/render-basic",
-  upload.array("clips", 10),
-  async (req, res) => {
-    try {
-         // Lista med klipp att rendera (antingen plan.files eller plan.clips)
-    const files =
-      Array.isArray(plan.files) && plan.files.length > 0
-        ? plan.files
-        : Array.isArray(plan.clips) && plan.clips.length > 0
-        ? plan.clips
-        : [];
-
+/* =========================
+   Reels: basic rendering (v1)
+   - video-only: returnerar första videon (copy)
+   - image-only: gör 3s mp4 av första bilden
+   - mix: 400
+========================= */
+app.post("/api/reels/render-basic", upload.array("clips", 10), async (req, res) => {
+  try {
+    const files = Array.isArray(req.files) ? req.files : [];
     if (!files.length) {
+      return res.status(400).json({ ok: false, message: "Inga filer uppladdade (clips)." });
+    }
+
+    const imageFiles = files.filter((f) => (f.mimetype || "").startsWith("image/"));
+    const videoFiles = files.filter((f) => (f.mimetype || "").startsWith("video/"));
+
+    const allImages = imageFiles.length === files.length;
+    const allVideos = videoFiles.length === files.length;
+
+    if (!allImages && !allVideos) {
       return res.status(400).json({
         ok: false,
-        message: "Inga klipp i planen (plan.files eller plan.clips).",
+        error: "Demo-läge: ladda antingen bara bilder eller bara videor (inte mixat).",
       });
     }
 
+    const MAX_BYTES = 50 * 1024 * 1024;
 
-      const imageFiles = files.filter((f) =>
-        (f.mimetype || "").startsWith("image/")
-      );
-      const videoFiles = files.filter((f) =>
-        (f.mimetype || "").startsWith("video/")
-      );
-
-      const allImages = imageFiles.length === files.length;
-      const allVideos = videoFiles.length === files.length;
-
-      // Demo: antingen bara bilder ELLER bara videor
-      if (!allImages && !allVideos) {
-        return res.status(400).json({
-          ok: false,
-          error:
-            "Demo-läge: ladda antingen bara bilder eller bara videor (inte mixat) i samma render.",
-        });
+    // ---- VIDEO ----
+    if (allVideos) {
+      for (const vf of videoFiles) {
+        if (vf.size > MAX_BYTES) {
+          return res.status(413).json({
+            ok: false,
+            error: "Ett videoklipp är för stort för demo-render (max ~50MB/klipp).",
+          });
+        }
       }
 
-      const MAX_BYTES = 50 * 1024 * 1024; // ca 50 MB per videoklipp
+      const videoFile = videoFiles[0];
+      const inputPath = videoFile.path;
+      const outputPath = path.join("/tmp", "kenai-basic-" + Date.now() + "-single.mp4");
 
-      // ----------------- FALL 1: ENDAST VIDEO -----------------
-      if (allVideos) {
-        for (const vf of videoFiles) {
-          if (vf.size > MAX_BYTES) {
-            console.warn("Video för stor för basic-render:", {
-              name: vf.originalname,
-              size: vf.size,
-              max: MAX_BYTES,
-            });
-            return res.status(413).json({
-              ok: false,
-              error:
-                "Ett av videoklippen är för stort för demo-render (max ca 50 MB per klipp). Testa kortare/komprimerade klipp.",
-            });
-          }
-        }
-
-        if (videoFiles.length > 1) {
-          console.log(
-            "Render-basic: demo-läge – flera videor skickade, använder bara första i v1:",
-            videoFiles.map((f) => f.originalname)
-          );
-        }
-
-        const videoFile = videoFiles[0];
-        const inputPath = videoFile.path;
-        const outputPath = path.join(
-          "/tmp",
-          `kenai-basic-${Date.now()}-single.mp4`
-        );
-
-        console.log("Render-basic: single video:", {
-          originalName: videoFile.originalname,
-          mimetype: videoFile.mimetype,
-          size: videoFile.size,
-          inputPath,
-          outputPath,
-        });
-
-        await new Promise((resolve, reject) => {
-          ffmpeg(inputPath)
-            .outputOptions(["-c:v copy", "-c:a copy", "-movflags +faststart"])
-            .output(outputPath)
-            .on("end", () => {
-              console.log("FFmpeg render-basic (single video) klar:", {
-                outputPath,
-              });
-              resolve();
-            })
-            .on("error", (err) => {
-              console.error("Fel i FFmpeg render-basic (single video):", err);
-              reject(err);
-            })
-            .run();
-        });
-
-        let videoBuffer;
-        try {
-          videoBuffer = await fs.promises.readFile(outputPath);
-        } catch (err) {
-          console.error("Kunde inte läsa videon (single video):", err);
-          return res
-            .status(500)
-            .json({ ok: false, error: "Kunde inte läsa videon." });
-        }
-
-        res.setHeader("Content-Type", "video/mp4");
-        res.setHeader("Content-Length", videoBuffer.length);
-        res.send(videoBuffer);
-
-        try {
-          for (const f of files) {
-            await fs.promises.unlink(f.path).catch(() => {});
-          }
-          await fs.promises.unlink(outputPath).catch(() => {});
-        } catch (cleanupErr) {
-          console.warn(
-            "Kunde inte radera tmp-filer (render-basic single video):",
-            cleanupErr
-          );
-        }
-
-        return;
-      }
-
-      // ----------------- FALL 2: ENDAST BILDER -----------------
-      if (allImages) {
-        console.log(
-          "Render-basic: image-only reel (first image only i v1):",
-          imageFiles.map((f) => f.originalname)
-        );
-
-        const firstImg = imageFiles[0];
-
-        const finalPath = path.join(
-          "/tmp",
-          `kenai-basic-img-${Date.now()}-single.mp4`
-        );
-
-        // Gör första bilden till ett kort videoklipp (ca 3 sek)
-        await new Promise((resolve, reject) => {
-          ffmpeg(firstImg.path)
-            .inputOptions(["-loop 1"])
-            .outputOptions([
-              "-t 3", // längd ≈ 3 sek
-              "-r 30",
-              "-movflags +faststart",
-            ])
-            .size("1080x?")
-            .output(finalPath)
-            .on("end", () => {
-              console.log("Bild → enkel image-reel klar:", {
-                src: firstImg.path,
-                out: finalPath,
-              });
-              resolve();
-            })
-            .on("error", (err) => {
-              console.error("Fel när bild gjordes till enkel image-reel:", err);
-              reject(err);
-            })
-            .run();
-        });
-
-        let videoBuffer;
-        try {
-          videoBuffer = await fs.promises.readFile(finalPath);
-        } catch (err) {
-          console.error("Kunde inte läsa image-reel-videon:", err);
-          return res
-            .status(500)
-            .json({ ok: false, error: "Kunde inte läsa image-reelen." });
-        }
-
-        res.setHeader("Content-Type", "video/mp4");
-        res.setHeader("Content-Length", videoBuffer.length);
-        res.send(videoBuffer);
-
-        try {
-          for (const f of files) {
-            await fs.promises.unlink(f.path).catch(() => {});
-          }
-          // om du vill: ta bort finalPath också
-          // await fs.promises.unlink(finalPath).catch(() => {});
-        } catch (cleanupErr) {
-          console.warn("Kunde inte radera tmp-filer (image-only):", cleanupErr);
-        }
-
-        return;
-      }
-
-      // Failsafe
-      return res.status(500).json({
-        ok: false,
-        error: "Okänt läge i render-basic.",
+      await new Promise((resolve, reject) => {
+        ffmpeg(inputPath)
+          .outputOptions(["-c:v copy", "-c:a copy", "-movflags +faststart"])
+          .output(outputPath)
+          .on("end", resolve)
+          .on("error", reject)
+          .run();
       });
-    } catch (err) {
-      console.error("Fel i /api/reels/render-basic:", err);
-      return res.status(500).json({
-        ok: false,
-        error: "Serverfel i render-basic.",
-      });
+
+      const buf = await fs.promises.readFile(outputPath);
+      res.setHeader("Content-Type", "video/mp4");
+      res.setHeader("Content-Length", buf.length);
+      res.send(buf);
+
+      // cleanup
+      for (const f of files) await fs.promises.unlink(f.path).catch(() => {});
+      await fs.promises.unlink(outputPath).catch(() => {});
+      return;
     }
+
+    // ---- IMAGES ----
+    if (allImages) {
+      const firstImg = imageFiles[0];
+      const finalPath = path.join("/tmp", "kenai-basic-img-" + Date.now() + "-single.mp4");
+
+      await new Promise((resolve, reject) => {
+        ffmpeg(firstImg.path)
+          .inputOptions(["-loop 1"])
+          .outputOptions(["-t 3", "-r 30", "-movflags +faststart"])
+          .size("1080x?")
+          .output(finalPath)
+          .on("end", resolve)
+          .on("error", reject)
+          .run();
+      });
+
+      const buf = await fs.promises.readFile(finalPath);
+      res.setHeader("Content-Type", "video/mp4");
+      res.setHeader("Content-Length", buf.length);
+      res.send(buf);
+
+      for (const f of files) await fs.promises.unlink(f.path).catch(() => {});
+      await fs.promises.unlink(finalPath).catch(() => {});
+      return;
+    }
+
+    return res.status(500).json({ ok: false, error: "Okänt läge i render-basic." });
+  } catch (err) {
+    console.error("Fel i /api/reels/render-basic:", err);
+    return res.status(500).json({ ok: false, error: "Serverfel i render-basic." });
   }
-);
-// --- Reels: lägg på musik (video + audio → mp4) ---
+});
+
+/* =========================
+   Reels: render-with-audio (video + audio -> mp4)
+========================= */
 app.post(
   "/api/reels/render-with-audio",
   upload.fields([
@@ -543,150 +355,84 @@ app.post(
       const audioFile = req.files?.audio?.[0];
 
       if (!videoFile || !audioFile) {
-        return res.status(400).json({
-          ok: false,
-          error: "Både video och ljud måste skickas in.",
-        });
+        return res.status(400).json({ ok: false, error: "Både video och ljud måste skickas in." });
       }
-
-      console.log("Render-with-audio:", {
-        video: videoFile.originalname,
-        audio: audioFile.originalname,
-      });
 
       const inputVideoPath = videoFile.path;
       const inputAudioPath = audioFile.path;
-      const outputPath = path.join(
-        "/tmp",
-        `kenai-mix-${Date.now()}.mp4`
-      );
+      const outputPath = path.join("/tmp", "kenai-mix-" + Date.now() + ".mp4");
 
       await new Promise((resolve, reject) => {
         ffmpeg()
           .input(inputVideoPath)
           .input(inputAudioPath)
-          .outputOptions([
-            "-c:v copy",   // behåll video som den är
-            "-c:a aac",
-            "-shortest",   // klipp till den som är kortast (oftast video)
-            "-movflags +faststart",
-          ])
+          .outputOptions(["-c:v copy", "-c:a aac", "-shortest", "-movflags +faststart"])
           .output(outputPath)
-          .on("end", () => {
-            console.log("FFmpeg mix (video+audio) klar:", { outputPath });
-            resolve();
-          })
-          .on("error", (err) => {
-            console.error("Fel i FFmpeg mix (video+audio):", err);
-            reject(err);
-          })
+          .on("end", resolve)
+          .on("error", reject)
           .run();
       });
 
-      let mixedBuffer;
-      try {
-        mixedBuffer = await fs.promises.readFile(outputPath);
-      } catch (err) {
-        console.error("Kunde inte läsa mixad video:", err);
-        return res
-          .status(500)
-          .json({ ok: false, error: "Kunde inte läsa mixad video." });
-      }
-
+      const buf = await fs.promises.readFile(outputPath);
       res.setHeader("Content-Type", "video/mp4");
-      res.setHeader("Content-Length", mixedBuffer.length);
-      res.send(mixedBuffer);
+      res.setHeader("Content-Length", buf.length);
+      res.send(buf);
 
-      // Städning
-      try {
-        await fs.promises.unlink(inputVideoPath).catch(() => {});
-        await fs.promises.unlink(inputAudioPath).catch(() => {});
-        await fs.promises.unlink(outputPath).catch(() => {});
-      } catch (cleanupErr) {
-        console.warn("Kunde inte radera tmp-filer (render-with-audio):", cleanupErr);
-      }
+      await fs.promises.unlink(inputVideoPath).catch(() => {});
+      await fs.promises.unlink(inputAudioPath).catch(() => {});
+      await fs.promises.unlink(outputPath).catch(() => {});
     } catch (err) {
       console.error("Fel i /api/reels/render-with-audio:", err);
-      return res.status(500).json({
-        ok: false,
-        error: "Serverfel i render-with-audio.",
-  });
-}
-});  
-```js
-// --- Kenai Recorder: /api/summarize (enkel version) ---
+      return res.status(500).json({ ok: false, error: "Serverfel i render-with-audio." });
+    }
+  }
+);
+
+/* =========================
+   Recorder: summarize (placeholder)
+========================= */
 app.post("/api/summarize", async (req, res) => {
-try {
- const { publicUrl } = req.body || {};
- console.log("/api/summarize kallad, publicUrl =", publicUrl);
+  try {
+    const { publicUrl } = req.body || {};
+    const summaryText =
+      "Backend /api/summarize svarar. AI-sammanfattningen är inte helt inkopplad i denna build, men URL:en togs emot korrekt.";
 
- // Enkel placeholder-sammanfattning så allt flöde funkar.
- const summaryText =
-   "Backend /api/summarize svarar. AI-sammanfattningen är inte helt inkopplad i denna build, men URL:en togs emot korrekt.";
-
- return res.status(200).json({
-   ok: true,
-   summary: summaryText,
-   publicUrl,
- });
-} catch (err) {
- console.error("Fel i /api/summarize:", err);
- return res.status(500).json({
-   ok: false,
-   message: "Serverfel i /api/summarize.",
-   error: String(err && err.message ? err.message : err),
- });
-}
+    return res.status(200).json({ ok: true, summary: summaryText, publicUrl });
+  } catch (err) {
+    console.error("Fel i /api/summarize:", err);
+    return res.status(500).json({
+      ok: false,
+      message: "Serverfel i /api/summarize.",
+      error: String(err?.message || err),
+    });
+  }
 });
 
- 
-
-// --- Reels: test-render med fasta klipp (för testning) ---
+/* =========================
+   Test: render reel from fixed local clips
+========================= */
 app.post("/api/render-reel-test", async (req, res) => {
   try {
-    console.log("/api/render-reel-test body:", req.body);
-
-    // 1) Kataloger och filnamn
     const clipsDir = path.join(__dirname, "test_clips");
     const outputDir = path.join(__dirname, "test_output");
     const outputFile = path.join(outputDir, "reel-from-api.mp4");
 
-    // 2) Se till att output-mapp finns
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
+    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+
+    const clips = [path.join(clipsDir, "clip1.MOV"), path.join(clipsDir, "clip2.MOV")];
+
+    for (const file of clips) {
+      if (!fs.existsSync(file)) {
+        console.error("Hittar inte klipp:", file);
+        return res.status(400).json({ ok: false, error: "Hittar inte klipp: " + file });
+      }
     }
 
-    // 3) En enkel lista med dina test-klipp
-    const clips = [
-      path.join(clipsDir, "clip1.MOV"),
-      path.join(clipsDir, "clip2.MOV"),
-    ];
-
-    // 4) Kolla att alla klipp finns
-    for (const file of clips) {
-  if (!fs.existsSync(file)) {
-    console.error("Hittar inte klipp:", file);
-  return res.status(400).json({
-  ok: false,
-  throw new Error(`Hittar inte klipp: ${file}`);
-});
-
-     
-
-    console.log("Bygger reel av klipp (API):");
-    clips.forEach((f, i) => console.log(`${i + 1}: ${f}`));
-    console.log("Outputfil:", outputFile);
-
-    // 5) Bygg ffmpeg-kommando
     const command = ffmpeg();
-    clips.forEach((file) => {
-      command.input(file);
-    });
+    clips.forEach((file) => command.input(file));
 
     command
-      .on("start", (cmd) => {
-        console.log("FFmpeg start:", cmd);
-      })
+      .on("start", (cmd) => console.log("FFmpeg start:", cmd))
       .on("error", (err) => {
         console.error("FFmpeg error:", err);
         if (!res.headersSent) {
@@ -720,8 +466,7 @@ app.post("/api/render-reel-test", async (req, res) => {
   }
 });
 
-// --- Starta servern ---
-const PORT = process.env.PORT || 3000;
+// ---- Start ----
 app.listen(PORT, () => {
-  console.log(`Kenai backend kör på port ${PORT}`);
+  console.log("Kenai backend kör på port " + PORT);
 });
