@@ -10,12 +10,20 @@ import OpenAI from "openai";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
 import ffprobeInstaller from "@ffprobe-installer/ffprobe";
+import os from "os";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 ffmpeg.setFfprobePath(ffprobeInstaller.path);
 
 const __dirname = path.resolve();
+const RENDER_DIR = path.join(__dirname, "public", "renders");
+fs.mkdirSync(RENDER_DIR, { recursive: true });
 const app = express();
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true }));
+
+app.use(express.static(path.join(__dirname, "public")));
+
 app.set("trust proxy", 1);
 
 // ---- ENV / helpers ----
@@ -42,8 +50,9 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB per fil (demo)
+  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
 });
+
 
 // ---- CORS (ingen cors-dependency) ----
 const ALLOWED_ORIGINS = new Set([
@@ -69,6 +78,8 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 app.use(express.static(path.join(__dirname, "public")));
+fs.mkdirSync(RENDER_DIR, { recursive: true });
+
 
 // ---- Reels output static (om du skriver filer dit senare) ----
 const reelsOutputDir = path.join(process.cwd(), "reels-output");
@@ -216,31 +227,89 @@ app.post("/api/reels/hooks", async (req, res) => {
 /* =========================
    Reels: render demo
 ========================= */
-app.post("/api/reels/render-demo", async (req, res) => {
+app.post("/api/reels/render", upload.array("clips", 50), async (req, res) => {
   try {
-    const { style, clips, targetSeconds } = req.body || {};
-    if (!Array.isArray(clips) || clips.length === 0) {
-      return res.status(400).json({ ok: false, error: "Inga klipp skickades till render-demo." });
+    const planRaw = req.body?.plan;
+const plan =
+  typeof planRaw === "string"
+    ? JSON.parse(planRaw)
+    : planRaw; // om det redan är ett objekt
+    const files = req.files || [];
+
+    if (!plan) return res.status(400).json({ ok: false, error: "Missing plan" });
+    if (!files.length) return res.status(400).json({ ok: false, error: "No files uploaded" });
+
+    const targetSeconds = Number(plan.targetSeconds || plan.target || 10);
+    const n = files.length;
+    const perClip = Math.max(1, Math.floor(targetSeconds / n));
+
+    const sessionId = plan.sessionId || Date.now().toString();
+    const outName = `reel_${sessionId}.mp4`;
+    const outPath = path.join(RENDER_DIR, outName);
+
+    // 1) bygg segment
+    const segments = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      const inPath = f.path;
+      const segPath = path.join(os.tmpdir(), `seg_${sessionId}_${i}.mp4`);
+
+      const isImg = (f.mimetype || "").startsWith("image/");
+      const isVid = (f.mimetype || "").startsWith("video/");
+
+      if (!isImg && !isVid) {
+        return res.status(400).json({ ok: false, error: `Unsupported type: ${f.mimetype}` });
+      }
+
+      await new Promise((resolve, reject) => {
+        let cmd = ffmpeg(inPath)
+          .outputOptions([
+            "-t", String(perClip),
+            "-vf",
+            "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,fps=30,format=yuv420p",
+            "-pix_fmt", "yuv420p",
+            "-movflags", "+faststart",
+          ])
+          .videoCodec("libx264");
+
+        // image: loopa
+        if (isImg) cmd = cmd.inputOptions(["-loop 1"]);
+
+        // video: försök ha ljud
+        if (isVid) cmd = cmd.audioCodec("aac").audioFrequency(48000).audioChannels(2);
+
+        cmd
+          .on("end", resolve)
+          .on("error", reject)
+          .save(segPath);
+      });
+
+      segments.push(segPath);
     }
-    if (!targetSeconds || targetSeconds <= 0) {
-      return res.status(400).json({ ok: false, error: "Ogiltig mållängd." });
-    }
+
+    // 2) concat segment
+    // concat demuxer kräver en list.txt
+    const listPath = path.join("/tmp", `list_${sessionId}.txt`);
+    fs.writeFileSync(listPath, segments.map(p => `file '${p}'`).join("\n"));
+
+    await new Promise((resolve, reject) => {
+      ffmpeg()
+        .input(listPath)
+        .inputOptions(["-f concat", "-safe 0"])
+        .outputOptions(["-c copy"])
+        .on("end", resolve)
+        .on("error", reject)
+        .save(outPath);
+    });
 
     return res.json({
       ok: true,
-      message: "Render-demo mottagen. FFmpeg-rendering kopplas på i nästa steg.",
-      debug: {
-        style: style || "Basic",
-        clips: clips.map((c) => ({
-          name: c.name || "okänt namn",
-          plannedSeconds: c.duration || null,
-        })),
-        targetSeconds,
-      },
+      videoUrl: `/renders/${outName}`,
+      debug: { targetSeconds, perClip, count: n },
     });
-  } catch (err) {
-    console.error("Fel i /api/reels/render-demo:", err);
-    return res.status(500).json({ ok: false, error: "Serverfel i render-demo." });
+  } catch (e) {
+    console.error("render error:", e);
+    res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
 });
 
@@ -465,6 +534,13 @@ app.post("/api/render-reel-test", async (req, res) => {
     }
   }
 });
+app.use((err, req, res, next) => {
+  if (err && err.name === "MulterError") {
+    return res.status(400).json({ ok: false, error: err.code, message: err.message });
+  }
+  next(err);
+});
+
 
 // ---- Start ----
 app.listen(PORT, () => {

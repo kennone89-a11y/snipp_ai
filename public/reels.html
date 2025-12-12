@@ -315,15 +315,15 @@
       <h2 style="font-size: 16px; margin-bottom: 8px;">2. Lägg till klipp &amp; längd</h2>
       <div class="row">
         <div>
-          <label for="files">Bilder/filmer (lokalt, laddas ej upp än)</label>
-          <input id="files" type="file" multiple accept="image/*,video/*" />
-          <div class="small-muted">
-            Välj några sommarbilder/klipp som vi kan planera reelen med.
-          </div>
-        </div>
-        <div>
-         <label for="files">Bilder/filmer (lokalt, laddas ej upp än)</label>
-<input id="files" type="file" multiple accept="image/*,video/*" />
+          
+
+<label for="fileInputMulti">Bilder/filmer (lokalt, laddas ej upp än)</label>
+<input
+  id="fileInputMulti"
+  type="file"
+  multiple
+  accept="image/*,video/*"
+/>
 <div class="small-muted">
   Välj några sommarbilder/klipp som vi kan planera reelen med.
 </div>
@@ -396,78 +396,107 @@
 
   
  
- 
-   <script>
+<script>
 (() => {
-  // Elements
-  const fileInput = document.querySelector('input[type="file"]');
-  const targetSelect = document.querySelector('select');
-  const planBtn = document.getElementById("buildPlanBtn");
-  const renderBtn = document.getElementById("renderBtn");
-  const renderWithMusicBtn = document.getElementById("renderWithMusicBtn");
-  const statusText = document.getElementById("statusText");
-  const previewContainer = document.getElementById("previewContainer");
+// Elements
 
-  let selectedFiles = [];
+const fileInputMulti  = document.getElementById("fileInputMulti");
 
-  function setStatus(msg) {
-    if (statusText) statusText.textContent = msg;
+const targetSelect = document.querySelector("select");
+const planBtn = document.getElementById("buildPlanBtn");
+const renderBtn = document.getElementById("renderBtn");
+const renderWithMusicBtn = document.getElementById("renderWithMusicBtn");
+const statusText = document.getElementById("statusText");
+const previewContainer = document.getElementById("previewContainer");
+
+function setStatus(msg) {
+  if (statusText) statusText.textContent = msg;
+}
+
+function getTargetSeconds() {
+  const v = parseInt((targetSelect && targetSelect.value) || "10", 10);
+  return Number.isFinite(v) ? v : 10;
+}
+
+// Välj filer: prioritera höger om den har filer, annars vänster
+function getChosenFiles() {
+  return Array.from(fileInputMulti?.files || []);
+}
+
+ 
+function buildPlan() {
+  const chosen = getChosenFiles(); // läser DIREKT från inputs
+  if (!chosen.length) {
+    alert("Välj minst en fil");
+    return null;
   }
 
-  function getTargetSeconds() {
-    const v = parseInt((targetSelect && targetSelect.value) || "10", 10);
-    return Number.isFinite(v) ? v : 10;
+  const targetSeconds = getTargetSeconds();
+  const plan = {
+    targetSeconds,
+    totalFiles: chosen.length,
+    files: chosen.map((f) => ({
+      name: f.name,
+      type: (f.type || "").startsWith("image/") ? "image" : "video",
+      size: f.size,
+    })),
+  };
+
+  window.__PLAN = plan;
+  return plan;
+}
+
+// (valfritt men bra) logga när du väljer filer
+
+if (fileInputMulti) fileInputMulti.addEventListener("change", () => {
+  setStatus(`Valt (höger): ${fileInputMulti.files.length} filer`);
+});
+
+
+async function createReelPlan() {
+  const plan = buildPlan();
+  if (!plan) return;
+
+  if (previewContainer) {
+    previewContainer.textContent = JSON.stringify(plan, null, 2);
   }
+  setStatus(`Plan skapad: ${plan.totalFiles} filer`);
+  alert("Plan skapad (demo) – redo att rendera.");
+}
 
-  function buildPlan() {
-    const targetSeconds = getTargetSeconds();
-    const plan = {
-      targetSeconds,
-      totalFiles: selectedFiles.length,
-      files: selectedFiles.map(f => ({
-        name: f.name,
-        type: (f.type || "").startsWith("image/") ? "image" : "video",
-        size: f.size
-      }))
-    };
-
-    window.__PLAN = plan;
-
-    if (previewContainer) {
-      previewContainer.innerHTML =
-        `<h5>AI-plan (demo)</h5><pre>${JSON.stringify(plan, null, 2)}</pre>`;
-    }
-
-    setStatus("Plan skapad (demo) – redo att skickas till backend.");
-    return plan;
-  }
 
   async function renderReelApi(plan) {
-    const p = plan || window.__PLAN;
-    if (!p) {
+    if (!plan) {
       alert("Ingen plan ännu. Klicka först 'Skapa reel-plan (demo)'.");
       return null;
     }
 
-    const payload = {
-      style: p.style || p.styleKey || "Basic",
-      clips: p.files || p.clips || [],
-      targetSeconds: p.targetSeconds || p.target || 10
-    };
+    const files = getChosenFiles();
+    if (!files.length) {
+      alert("Välj minst en fil");
+      return null;
+    }
 
-    const res = await fetch("/api/reels/render-demo", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
+    const fd = new FormData();
+    fd.append("plan", JSON.stringify(plan));
+    for (const f of files) fd.append("clips", f);
 
+    const res = await fetch("/api/reels/render", { method: "POST", body: fd });
+
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
     let data = null;
-    try { data = await res.json(); } catch (_) { data = null; }
+    let raw = "";
+    try {
+      if (ct.includes("application/json")) data = await res.json();
+      else raw = await res.text();
+    } catch (e) {
+      try { raw = await res.text(); } catch (_) {}
+    }
 
-    console.log("Render svar:", res.status, data);
+    console.log("Render svar:", res.status, { ct, data, raw });
 
     if (!res.ok) {
-      alert((data && (data.error || data.message)) || `Render fel (${res.status})`);
+      alert((data && (data.error || data.message)) || raw || `Render fel (${res.status})`);
       return null;
     }
 
@@ -475,41 +504,27 @@
     return data;
   }
 
-  // Expose for any inline onclick that still exists
-  window.renderReelApi = renderReelApi;
-  window.__renderNow = async () => renderReelApi(window.__PLAN);
-
-  // Wire events
-  if (fileInput) {
-    fileInput.addEventListener("change", () => {
-      selectedFiles = Array.from(fileInput.files || []);
-      setStatus(`Valda filer: ${selectedFiles.length}`);
-    });
+  async function renderNow() {
+    const plan = window.__PLAN;
+    await renderReelApi(plan);
   }
 
-  if (planBtn) {
-    planBtn.addEventListener("click", () => {
-      if (!selectedFiles.length) return alert("Välj minst ett klipp först.");
-      buildPlan();
-    });
+  async function renderWithMusicNow() {
+    const plan = window.__PLAN;
+    await renderReelApi(plan); // samma demo-call just nu
   }
 
-  if (renderBtn) {
-    renderBtn.addEventListener("click", async () => {
-      if (!selectedFiles.length) return alert("Välj minst ett klipp först.");
-      if (!window.__PLAN) buildPlan();
-      await renderReelApi(window.__PLAN);
-    });
-  }
+  // Wire buttons
+  if (planBtn) planBtn.addEventListener("click", createReelPlan);
+  if (renderBtn) renderBtn.addEventListener("click", renderNow);
+  if (renderWithMusicBtn) renderWithMusicBtn.addEventListener("click", renderWithMusicNow);
 
-  if (renderWithMusicBtn) {
-    renderWithMusicBtn.addEventListener("click", () => {
-      alert("Demo-läge: musik-render är inte kopplad till backend ännu.");
-    });
-  }
+  // Expose (if inline onclick finns kvar)
+  window.__buildPlan = createReelPlan;
+  window.__renderNow = renderNow;
+  window.__renderWithMusic = renderWithMusicNow;
 
-  // Boot
-  setStatus("Redo.");
+  setStatus("Redo. Välj filer och skapa plan.");
 })();
 </script>
 </body>
