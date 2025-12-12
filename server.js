@@ -570,13 +570,6 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
-app.use((err, req, res, next) => {
-  if (err && err.name === "MulterError") {
-    return res.status(400).json({ ok: false, error: err.code, message: err.message });
-  }
-  next(err);
-});
-
 app.get("/api/health", (req, res) => {
   res.json({
     ok: true,
