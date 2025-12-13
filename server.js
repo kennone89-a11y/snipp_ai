@@ -501,7 +501,7 @@ app.post("/api/summarize", async (req, res) => {
 
       return res.json({ ok: true, summary, publicUrl: audioUrl || null });
     }
-
+ 
     // B) Om frontend skickar url/publicUrl -> transkribera ljudet och sammanfatta
     if (!audioUrl || typeof audioUrl !== "string") {
       return res.status(400).json({
