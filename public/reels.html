@@ -397,33 +397,30 @@
   
  
 <script>
-  // FIX: helper som reels-sidan kräver
-async function awaitfetch(url, options = {}, timeoutMs = 60000) {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  async function awaitfetch(url, options) {
+  const res = await fetch(url, options);
 
-  try {
-    const res = await fetch(url, { ...options, signal: ctrl.signal });
-    const ct = (res.headers.get("content-type") || "").toLowerCase();
-
-    let data;
-    try {
-      data = ct.includes("application/json")
-        ? await res.json()
-        : await res.text();
-    } catch {
-      data = await res.text().catch(() => "");
-    }
-
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
-
-    return data;
-  } finally {
-    clearTimeout(t);
+  const ct = res.headers.get("content-type") || "";
+  let data = "";
+  if (ct.includes("application/json")) {
+    data = await res.json().catch(() => ({}));
+  } else {
+    data = await res.text().catch(() => "");
   }
+
+  // lägg på datan på response-objektet
+  res.data = data;
+
+  if (!res.ok) {
+    const msg =
+      (data && (data.error || data.message)) ? (data.error || data.message) : `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+
+  return res;
 }
+
+
 
 (() => {
   const API_BASE = location.origin.includes("localhost")
@@ -513,7 +510,8 @@ async function createReelPlan() {
     fd.append("plan", JSON.stringify(plan));
     for (const f of files) fd.append("clips", f);
  
-    const res = awaitfetch(`${API_BASE}/api/render-reel`, {method: "POST", body: fd });
+    const res = await awaitfetch(`${API_BASE}/api/render-reel`, { method: "POST", body: fd });
+
 
     const ct = (res.headers.get("content-type") || "").toLowerCase();
     let data = null;
