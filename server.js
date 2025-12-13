@@ -474,7 +474,7 @@ app.post("/api/summarize", async (req, res) => {
   try {
     const { publicUrl } = req.body || {};
     if (!publicUrl) {
-      return res.status(400).json({ ok: false, message: "Missing publicUrl" });
+      return res.status(418).json({ ok:false, message:"LIVE-CHECK-418" });
     }
 
     // 1) Ladda ner ljudet från Supabase public URL
