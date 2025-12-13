@@ -3,14 +3,12 @@ import dotenv from "dotenv";
 dotenv.config({ override: true });
 
 import express from "express";
-import path from "path";
-import fs from "fs";
 import multer from "multer";
 import OpenAI from "openai";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
 import ffprobeInstaller from "@ffprobe-installer/ffprobe";
-import os from "os";
+
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 ffmpeg.setFfprobePath(ffprobeInstaller.path);
@@ -472,40 +470,59 @@ import os from "os";
  
 app.post("/api/summarize", async (req, res) => {
   try {
-    const { publicUrl } = req.body || {};
-    if (!publicUrl) {
-      return res.status(418).json({ ok:false, message:"LIVE-CHECK-418" });
-    }
- 
-    // 1) Ladda ner ljudet från Supabase public URL
-    const r = await fetch(publicUrl);
-    if (!r.ok) {
-      return res.status(400).json({
-        ok: false,
-        message: `Could not fetch publicUrl (${r.status})`,
+    const openai = getOpenAI();
+
+    const { publicUrl, url, text } = req.body || {};
+
+    // 1) Om text skickas in: sammanfatta direkt
+    if (text && typeof text === "string" && text.trim()) {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "Du skriver en kort, tydlig svensk sammanfattning. Punktlista med 3–7 punkter. Inga onödiga ord.",
+          },
+          { role: "user", content: text.trim() },
+        ],
       });
+
+      const summary = completion?.choices?.[0]?.message?.content?.trim() || "";
+      return res.json({ ok: true, summary, transcript: text.trim() });
+    }
+
+    // 2) Annars: vi måste ha en URL (publicUrl eller url)
+    const audioUrl = (publicUrl || url || "").trim();
+    if (!audioUrl) {
+      return res.status(400).json({ ok: false, message: "Missing publicUrl/url or text" });
+    }
+
+    // 3) Hämta ljudfilen
+    const r = await fetch(audioUrl);
+    if (!r.ok) {
+      return res.status(400).json({ ok: false, message: `Could not fetch audioUrl (${r.status})` });
     }
 
     const arrayBuf = await r.arrayBuffer();
     const buf = Buffer.from(arrayBuf);
 
-    // 2) Spara temporärt till fil (stabilt på Render)
-    const tmpDir = os.tmpdir();
-    const tmpFile = path.join(tmpDir, `kenai-upload-${Date.now()}.webm`);
+    // 4) Spara temporärt till fil
+    const tmpFile = path.join(os.tmpdir(), `kenai-upload-${Date.now()}.webm`);
     fs.writeFileSync(tmpFile, buf);
 
-    // 3) Transkribera (Whisper)
-    const transcript = await openai.audio.transcriptions.create({
+    // 5) Transkribera (Whisper)
+    const transcriptObj = await openai.audio.transcriptions.create({
       file: fs.createReadStream(tmpFile),
       model: "whisper-1",
     });
 
-    // Städa tempfil
+    // städa
     try { fs.unlinkSync(tmpFile); } catch (_) {}
 
-    const text = transcript?.text || "";
+    const transcript = transcriptObj?.text || "";
 
-    // 4) Sammanfatta på svenska
+    // 6) Sammanfatta på svenska
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -514,14 +531,13 @@ app.post("/api/summarize", async (req, res) => {
           content:
             "Du skriver en kort, tydlig svensk sammanfattning. Punktlista med 3–7 punkter. Inga onödiga ord.",
         },
-        { role: "user", content: text || "(tom transkription)" },
+        { role: "user", content: transcript || "(tom transkription)" },
       ],
     });
 
-    const summary =
-      completion?.choices?.[0]?.message?.content?.trim() || "";
+    const summary = completion?.choices?.[0]?.message?.content?.trim() || "";
 
-    return res.json({ ok: true, publicUrl, transcript: text, summary });
+    return res.json({ ok: true, publicUrl: audioUrl, transcript, summary });
   } catch (err) {
     console.error("summarize error:", err);
     return res.status(500).json({
@@ -531,6 +547,7 @@ app.post("/api/summarize", async (req, res) => {
     });
   }
 });
+
 
 
 
