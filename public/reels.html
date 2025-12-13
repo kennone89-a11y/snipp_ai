@@ -397,6 +397,34 @@
   
  
 <script>
+  // FIX: helper som reels-sidan kräver
+async function awaitfetch(url, options = {}, timeoutMs = 60000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(url, { ...options, signal: ctrl.signal });
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+
+    let data;
+    try {
+      data = ct.includes("application/json")
+        ? await res.json()
+        : await res.text();
+    } catch {
+      data = await res.text().catch(() => "");
+    }
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    return data;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 (() => {
   const API_BASE = location.origin.includes("localhost")
   ? "http://65.109.1.72:3000"
