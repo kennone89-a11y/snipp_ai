@@ -5,23 +5,26 @@ dotenv.config({ override: true });
 import express from "express";
 import multer from "multer";
 import OpenAI from "openai";
+
+import fs from "fs";
+import os from "os";
+import path from "path";
+import { fileURLToPath } from "url";
+
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
 import ffprobeInstaller from "@ffprobe-installer/ffprobe";
 
+// ---- Paths (ESM-friendly __dirname) ----
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
+// ---- FFmpeg paths ----
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 ffmpeg.setFfprobePath(ffprobeInstaller.path);
 
-const __dirname = path.resolve();
-const RENDER_DIR = path.join(__dirname, "public", "renders");
-fs.mkdirSync(RENDER_DIR, { recursive: true });
+// ---- App ----
 const app = express();
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ extended: true }));
-
-app.use(express.static(path.join(__dirname, "public")));
-
 app.set("trust proxy", 1);
 
 // ---- ENV / helpers ----
@@ -32,27 +35,14 @@ function requireOpenAIKey() {
   if (!key) throw new Error("OPENAI_API_KEY saknas i environment variables");
   return key;
 }
-
 function getOpenAI() {
-  const key = requireOpenAIKey();
-  return new OpenAI({ apiKey: key });
+  return new OpenAI({ apiKey: requireOpenAIKey() });
 }
 
-
-// ---- Multer: spara filer i /tmp (Render-vänligt) ----
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "/tmp"),
-  filename: (req, file, cb) => {
-    const safeName = (file.originalname || "file").replace(/\s+/g, "_");
-    cb(null, "kenai-" + Date.now() + "-" + safeName);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
-});
-
+// ---- Body + static ----
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ extended: true, limit: "100mb" }));
+app.use(express.static(path.join(__dirname, "public")));
 
 // ---- CORS (ingen cors-dependency) ----
 const ALLOWED_ORIGINS = new Set([
@@ -74,12 +64,24 @@ app.use((req, res, next) => {
   next();
 });
 
-// ---- Body + static ----
-app.use(express.json({ limit: "100mb" }));
-app.use(express.urlencoded({ extended: true, limit: "100mb" }));
-app.use(express.static(path.join(__dirname, "public")));
-fs.mkdirSync(RENDER_DIR, { recursive: true });
+// ---- Multer: spara filer i /tmp (Render-vänligt) ----
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, "/tmp"),
+  filename: (req, file, cb) => {
+    const safeName = (file.originalname || "file").replace(/\s+/g, "_");
+    cb(null, "kenai-" + Date.now() + "-" + safeName);
+  },
+});
 
+const upload = multer({
+  storage,
+  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
+});
+
+// ---- Render output dir (static) ----
+const RENDER_DIR = path.join(__dirname, "public", "renders");
+fs.mkdirSync(RENDER_DIR, { recursive: true });
+app.use("/renders", express.static(RENDER_DIR));
 
 // ---- Reels output static (om du skriver filer dit senare) ----
 const reelsOutputDir = path.join(process.cwd(), "reels-output");
@@ -181,7 +183,7 @@ app.post("/api/reels/hooks", async (req, res) => {
       return res.status(400).json({ error: "Missing idea" });
     }
 
-    requireOpenAIKey();
+    const openai = getOpenAI();
 
     const userPrompt =
       "Du är en svensk expert på TikTok/Instagram Reels.\n\n" +
@@ -230,10 +232,7 @@ app.post("/api/reels/hooks", async (req, res) => {
 app.post("/api/reels/render", upload.array("clips", 50), async (req, res) => {
   try {
     const planRaw = req.body?.plan;
-const plan =
-  typeof planRaw === "string"
-    ? JSON.parse(planRaw)
-    : planRaw; // om det redan är ett objekt
+    const plan = typeof planRaw === "string" ? JSON.parse(planRaw) : planRaw;
     const files = req.files || [];
 
     if (!plan) return res.status(400).json({ ok: false, error: "Missing plan" });
@@ -247,7 +246,6 @@ const plan =
     const outName = `reel_${sessionId}.mp4`;
     const outPath = path.join(RENDER_DIR, outName);
 
-    // 1) bygg segment
     const segments = [];
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
@@ -264,33 +262,28 @@ const plan =
       await new Promise((resolve, reject) => {
         let cmd = ffmpeg(inPath)
           .outputOptions([
-            "-t", String(perClip),
+            "-t",
+            String(perClip),
             "-vf",
             "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,fps=30,format=yuv420p",
-            "-pix_fmt", "yuv420p",
-            "-movflags", "+faststart",
+            "-pix_fmt",
+            "yuv420p",
+            "-movflags",
+            "+faststart",
           ])
           .videoCodec("libx264");
 
-        // image: loopa
         if (isImg) cmd = cmd.inputOptions(["-loop 1"]);
-
-        // video: försök ha ljud
         if (isVid) cmd = cmd.audioCodec("aac").audioFrequency(48000).audioChannels(2);
 
-        cmd
-          .on("end", resolve)
-          .on("error", reject)
-          .save(segPath);
+        cmd.on("end", resolve).on("error", reject).save(segPath);
       });
 
       segments.push(segPath);
     }
 
-    // 2) concat segment
-    // concat demuxer kräver en list.txt
     const listPath = path.join("/tmp", `list_${sessionId}.txt`);
-    fs.writeFileSync(listPath, segments.map(p => `file '${p}'`).join("\n"));
+    fs.writeFileSync(listPath, segments.map((p) => `file '${p}'`).join("\n"));
 
     await new Promise((resolve, reject) => {
       ffmpeg()
@@ -315,9 +308,6 @@ const plan =
 
 /* =========================
    Reels: basic rendering (v1)
-   - video-only: returnerar första videon (copy)
-   - image-only: gör 3s mp4 av första bilden
-   - mix: 400
 ========================= */
 app.post("/api/reels/render-basic", upload.array("clips", 10), async (req, res) => {
   try {
@@ -341,7 +331,6 @@ app.post("/api/reels/render-basic", upload.array("clips", 10), async (req, res) 
 
     const MAX_BYTES = 50 * 1024 * 1024;
 
-    // ---- VIDEO ----
     if (allVideos) {
       for (const vf of videoFiles) {
         if (vf.size > MAX_BYTES) {
@@ -370,13 +359,11 @@ app.post("/api/reels/render-basic", upload.array("clips", 10), async (req, res) 
       res.setHeader("Content-Length", buf.length);
       res.send(buf);
 
-      // cleanup
       for (const f of files) await fs.promises.unlink(f.path).catch(() => {});
       await fs.promises.unlink(outputPath).catch(() => {});
       return;
     }
 
-    // ---- IMAGES ----
     if (allImages) {
       const firstImg = imageFiles[0];
       const finalPath = path.join("/tmp", "kenai-basic-img-" + Date.now() + "-single.mp4");
@@ -463,7 +450,6 @@ app.post(
 app.post("/api/summarize", async (req, res) => {
   try {
     const { publicUrl, url, text } = req.body || {};
-
     const openai = getOpenAI();
 
     // 1) Om text finns: sammanfatta direkt
@@ -511,8 +497,9 @@ app.post("/api/summarize", async (req, res) => {
       model: "whisper-1",
     });
 
-    // städa tempfil
-    try { fs.unlinkSync(tmpFile); } catch (_) {}
+    try {
+      fs.unlinkSync(tmpFile);
+    } catch (_) {}
 
     const transcript = (transcriptResp?.text || "").trim();
     if (!transcript) {
@@ -544,10 +531,6 @@ app.post("/api/summarize", async (req, res) => {
     });
   }
 });
-
-
-
-
 
 /* =========================
    Test: render reel from fixed local clips
@@ -606,6 +589,8 @@ app.post("/api/render-reel-test", async (req, res) => {
     }
   }
 });
+
+// ---- Errors + health ----
 app.use((err, req, res, next) => {
   if (err && err.name === "MulterError") {
     return res.status(400).json({ ok: false, error: err.code, message: err.message });
