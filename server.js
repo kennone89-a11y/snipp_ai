@@ -3,14 +3,12 @@ import dotenv from "dotenv";
 dotenv.config({ override: true });
 
 import express from "express";
-import path from "path";
-import fs from "fs";
 import multer from "multer";
 import OpenAI from "openai";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
 import ffprobeInstaller from "@ffprobe-installer/ffprobe";
-import os from "os";
+
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 ffmpeg.setFfprobePath(ffprobeInstaller.path);
@@ -459,109 +457,94 @@ app.post(
   }
 );
 
-/* =========================
-   Recorder: summarize (url OR text)
-========================= */
+// =========================
+// Recorder: summarize (text OR publicUrl/url -> whisper -> summary)
+// =========================
 app.post("/api/summarize", async (req, res) => {
-  let tmpPath = null;
-
   try {
-    const { text, publicUrl, url } = req.body || {};
-        // TEMP: om frontend skickar publicUrl men ingen text ännu,
-    // returnera tydligt fel (så vi ser att kopplingen fungerar)
-    if (!text && publicUrl) {
-      return res.status(400).json({
-        ok: false,
-        error: "Backend tar emot publicUrl, men denna build transkriberar inte ljud ännu. Implementera transcribe nästa.",
-        publicUrl,
-      });
-    }
-
-    const audioUrl = url || publicUrl;
+    const { publicUrl, url, text } = req.body || {};
 
     const openai = getOpenAI();
 
-    // A) Om frontend skickar text -> sammanfatta direkt
-    if (text && typeof text === "string" && text.trim().length > 0) {
+    // 1) Om text finns: sammanfatta direkt
+    if (typeof text === "string" && text.trim()) {
       const completion = await openai.chat.completions.create({
-        model: "gpt-4.1-mini",
-        temperature: 0.4,
+        model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: "Du skriver korta, tydliga sammanfattningar på svenska." },
           {
-            role: "user",
+            role: "system",
             content:
-              "Sammanfatta detta i 6-10 bullet points + 1 kort slutsats:\n\n" + text.trim(),
+              "Du skriver en kort, tydlig svensk sammanfattning. Punktlista med 3–7 punkter. Inga onödiga ord.",
           },
+          { role: "user", content: text.trim() },
         ],
       });
 
-      const summary = (completion.choices?.[0]?.message?.content || "").trim();
-      if (!summary) return res.status(500).json({ ok: false, error: "Tomt AI-svar" });
-
-      return res.json({ ok: true, summary, publicUrl: audioUrl || null });
+      const summary = completion?.choices?.[0]?.message?.content?.trim() || "";
+      return res.json({ ok: true, summary, transcript: text.trim(), publicUrl: null });
     }
-   
-    // B) Om frontend skickar url/publicUrl -> transkribera ljudet och sammanfatta
-    if (!audioUrl || typeof audioUrl !== "string") {
+
+    // 2) Annars: måste ha en ljud-URL
+    const audioUrl = (publicUrl || url || "").trim();
+    if (!audioUrl) {
+      return res.status(400).json({ ok: false, error: "Missing publicUrl/url or text" });
+    }
+
+    // 3) Hämta ljudfilen
+    const r = await fetch(audioUrl);
+    if (!r.ok) {
       return res.status(400).json({
         ok: false,
-        error: "Saknar 'url' i body. Skicka { url: 'https://...' }",
+        error: `Could not fetch audioUrl (${r.status})`,
       });
     }
 
-    // 1) Ladda ner ljudfilen till /tmp
-    const r = await fetch(audioUrl);
-    if (!r.ok) {
-      return res.status(400).json({ ok: false, error: "Kunde inte hämta audio-URL (fetch fail)." });
-    }
-    const ab = await r.arrayBuffer();
-    tmpPath = path.join("/tmp", `kenai-audio-${Date.now()}.webm`);
-    await fs.promises.writeFile(tmpPath, Buffer.from(ab));
+    const buf = Buffer.from(await r.arrayBuffer());
 
-    // 2) Transkribera (Whisper)
+    // 4) Spara temporärt (Render-vänligt)
+    const tmpFile = path.join(os.tmpdir(), `kenai-upload-${Date.now()}.webm`);
+    fs.writeFileSync(tmpFile, buf);
+
+    // 5) Whisper -> transkript
     const transcriptResp = await openai.audio.transcriptions.create({
+      file: fs.createReadStream(tmpFile),
       model: "whisper-1",
-      file: fs.createReadStream(tmpPath),
     });
+
+    // städa tempfil
+    try { fs.unlinkSync(tmpFile); } catch (_) {}
 
     const transcript = (transcriptResp?.text || "").trim();
     if (!transcript) {
-      return res.status(500).json({ ok: false, error: "Tom transkription från AI." });
+      return res.status(500).json({ ok: false, error: "Tom transkription från AI" });
     }
 
-    // 3) Sammanfatta transkript
+    // 6) Sammanfatta transkript
     const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      temperature: 0.4,
+      model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: "Du skriver korta, tydliga sammanfattningar på svenska." },
         {
-          role: "user",
+          role: "system",
           content:
-            "Här är en transkription. Sammanfatta i 6-10 bullet points + 1 kort slutsats:\n\n" +
-            transcript,
+            "Du skriver en kort, tydlig svensk sammanfattning. Punktlista med 3–7 punkter. Inga onödiga ord.",
         },
+        { role: "user", content: transcript },
       ],
     });
 
-    const summary = (completion.choices?.[0]?.message?.content || "").trim();
-    if (!summary) return res.status(500).json({ ok: false, error: "Tomt AI-svar" });
+    const summary = completion?.choices?.[0]?.message?.content?.trim() || "";
 
-    return res.json({ ok: true, summary, transcript, publicUrl: audioUrl });
+    return res.json({ ok: true, publicUrl: audioUrl, transcript, summary });
   } catch (err) {
-    console.error("Fel i /api/summarize:", err);
+    console.error("summarize error:", err);
     return res.status(500).json({
       ok: false,
-      message: "Serverfel i /api/summarize.",
-      error: String(err?.message || err),
+      error: "Server error in /api/summarize",
+      detail: String(err?.message || err),
     });
-  } finally {
-    if (tmpPath) {
-      fs.promises.unlink(tmpPath).catch(() => {});
-    }
   }
 });
+
 
 
 
