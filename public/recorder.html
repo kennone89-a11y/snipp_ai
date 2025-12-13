@@ -314,14 +314,6 @@
   </div>
 </section>
 
-      <div class="btn-row" style="margin-top: 6px;">
-  <button id="summaryBtn" class="secondary" style="display:none" disabled>
-    Sammanfatta
-  </button>
-</div>
-
-
-
     <!-- EXPORT / MAIL -->
     <section class="section">
       <div class="section-title">4 · Export</div>
@@ -373,6 +365,24 @@ const urlInput = document.getElementById("urlInput");
 const summaryEl = document.getElementById("summary");
 const statusEl = document.getElementById("status");
 const logEl = document.getElementById("log");
+function setStatus(t) {
+  if (statusEl) statusEl.textContent = t || "";
+  console.log("STATUS:", t);
+}
+
+function setLog(t) {
+  if (logEl) logEl.textContent = t || "";
+  console.log("LOG:", t);
+}
+
+// global state (behövs av upload/summarize)
+let audioBlob = null;
+let publicUrl = null;
+let mediaRecorder = null;
+let chunks = [];
+let timerId = null;
+let startTime = 0;
+
 
 const aiStatusEl = document.getElementById("aiStatus");       // div.ai-status
 const aiStatusTextEl = document.getElementById("aiStatusText"); // p under upload
@@ -545,7 +555,7 @@ setLog("Public URL hämtad.");
     res = await fetch(`${backendBase}/api/summarize`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: url }),
+      body: JSON.stringify({ publicUrl: url }),
     });
 
     txt = await res.text();

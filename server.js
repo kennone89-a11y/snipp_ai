@@ -467,6 +467,16 @@ app.post("/api/summarize", async (req, res) => {
 
   try {
     const { text, publicUrl, url } = req.body || {};
+        // TEMP: om frontend skickar publicUrl men ingen text ännu,
+    // returnera tydligt fel (så vi ser att kopplingen fungerar)
+    if (!text && publicUrl) {
+      return res.status(400).json({
+        ok: false,
+        error: "Backend tar emot publicUrl, men denna build transkriberar inte ljud ännu. Implementera transcribe nästa.",
+        publicUrl,
+      });
+    }
+
     const audioUrl = url || publicUrl;
 
     const openai = getOpenAI();
