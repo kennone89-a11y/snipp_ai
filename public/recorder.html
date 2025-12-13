@@ -564,7 +564,7 @@ setLog("Public URL hämtad.");
     } catch (e) {
       json = null;
     }
-
+ 
     if (!res.ok) {
       const msg = (json && (json.error || json.message)) || txt || "Okänt fel";
       throw new Error(`Backend-fel: ${String(msg).slice(0, 300)}`);
