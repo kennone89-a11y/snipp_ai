@@ -183,7 +183,7 @@ app.post("/api/reels/hooks", async (req, res) => {
       return res.status(400).json({ error: "Missing idea" });
     }
 
-    requireOpenAIKey();
+    const openai = getOpenAI();
 
     const userPrompt =
       "Du är en svensk expert på TikTok/Instagram Reels.\n\n" +
