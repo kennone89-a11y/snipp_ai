@@ -476,7 +476,7 @@ app.post("/api/summarize", async (req, res) => {
     if (!publicUrl) {
       return res.status(418).json({ ok:false, message:"LIVE-CHECK-418" });
     }
-
+ 
     // 1) Ladda ner ljudet från Supabase public URL
     const r = await fetch(publicUrl);
     if (!r.ok) {
