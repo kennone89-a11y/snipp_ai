@@ -470,12 +470,11 @@ import os from "os";
  
 app.post("/api/summarize", async (req, res) => {
   try {
-    const openai = getOpenAI();
-
     const { publicUrl, url, text } = req.body || {};
 
-    // 1) Om text skickas in: sammanfatta direkt
-    if (text && typeof text === "string" && text.trim()) {
+    // 1) Om text finns: sammanfatta direkt
+    if (text && String(text).trim()) {
+      const openai = getOpenAI();
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
@@ -484,45 +483,44 @@ app.post("/api/summarize", async (req, res) => {
             content:
               "Du skriver en kort, tydlig svensk sammanfattning. Punktlista med 3–7 punkter. Inga onödiga ord.",
           },
-          { role: "user", content: text.trim() },
+          { role: "user", content: String(text).trim() },
         ],
       });
 
-      const summary = completion?.choices?.[0]?.message?.content?.trim() || "";
-      return res.json({ ok: true, summary, transcript: text.trim() });
+      const summary = completion.choices?.[0]?.message?.content?.trim() || "";
+      return res.json({ ok: true, summary });
     }
 
-    // 2) Annars: vi måste ha en URL (publicUrl eller url)
+    // 2) Annars: hämta ljud från URL
     const audioUrl = (publicUrl || url || "").trim();
     if (!audioUrl) {
       return res.status(400).json({ ok: false, message: "Missing publicUrl/url or text" });
     }
 
-    // 3) Hämta ljudfilen
     const r = await fetch(audioUrl);
     if (!r.ok) {
-      return res.status(400).json({ ok: false, message: `Could not fetch audioUrl (${r.status})` });
+      return res.status(400).json({
+        ok: false,
+        message: `Could not fetch audioUrl (${r.status})`,
+      });
     }
 
-    const arrayBuf = await r.arrayBuffer();
-    const buf = Buffer.from(arrayBuf);
-
-    // 4) Spara temporärt till fil
+    const buf = Buffer.from(await r.arrayBuffer());
     const tmpFile = path.join(os.tmpdir(), `kenai-upload-${Date.now()}.webm`);
     fs.writeFileSync(tmpFile, buf);
 
-    // 5) Transkribera (Whisper)
+    // 3) Transkribera + sammanfatta
+    const openai = getOpenAI();
+
     const transcriptObj = await openai.audio.transcriptions.create({
       file: fs.createReadStream(tmpFile),
       model: "whisper-1",
     });
 
-    // städa
     try { fs.unlinkSync(tmpFile); } catch (_) {}
 
     const transcript = transcriptObj?.text || "";
 
-    // 6) Sammanfatta på svenska
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -535,8 +533,7 @@ app.post("/api/summarize", async (req, res) => {
       ],
     });
 
-    const summary = completion?.choices?.[0]?.message?.content?.trim() || "";
-
+    const summary = completion.choices?.[0]?.message?.content?.trim() || "";
     return res.json({ ok: true, publicUrl: audioUrl, transcript, summary });
   } catch (err) {
     console.error("summarize error:", err);
@@ -546,86 +543,4 @@ app.post("/api/summarize", async (req, res) => {
       detail: String(err?.message || err),
     });
   }
-});
-
-
-
-
-
-
-/* =========================
-   Test: render reel from fixed local clips
-========================= */
-app.post("/api/render-reel-test", async (req, res) => {
-  try {
-    const clipsDir = path.join(__dirname, "test_clips");
-    const outputDir = path.join(__dirname, "test_output");
-    const outputFile = path.join(outputDir, "reel-from-api.mp4");
-
-    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
-
-    const clips = [path.join(clipsDir, "clip1.MOV"), path.join(clipsDir, "clip2.MOV")];
-
-    for (const file of clips) {
-      if (!fs.existsSync(file)) {
-        console.error("Hittar inte klipp:", file);
-        return res.status(400).json({ ok: false, error: "Hittar inte klipp: " + file });
-      }
-    }
-
-    const command = ffmpeg();
-    clips.forEach((file) => command.input(file));
-
-    command
-      .on("start", (cmd) => console.log("FFmpeg start:", cmd))
-      .on("error", (err) => {
-        console.error("FFmpeg error:", err);
-        if (!res.headersSent) {
-          return res.status(500).json({
-            ok: false,
-            message: "FFmpeg misslyckades.",
-            details: String(err),
-          });
-        }
-      })
-      .on("end", () => {
-        console.log("FFmpeg klar, skapade:", outputFile);
-        if (!res.headersSent) {
-          return res.json({
-            ok: true,
-            message: "Reel render klar.",
-            outputPath: "/test_output/reel-from-api.mp4",
-          });
-        }
-      })
-      .mergeToFile(outputFile, outputDir);
-  } catch (err) {
-    console.error("Fel i /api/render-reel-test:", err);
-    if (!res.headersSent) {
-      return res.status(500).json({
-        ok: false,
-        message: "Serverfel i /api/render-reel-test.",
-        details: String(err),
-      });
-    }
-  }
-});
-app.use((err, req, res, next) => {
-  if (err && err.name === "MulterError") {
-    return res.status(400).json({ ok: false, error: err.code, message: err.message });
-  }
-  next(err);
-});
-
-app.get("/api/health", (req, res) => {
-  res.json({
-    ok: true,
-    hasOpenAIKey: Boolean(process.env.OPENAI_API_KEY),
-    node: process.version,
-  });
-});
-
-// ---- Start ----
-app.listen(PORT, () => {
-  console.log("Kenai backend kör på port " + PORT);
 });
