@@ -460,28 +460,18 @@ app.post(
 );
 
 /* =========================
-   Recorder: summarize (url OR text)
+   Recorder: summarize (URL OR text)
+   - om text finns: sammanfatta text
+   - annars: hämta ljud från (url/publicUrl), transkribera, sammanfatta
 ========================= */
 app.post("/api/summarize", async (req, res) => {
   let tmpPath = null;
 
   try {
     const { text, publicUrl, url } = req.body || {};
-        // TEMP: om frontend skickar publicUrl men ingen text ännu,
-    // returnera tydligt fel (så vi ser att kopplingen fungerar)
-    if (!text && publicUrl) {
-      return res.status(400).json({
-        ok: false,
-        error: "Backend tar emot publicUrl, men denna build transkriberar inte ljud ännu. Implementera transcribe nästa.",
-        publicUrl,
-      });
-    }
-
-    const audioUrl = url || publicUrl;
-
     const openai = getOpenAI();
 
-    // A) Om frontend skickar text -> sammanfatta direkt
+    // A) Om vi redan får text → sammanfatta direkt
     if (text && typeof text === "string" && text.trim().length > 0) {
       const completion = await openai.chat.completions.create({
         model: "gpt-4.1-mini",
@@ -490,47 +480,54 @@ app.post("/api/summarize", async (req, res) => {
           { role: "system", content: "Du skriver korta, tydliga sammanfattningar på svenska." },
           {
             role: "user",
-            content:
-              "Sammanfatta detta i 6-10 bullet points + 1 kort slutsats:\n\n" + text.trim(),
+            content: "Sammanfatta detta i 6-10 bullet points + 1 kort slutsats:\n\n" + text.trim(),
           },
         ],
       });
 
       const summary = (completion.choices?.[0]?.message?.content || "").trim();
       if (!summary) return res.status(500).json({ ok: false, error: "Tomt AI-svar" });
-
-      return res.json({ ok: true, summary, publicUrl: audioUrl || null });
+      return res.json({ ok: true, summary, transcript: text.trim(), publicUrl: publicUrl || url || null });
     }
 
-    // B) Om frontend skickar url/publicUrl -> transkribera ljudet och sammanfatta
-    if (!audioUrl || typeof audioUrl !== "string") {
+    // B) Annars: vi måste ha en URL till ljudet
+    const audioUrl = (url || publicUrl || "").trim();
+    if (!audioUrl) {
       return res.status(400).json({
         ok: false,
-        error: "Saknar 'url' i body. Skicka { url: 'https://...' }",
+        error: "Saknar 'url' eller 'publicUrl' i body. Skicka { publicUrl: '...' }.",
       });
     }
 
     // 1) Ladda ner ljudfilen till /tmp
     const r = await fetch(audioUrl);
     if (!r.ok) {
-      return res.status(400).json({ ok: false, error: "Kunde inte hämta audio-URL (fetch fail)." });
+      return res.status(400).json({ ok: false, error: `Kunde inte hämta audioUrl (HTTP ${r.status})` });
     }
-    const ab = await r.arrayBuffer();
-    tmpPath = path.join("/tmp", `kenai-audio-${Date.now()}.webm`);
-    await fs.promises.writeFile(tmpPath, Buffer.from(ab));
 
-    // 2) Transkribera (Whisper)
-    const transcriptResp = await openai.audio.transcriptions.create({
+    const contentType = r.headers.get("content-type") || "";
+    const ext =
+      contentType.includes("webm") ? "webm" :
+      contentType.includes("mpeg") ? "mp3" :
+      contentType.includes("mp4")  ? "m4a" :
+      contentType.includes("wav")  ? "wav" : "webm";
+
+    tmpPath = path.join("/tmp", `kenai-audio-${Date.now()}.${ext}`);
+    const buf = Buffer.from(await r.arrayBuffer());
+    await fs.promises.writeFile(tmpPath, buf);
+
+    // 2) Transkribera (stabilt: whisper-1)
+    const tr = await openai.audio.transcriptions.create({
       model: "whisper-1",
       file: fs.createReadStream(tmpPath),
     });
 
-    const transcript = (transcriptResp?.text || "").trim();
+    const transcript = (tr.text || "").trim();
     if (!transcript) {
-      return res.status(500).json({ ok: false, error: "Tom transkription från AI." });
+      return res.status(500).json({ ok: false, error: "Tom transkribering" });
     }
 
-    // 3) Sammanfatta transkript
+    // 3) Sammanfatta transkriptet
     const completion = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
       temperature: 0.4,
@@ -538,9 +535,7 @@ app.post("/api/summarize", async (req, res) => {
         { role: "system", content: "Du skriver korta, tydliga sammanfattningar på svenska." },
         {
           role: "user",
-          content:
-            "Här är en transkription. Sammanfatta i 6-10 bullet points + 1 kort slutsats:\n\n" +
-            transcript,
+          content: "Sammanfatta detta i 6-10 bullet points + 1 kort slutsats:\n\n" + transcript,
         },
       ],
     });
@@ -548,18 +543,12 @@ app.post("/api/summarize", async (req, res) => {
     const summary = (completion.choices?.[0]?.message?.content || "").trim();
     if (!summary) return res.status(500).json({ ok: false, error: "Tomt AI-svar" });
 
-    return res.json({ ok: true, summary, transcript, publicUrl: audioUrl });
+    return res.json({ ok: true, publicUrl: audioUrl, transcript, summary });
   } catch (err) {
     console.error("Fel i /api/summarize:", err);
-    return res.status(500).json({
-      ok: false,
-      message: "Serverfel i /api/summarize.",
-      error: String(err?.message || err),
-    });
+    return res.status(500).json({ ok: false, error: String(err?.message || err) });
   } finally {
-    if (tmpPath) {
-      fs.promises.unlink(tmpPath).catch(() => {});
-    }
+    if (tmpPath) await fs.promises.unlink(tmpPath).catch(() => {});
   }
 });
 

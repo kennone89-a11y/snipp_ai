@@ -558,7 +558,7 @@ setLog("Public URL hämtad.");
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ publicUrl: url }),
     });
-
+ 
     txt = await res.text();
     try {
       json = JSON.parse(txt);
