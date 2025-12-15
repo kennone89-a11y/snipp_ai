@@ -501,16 +501,18 @@ async function createReelPlan() {
     }
 
     const files = getChosenFiles();
-    if (!files.length) {
-      alert("Välj minst en fil");
-      return null;
-    }
+if (!files.length) { alert("Välj minst en fil"); return null; }
 
-    const fd = new FormData();
-    fd.append("plan", JSON.stringify(plan));
-    for (const f of files) fd.append("clips", f);
+const fd = new FormData();
+fd.append("plan", JSON.stringify(plan));
+for (const f of files) fd.append("clips", f);
 
-    `${API_BASE}/api/render-reel-test`
+const res = await fetch(`${API_BASE}/api/render-reel-test`, {
+  method: "POST",
+  body: fd
+});
+
+
 
 
 
