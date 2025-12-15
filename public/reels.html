@@ -509,8 +509,10 @@ async function createReelPlan() {
     const fd = new FormData();
     fd.append("plan", JSON.stringify(plan));
     for (const f of files) fd.append("clips", f);
- 
-    const res = await awaitfetch(`${API_BASE}/api/render-reel`, { method: "POST", body: fd });
+
+    `${API_BASE}/api/render-reel-test`
+
+
 
 
     const ct = (res.headers.get("content-type") || "").toLowerCase();
