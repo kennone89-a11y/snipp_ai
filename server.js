@@ -537,22 +537,26 @@ app.post("/api/summarize", async (req, res) => {
 ========================= */
 app.post("/api/render-reel-test", async (req, res) => {
   try {
-   const clipsDir = path.join(__dirname, "public", "test_clips");
+ const clipsDir = path.join(__dirname, "public", "test_clips");
+const outputDir = path.join(__dirname, "test_output");
+const outputFile = path.join(outputDir, "reel-from-api.mp4");
 
+if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
-    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
-
-    const clips = [
+const clips = [
   path.join(clipsDir, "clip1.MOV..MOV"),
   path.join(clipsDir, "clip2.MOV..MOV"),
 ];
 
-    for (const file of clips) {
-      if (!fs.existsSync(file)) {
-        console.error("Hittar inte klipp:", file);
-        return res.status(400).json({ ok: false, error: "Hittar inte klipp: " + file });
-      }
-    }
+
+    
+      for (const file of clips) {
+  if (!fs.existsSync(file)) {
+    console.error("Hittar inte klipp:", file);
+    return res.status(400).json({ ok: false, error: "Hittar inte klipp: " + file });
+  }
+}
+
 
     const command = ffmpeg();
     clips.forEach((file) => command.input(file));
