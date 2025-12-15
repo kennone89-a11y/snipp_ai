@@ -537,9 +537,12 @@ app.post("/api/summarize", async (req, res) => {
 ========================= */
 app.post("/api/render-reel-test", async (req, res) => {
   try {
-    const clipsDir = path.join(__dirname, "test_clips");
-    const outputDir = path.join(__dirname, "test_output");
-    const outputFile = path.join(outputDir, "reel-from-api.mp4");
+   const clipsDir = path.join(__dirname, "public", "test_clips");
+const clips = [
+  path.join(clipsDir, "clip1.MOV..MOV"),
+  path.join(clipsDir, "clip2.MOV..MOV"),
+];
+
 
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
